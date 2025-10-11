@@ -45,7 +45,7 @@
 
 ---
 
-### Day 2 (2025-10-12) - Spring Boot 프로젝트 생성 및 기본 설정
+### Day 2 (2025-10-12) - Spring Boot 프로젝트 생성 및 기본 설정 ✅
 **목표**: 
 - [x] Spring Boot 프로젝트 생성 (Maven)
 - [x] 기본 의존성 설정
@@ -67,6 +67,8 @@
 - [x] frontend Dockerfile 및 nginx 설정
 - [x] docker-compose.yml 수정 (healthcheck 추가)
 - [x] MySQL 초기화 스크립트 완성 (7개 테이블 + 초기 데이터)
+- [x] QueryDSL 설정 문제 해결
+- [x] MySQL 사용자 권한 문제 해결
 
 **완료된 작업**:
 1. **Backend 설정**
@@ -75,6 +77,7 @@
    - application.yml: MySQL, Redis, JWT, Upbit API 설정
    - Security 설정: 공개 엔드포인트 (/api/health, /api/auth/**)
    - CORS 설정: 프론트엔드 연동 준비
+   - QueryDSL 설정: Compiler plugin에 통합하여 안정화
    
 2. **Frontend 설정**
    - Vue 3 + TypeScript + Vite 프로젝트 구조
@@ -87,6 +90,7 @@
    - 초기 코인 정보 데이터 (Top 10 코인)
    - 기본 관리자 계정 생성 (admin/admin123!)
    - 인덱스 최적화 및 외래키 설정
+   - 사용자 권한 설정 완료
    
 4. **Docker 환경**
    - Multi-stage 빌드로 이미지 최적화
@@ -99,15 +103,13 @@
 - ✅ Redis 컨테이너 정상 실행 (포트 6379)
 - ✅ Backend 컨테이너 정상 실행 (포트 8080)
 - ✅ Frontend 컨테이너 정상 실행 (포트 80)
-- ✅ Health Check API 응답 확인 (DB, Redis 연결 정상)
-- ✅ 프론트엔드 웹페이지 접속 확인
-
-**내일 준비사항**:
-- JPA Entity 클래스 설계 검토
-- JWT 인증 구현 계획
-- Repository 인터페이스 설계
-
-**다음 일정**: Day 3 - 데이터베이스 엔티티 및 인증 시스템 구현
+- ✅ Health Check API 응답 확인
+```json
+  {
+    "status": "UP",
+    "database": {"status": "UP", "database": "MySQL"},
+    "redis": {"status": "UP"}
+  }
 
 ---
 

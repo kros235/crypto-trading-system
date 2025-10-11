@@ -146,3 +146,8 @@ ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP;
 INSERT INTO trading_settings (user_id, coin_symbols, base_period, buy_threshold_pct, sell_target_pct, stop_loss_pct) VALUES
 ('admin', '["KRW-BTC", "KRW-ETH"]', 20, -5.00, 3.00, -10.00)
 ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP;
+
+-- 사용자 권한 설정 (모든 IP에서 접근 가능하도록)
+CREATE USER IF NOT EXISTS 'crypto_user'@'%' IDENTIFIED BY 'cryptopass123!';
+GRANT ALL PRIVILEGES ON crypto_trading.* TO 'crypto_user'@'%';
+FLUSH PRIVILEGES;

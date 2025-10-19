@@ -367,6 +367,39 @@ Exception 계층:
 
 ---
 
+## Day 4 (2025-10-19) - 업비트 API 연동
+
+### 완료 작업
+- ✅ 업비트 API 클라이언트 서비스 구현
+- ✅ DTO 클래스 생성 (UpbitMarketDTO, UpbitTickerDTO, UpbitAccountDTO, UpbitOrderDTO)
+- ✅ CoinInfo 엔티티 및 Repository 생성
+- ✅ CoinInfoService 구현 (코인 정보 관리)
+- ✅ 테스트용 Controller 생성
+- ✅ 공개 API 연동 테스트 완료
+  - 마켓 코드 조회 (218개 코인)
+  - 현재가 조회 (BTC, ETH)
+  - 코인 정보 DB 업데이트
+  - 활성 코인 목록 조회
+
+### 기술 스택
+- Auth0 JWT (업비트 API 인증)
+- Spring WebClient (비동기 HTTP 통신)
+- Spring Data JPA (코인 정보 관리)
+
+### API 엔드포인트
+- GET /api/upbit/test/markets - 마켓 코드 조회
+- GET /api/upbit/test/ticker - 현재가 조회
+- POST /api/upbit/test/update-coins - 코인 정보 업데이트
+- GET /api/upbit/test/active-coins - 활성 코인 조회
+- GET /api/upbit/test/accounts - 계좌 조회 (API 키 필요)
+
+### 다음 단계
+- WebSocket 실시간 시세 구현
+- 거래 전략 로직 개발
+- 자동 거래 시스템 구축
+
+---
+
 ## 🎯 전체 개발 계획
 
 ### Phase 1: 핵심 기능 (4주)

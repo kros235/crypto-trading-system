@@ -36,6 +36,7 @@ public class SecurityConfig {
                 // 공개 엔드포인트
                 .requestMatchers("/api/health", "/api/health/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
+	  .requestMatchers("/api/upbit/test/**").permitAll() // ← 추가
                 // Actuator 엔드포인트
                 .requestMatchers("/actuator/**").permitAll()
                 // 나머지는 인증 필요

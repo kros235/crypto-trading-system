@@ -98,6 +98,13 @@
             <version>0.12.3</version>
             <scope>runtime</scope>
         </dependency>
+
+        <!-- Auth0 JWT (업비트 API 인증용) -->
+        <dependency>
+                <groupId>com.auth0</groupId>
+                <artifactId>java-jwt</artifactId>
+                <version>4.4.0</version>
+        </dependency>
         
         <!-- WebSocket (Upbit 실시간 데이터) -->
         <dependency>
@@ -137,7 +144,7 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-    
+
     <build>
         <plugins>
             <plugin>

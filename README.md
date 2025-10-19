@@ -400,6 +400,159 @@ Exception 계층:
 
 ---
 
+### Day 5 (2025-10-20) - 거래 설정 관리 및 코인 정보 API 구현 ✅
+
+**목표**: 
+- [x] 거래 설정(Trading Settings) CRUD API 구현
+- [x] 코인 정보 조회 API 구현
+- [x] 현재가 조회 API 구현
+- [x] 계좌 정보 조회 API 구현
+- [x] Postman을 이용한 전체 API 테스트
+
+**진행 내용**:
+
+1. **거래 설정 관리 API 구현**
+   - TradingSettingDTO 생성 (Jakarta Validation으로 입력값 검증)
+   - TradingSettingService 구현 (CRUD 비즈니스 로직)
+   - TradingSettingController 구현 (REST API 엔드포인트)
+   - 사용자별 맞춤 거래 설정 관리 기능
+
+2. **코인 정보 및 시세 API 구현**
+   - CoinController 생성
+   - 활성 코인 목록 조회 API (공개)
+   - 단일/다중 코인 현재가 조회 API (공개)
+   - 업비트 계좌 정보 조회 API (인증 필요)
+
+3. **보안 강화**
+   - 공개 API와 인증 API 명확히 분리
+   - 관리자 전용 API 권한 체크 (ROLE_ADMIN)
+   - API 키 복호화 후 업비트 API 호출
+
+**완료된 작업**:
+
+1. **DTO 클래스**
+   - `TradingSettingDTO.java`: 거래 설정 데이터 전송 객체
+     - 입력값 검증: @NotEmpty, @Min, @DecimalMin, @DecimalMax
+     - 필드: coinSymbols, basePeriod, buyThresholdPct, sellTargetPct, stopLossPct, maxHoldingsPerCoin, dailyLimitAmount, useAiAnalysis, useTrailingStop, trailingStopPct
+
+2. **Service 계층**
+   - `TradingSettingService.java`: 거래 설정 비즈니스 로직
+     - getTradingSetting(): 사용자별 설정 조회
+     - createTradingSetting(): 설정 생성 (중복 체크 포함)
+     - updateTradingSetting(): 설정 수정
+     - deleteTradingSetting(): 설정 삭제
+     - convertToDTO(): Entity ↔ DTO 변환
+
+3. **Controller 계층**
+   - `TradingSettingController.java`: 거래 설정 REST API
+     - GET /api/trading-settings: 조회
+     - POST /api/trading-settings: 생성
+     - PUT /api/trading-settings: 수정
+     - DELETE /api/trading-settings: 삭제
+   - `CoinController.java`: 코인 정보 REST API
+     - GET /api/coins/active: 활성 코인 목록
+     - GET /api/coins/{symbol}/price: 현재가 조회
+     - GET /api/coins/prices: 여러 코인 현재가 조회
+     - GET /api/coins/accounts: 계좌 정보 조회 (인증)
+     - POST /api/coins/update: 코인 정보 업데이트 (관리자)
+
+4. **보안 설정 업데이트**
+   - `SecurityConfig.java` 수정
+     - 코인 정보 조회 API 공개 설정
+     - 계좌 조회 API 인증 필요
+     - 관리자 전용 API 권한 설정
+
+**테스트 결과**:
+
+Postman을 이용한 전체 API 테스트 완료:
+- ✅ 로그인 성공 (JWT 토큰 발급)
+- ✅ 거래 설정 생성 성공
+  - 요청: POST /api/trading-settings
+  - 응답: 201 Created, 생성된 설정 반환
+- ✅ 거래 설정 조회 성공
+  - 요청: GET /api/trading-settings
+  - 응답: 200 OK, 사용자의 설정 반환
+- ✅ 거래 설정 수정 성공
+  - 요청: PUT /api/trading-settings
+  - 응답: 200 OK, 수정된 설정 반환
+- ✅ 활성 코인 목록 조회 성공
+  - 요청: GET /api/coins/active
+  - 응답: 200 OK, Top 10 코인 목록 반환
+- ✅ 비트코인 현재가 조회 성공
+  - 요청: GET /api/coins/KRW-BTC/price
+  - 응답: 200 OK, 실시간 시세 반환
+- ✅ 여러 코인 현재가 조회 성공
+  - 요청: GET /api/coins/prices?symbols=KRW-BTC,KRW-ETH,KRW-XRP
+  - 응답: 200 OK, 3개 코인 시세 배열 반환
+- ✅ 계좌 정보 조회 성공 (API 키 등록 후)
+  - 요청: GET /api/coins/accounts
+  - 응답: 200 OK, 업비트 계좌 정보 반환
+- ✅ 거래 설정 삭제 성공
+  - 요청: DELETE /api/trading-settings
+  - 응답: 200 OK, 삭제 완료 메시지
+
+**주요 기능 설명**:
+
+1. **거래 설정 관리**
+   - 사용자별로 독립적인 거래 설정 관리
+   - 거래할 코인 종목 선택 (배열 형태)
+   - 기준 기간 설정 (7일~30일 이동평균선)
+   - 매수/매도 기준 설정 (%, BigDecimal로 정밀 처리)
+   - 손절매 및 트레일링 스톱 옵션
+   - AI 뉴스 분석 사용 여부 설정
+
+2. **코인 정보 조회**
+   - 업비트에서 제공하는 모든 활성 코인 정보
+   - 실시간 현재가 조회 (단일/다중)
+   - 시가, 고가, 저가, 거래량 등 상세 정보
+   - 24시간 누적 거래대금
+   - 52주 최고가/최저가
+
+3. **계좌 연동**
+   - 사용자의 API 키를 AES-256 암호화하여 DB 저장
+   - 필요 시 복호화하여 업비트 API 호출
+   - JWT로 인증된 사용자만 접근 가능
+   - KRW 잔액 및 보유 코인 정보 조회
+
+**생성된 파일 목록**:
+- `backend/src/main/java/com/cryptotrading/dto/TradingSettingDTO.java`
+- `backend/src/main/java/com/cryptotrading/service/TradingSettingService.java`
+- `backend/src/main/java/com/cryptotrading/controller/TradingSettingController.java`
+- `backend/src/main/java/com/cryptotrading/controller/CoinController.java`
+
+**수정된 파일**:
+- `backend/src/main/java/com/cryptotrading/config/SecurityConfig.java`
+
+**API 엔드포인트 정리**:
+
+| Method | Endpoint | 인증 | 설명 |
+|--------|----------|------|------|
+| POST | /api/auth/login | ❌ | 로그인 (JWT 발급) |
+| GET | /api/user/profile | ✅ | 사용자 프로필 조회 |
+| POST | /api/user/api-keys | ✅ | API 키 등록 |
+| GET | /api/trading-settings | ✅ | 거래 설정 조회 |
+| POST | /api/trading-settings | ✅ | 거래 설정 생성 |
+| PUT | /api/trading-settings | ✅ | 거래 설정 수정 |
+| DELETE | /api/trading-settings | ✅ | 거래 설정 삭제 |
+| GET | /api/coins/active | ❌ | 활성 코인 목록 |
+| GET | /api/coins/{symbol}/price | ❌ | 현재가 조회 |
+| GET | /api/coins/prices | ❌ | 여러 코인 현재가 |
+| GET | /api/coins/accounts | ✅ | 계좌 정보 조회 |
+| POST | /api/coins/update | 🔐 | 코인 정보 업데이트 (관리자) |
+
+**다음 단계 (Day 6 예정)**:
+- 가격 이력 수집 및 저장 기능
+- 기술적 지표 계산 (이동평균선, RSI, 볼린저밴드)
+- WebSocket 실시간 시세 구독
+- 가격 데이터 스케줄링 및 자동 수집
+
+**현재 진척도**: 약 30% 완료
+- Phase 1 (핵심 기능 4주) 중 1.25주차 완료
+- 인프라, 인증, 거래 설정, 코인 정보 API 완성
+- 다음 단계: 실시간 데이터 수집 및 기술적 분석
+
+---
+
 ## 🎯 전체 개발 계획
 
 ### Phase 1: 핵심 기능 (4주)

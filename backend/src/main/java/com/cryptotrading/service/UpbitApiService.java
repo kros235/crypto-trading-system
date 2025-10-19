@@ -28,22 +28,16 @@ public class UpbitApiService {
     @Value("${upbit.api.url}")
     private String upbitApiUrl;
 
-    @Value("${upbit.api.access-key}")
-    private String accessKey;
-
-    @Value("${upbit.api.secret-key}")
-    private String secretKey;
-
     private final WebClient webClient = WebClient.builder()
             .baseUrl("https://api.upbit.com/v1")
             .build();
 
     /**
-     * JWT 토큰 생성 (업비트 API 인증용)
+     * JWT 토큰 생성 (업비트 API 인증용) - 사용자 API 키 사용
      */
-    private String generateToken() {
+    private String generateToken(String accessKey, String secretKey) {
         if (accessKey == null || accessKey.isEmpty() || secretKey == null || secretKey.isEmpty()) {
-            throw new RuntimeException("업비트 API 키가 설정되지 않았습니다. .env 파일에 UPBIT_ACCESS_KEY와 UPBIT_SECRET_KEY를 설정해주세요.");
+            throw new RuntimeException("업비트 API 키가 등록되지 않았습니다. 먼저 API 키를 등록해주세요.");
         }
         Algorithm algorithm = Algorithm.HMAC256(secretKey);
         return JWT.create()
@@ -53,12 +47,12 @@ public class UpbitApiService {
     }
 
     /**
-     * JWT 토큰 생성 (쿼리 파라미터 포함)
+     * JWT 토큰 생성 (쿼리 파라미터 포함) - 사용자 API 키 사용
      */
-    private String generateToken(Map<String, String> params) {
+    private String generateToken(String accessKey, String secretKey, Map<String, String> params) {
         if (accessKey == null || accessKey.isEmpty() || secretKey == null || secretKey.isEmpty()) {
-            throw new RuntimeException("업비트 API 키가 설정되지 않았습니다. .env 파일에 UPBIT_ACCESS_KEY와 UPBIT_SECRET_KEY를 설정해주세요.");
-        }    
+            throw new RuntimeException("업비트 API 키가 등록되지 않았습니다. 먼저 API 키를 등록해주세요.");
+        }
         try {
             String queryString = params.entrySet().stream()
                     .map(entry -> entry.getKey() + "=" + entry.getValue())
@@ -117,12 +111,12 @@ public class UpbitApiService {
     }
 
     /**
-     * 3. 계좌 조회 (인증 필요)
+     * 3. 계좌 조회 (인증 필요) - 사용자 API 키 사용
      */
-    public List<UpbitAccountDTO> getAccounts() {
+    public List<UpbitAccountDTO> getAccounts(String accessKey, String secretKey) {
         log.info("계좌 조회 시작");
         
-        String token = generateToken();
+        String token = generateToken(accessKey, secretKey);
         
         return webClient.get()
                 .uri("/accounts")
@@ -135,18 +129,18 @@ public class UpbitApiService {
     }
 
     /**
-     * 4. 주문하기 - 매수 (인증 필요)
+     * 4. 주문하기 - 매수 (인증 필요) - 사용자 API 키 사용
      */
-    public UpbitOrderDTO orderBuy(String market, BigDecimal price) {
+    public UpbitOrderDTO orderBuy(String accessKey, String secretKey, String market, BigDecimal price) {
         log.info("매수 주문: market={}, price={}", market, price);
         
         Map<String, String> params = new HashMap<>();
         params.put("market", market);
         params.put("side", "bid");
         params.put("price", price.toString());
-        params.put("ord_type", "price"); // 시장가 매수
+        params.put("ord_type", "price");
         
-        String token = generateToken(params);
+        String token = generateToken(accessKey, secretKey, params);
         
         return webClient.post()
                 .uri("/orders")
@@ -161,18 +155,18 @@ public class UpbitApiService {
     }
 
     /**
-     * 5. 주문하기 - 매도 (인증 필요)
+     * 5. 주문하기 - 매도 (인증 필요) - 사용자 API 키 사용
      */
-    public UpbitOrderDTO orderSell(String market, BigDecimal volume) {
+    public UpbitOrderDTO orderSell(String accessKey, String secretKey, String market, BigDecimal volume) {
         log.info("매도 주문: market={}, volume={}", market, volume);
         
         Map<String, String> params = new HashMap<>();
         params.put("market", market);
         params.put("side", "ask");
         params.put("volume", volume.toString());
-        params.put("ord_type", "market"); // 시장가 매도
+        params.put("ord_type", "market");
         
-        String token = generateToken(params);
+        String token = generateToken(accessKey, secretKey, params);
         
         return webClient.post()
                 .uri("/orders")
@@ -187,15 +181,15 @@ public class UpbitApiService {
     }
 
     /**
-     * 6. 주문 취소 (인증 필요)
+     * 6. 주문 취소 (인증 필요) - 사용자 API 키 사용
      */
-    public UpbitOrderDTO cancelOrder(String uuid) {
+    public UpbitOrderDTO cancelOrder(String accessKey, String secretKey, String uuid) {
         log.info("주문 취소: uuid={}", uuid);
         
         Map<String, String> params = new HashMap<>();
         params.put("uuid", uuid);
         
-        String token = generateToken(params);
+        String token = generateToken(accessKey, secretKey, params);
         
         return webClient.delete()
                 .uri(uriBuilder -> uriBuilder

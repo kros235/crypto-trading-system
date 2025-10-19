@@ -37,6 +37,12 @@ public class SecurityConfig {
                 .requestMatchers("/api/health", "/api/health/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
 	  .requestMatchers("/api/upbit/test/**").permitAll() // ← 추가
+	  // 코인 정보 조회는 인증 필요 없음
+	  .requestMatchers("/api/coins/active").permitAll()
+	  .requestMatchers("/api/coins/*/price").permitAll()
+	  .requestMatchers("/api/coins/prices").permitAll()
+	  // 코인 정보 업데이트는 관리자만
+	  .requestMatchers("/api/coins/update").hasRole("ADMIN")
                 // Actuator 엔드포인트
                 .requestMatchers("/actuator/**").permitAll()
                 // 나머지는 인증 필요

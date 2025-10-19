@@ -7,6 +7,7 @@ import com.cryptotrading.entity.CoinInfo;
 import com.cryptotrading.service.CoinInfoService;
 import com.cryptotrading.service.UpbitApiService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +22,12 @@ public class UpbitTestController {
 
     private final UpbitApiService upbitApiService;
     private final CoinInfoService coinInfoService;
+
+    @Value("${upbit.api.access-key:}")
+    private String testAccessKey;
+
+    @Value("${upbit.api.secret-key:}")
+    private String testSecretKey;
 
     /**
      * 마켓 코드 조회 테스트
@@ -46,9 +53,22 @@ public class UpbitTestController {
      * 계좌 조회 테스트 (API 키 필요)
      */
     @GetMapping("/accounts")
-    public ResponseEntity<List<UpbitAccountDTO>> testGetAccounts() {
-        List<UpbitAccountDTO> accounts = upbitApiService.getAccounts();
-        return ResponseEntity.ok(accounts);
+    public ResponseEntity<?> testGetAccounts() {
+        try {
+            if (testAccessKey == null || testAccessKey.isEmpty() || 
+                testSecretKey == null || testSecretKey.isEmpty()) {
+                Map<String, String> error = new HashMap<>();
+                error.put("error", "테스트용 API 키가 .env 파일에 설정되지 않았습니다.");
+                return ResponseEntity.badRequest().body(error);
+            }
+            
+            List<UpbitAccountDTO> accounts = upbitApiService.getAccounts(testAccessKey, testSecretKey);
+            return ResponseEntity.ok(accounts);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
     }
 
     /**

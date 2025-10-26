@@ -551,6 +551,233 @@ Postman을 이용한 전체 API 테스트 완료:
 - 인프라, 인증, 거래 설정, 코인 정보 API 완성
 - 다음 단계: 실시간 데이터 수집 및 기술적 분석
 
+
+---
+
+## Day 6: Vue.js 프론트엔드 핵심 페이지 구현 (2025.10.26)
+
+### 🎯 목표
+- Vue.js 프론트엔드 기본 구조 완성
+- 로그인/회원가입 페이지 구현
+- 대시보드 구현
+- JWT 인증 연동
+- Pinia 상태 관리
+
+### ✅ 완료된 작업
+
+#### 1. 프로젝트 구조 설정frontend/src/
+├── api/
+│   └── index.ts              # Axios 설정 및 API 클라이언트
+├── stores/
+│   ├── auth.ts               # 인증 상태 관리
+│   └── coin.ts               # 코인 정보 상태 관리
+├── types/
+│   └── index.ts              # TypeScript 타입 정의
+├── views/
+│   ├── LoginView.vue         # 로그인 페이지
+│   ├── SignupView.vue        # 회원가입 페이지
+│   └── DashboardView.vue     # 대시보드
+├── components/
+│   ├── TheHeader.vue         # 헤더 컴포넌트
+│   └── TheSidebar.vue        # 사이드바 컴포넌트
+└── router/
+└── index.ts              # 라우터 설정 (가드 포함)
+
+#### 2. TypeScript 타입 시스템
+- User, LoginRequest, SignupRequest 타입
+- CoinInfo, CoinTicker 타입
+- AuthResponse, ApiError 타입
+- 타입 안정성 확보
+
+#### 3. Axios API 클라이언트
+- Axios 인스턴스 생성 및 설정
+- 요청 인터셉터: JWT 토큰 자동 추가
+- 응답 인터셉터: 401 에러 시 자동 로그아웃
+- API 모듈화: authApi, userApi, coinApi, systemApi
+
+#### 4. Pinia Store
+**인증 Store (auth.ts):**
+- 사용자 상태 관리
+- 로그인/회원가입 로직
+- 토큰 관리 (localStorage 연동)
+- 인증 상태 초기화
+
+**코인 Store (coin.ts):**
+- 활성 코인 목록 관리
+- 코인 시세 정보 캐싱
+- 다중 코인 시세 조회
+
+#### 5. 라우터 설정
+- 라우터 가드 구현
+- 인증 필요 페이지 보호 (requiresAuth)
+- 로그인 사용자 리다이렉션 (requiresGuest)
+- 홈(/) -> 대시보드 자동 리다이렉션
+
+#### 6. 로그인 페이지 (LoginView.vue)
+- Vuetify Material Design 적용
+- 폼 유효성 검증
+- 로딩 상태 표시
+- 에러 메시지 표시
+- 회원가입 페이지로 이동
+
+#### 7. 회원가입 페이지 (SignupView.vue)
+- 사용자 ID 검증 (4-20자, 영문/숫자/언더스코어)
+- 이메일 형식 검증
+- 비밀번호 강도 검증 (8-30자, 대소문자/숫자/특수문자)
+- 비밀번호 확인 일치 검증
+- 전화번호 형식 검증 (선택)
+- 실시간 입력값 검증
+
+#### 8. 대시보드 (DashboardView.vue)
+- 사용자 정보 카드
+  - 사용자 ID, 이메일, 역할
+  - API 키 등록 상태
+- 시스템 상태 카드
+  - 시스템 상태 표시
+  - 마지막 로그인 시간
+- 빠른 액세스 카드
+  - 거래 설정 바로가기 (준비중)
+  - 프로필 설정 바로가기 (준비중)
+- 활성 코인 목록
+  - 데이터 테이블로 표시
+  - 순위, 한글명, 영문명, 심볼, 상태
+  - 새로고침 기능
+  - 페이지네이션 (10개씩)
+
+#### 9. 공통 컴포넌트
+**헤더 (TheHeader.vue):**
+- 앱 타이틀 및 로고
+- 사이드바 토글 버튼
+- 사용자 프로필 메뉴
+- 로그아웃 기능
+
+**사이드바 (TheSidebar.vue):**
+- 네비게이션 메뉴
+- 관리자 전용 메뉴 (조건부 렌더링)
+- 임시 drawer 모드
+
+#### 10. 스타일링
+- Vuetify Material Design
+- 그라데이션 배경 (로그인/회원가입)
+- 반응형 레이아웃
+- 일관된 색상 테마
+
+### 🛠️ 기술 스택
+- **Frontend Framework**: Vue 3 (Composition API)
+- **언어**: TypeScript
+- **상태 관리**: Pinia
+- **라우팅**: Vue Router
+- **UI 프레임워크**: Vuetify 3
+- **HTTP 클라이언트**: Axios
+- **빌드 도구**: Vite
+
+### 📦 주요 패키지
+```json{
+"vue": "^3.4.0",
+"vue-router": "^4.2.0",
+"pinia": "^2.1.0",
+"vuetify": "^3.5.0",
+"axios": "^1.6.0",
+"typescript": "^5.3.0"
+}
+
+### 🔐 인증 플로우
+1. 사용자가 로그인 폼 제출
+2. authStore.login() 호출
+3. API 요청: POST /api/auth/login
+4. 성공 시 JWT 토큰 수신
+5. 토큰을 localStorage에 저장
+6. 사용자 프로필 조회: GET /api/user/profile
+7. 대시보드로 리다이렉션
+8. 이후 모든 API 요청에 토큰 자동 포함
+
+### 🧪 테스트 계정관리자 계정:
+
+ID: admin
+Password: Test1234!@
+Role: ADMIN
+일반 사용자:
+
+회원가입 페이지에서 생성
+Role: USER (자동 할당)
+
+
+### 📱 주요 화면
+
+#### 로그인 페이지
+- URL: `/login`
+- 기능: 사용자 인증, 자동 로그인 유지
+
+#### 회원가입 페이지
+- URL: `/signup`
+- 기능: 신규 계정 생성, 입력값 검증
+
+#### 대시보드
+- URL: `/dashboard`
+- 기능: 사용자 정보, 활성 코인 목록, 시스템 상태
+
+### 🔧 개발 중 해결한 이슈
+
+#### 1. 라우터 에러
+**문제**: 존재하지 않는 Vue 파일 import 에러Failed to resolve import "../views/ProfileView.vue"
+**해결**: 
+- router/index.ts에서 아직 생성하지 않은 페이지 제거
+- 버튼들을 disabled 상태로 변경
+
+#### 2. Admin 계정 비밀번호
+**문제**: 기존 admin 계정의 비밀번호를 모르는 상태
+**해결**:
+- BCryptPasswordEncoder로 새 해시 생성
+- DBeaver에서 password_hash 직접 업데이트
+```sqlUPDATE users
+SET password_hash = '2a$10
+Zh7x.LVZYfqU3xT8VFhqXOX.rS3qN5HJ4GqNyK7FmHpQk8KxY4Kxy',
+    updated_at = NOW()
+WHERE user_id = 'admin';
+
+
+### 🚀 실행 방법
+```bash프론트엔드 개발 서버 시작
+cd frontend
+npm install
+npm run dev브라우저에서 접속
+http://localhost:3000
+
+### 📊 진행 상황
+- 전체 진척도: **약 42%**
+- Phase 1 (핵심 기능): **70% 완료**
+- Phase 2 (고도화): **20% 진행중**
+- Phase 3 (안정화): **0%**
+
+### 🎯 다음 단계 (Day 7 예정)
+1. **프로필 설정 페이지**
+   - 사용자 정보 수정
+   - 비밀번호 변경
+   - 업비트 API 키 등록/수정/삭제
+
+2. **거래 설정 페이지**
+   - 거래 설정 CRUD
+   - 코인 선택 (멀티 셀렉트)
+   - 매수/매도 기준 설정
+
+3. **실시간 기능**
+   - 실시간 가격 업데이트 (폴링)
+   - 토스트 알림
+   - 로딩 상태 개선
+
+### 📸 스크린샷
+- 로그인 페이지: 그라데이션 배경, Material Design
+- 대시보드: 3단 카드 레이아웃, 코인 데이터 테이블
+- 회원가입: 실시간 입력값 검증, 비밀번호 강도 체크
+
+### 💡 배운 점
+1. **Vue 3 Composition API**: `ref`, `computed`, `onMounted` 활용
+2. **Pinia Store**: 모듈화된 상태 관리
+3. **TypeScript**: 타입 안전성으로 런타임 에러 방지
+4. **Axios Interceptors**: 토큰 자동 관리
+5. **Vue Router Guards**: 인증 기반 페이지 보호
+6. **Vuetify**: Material Design 빠른 구현
+
 ---
 
 ## 🎯 전체 개발 계획

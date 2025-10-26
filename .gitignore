@@ -12,46 +12,149 @@
 target/
 *.iml
 .idea/
+*.log
+
+# Spring Boot
+HELP.md
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
 
 # Node.js
 node_modules/
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 dist/
 .npm
+.pnp
+.pnp.js
 
 # Vue.js
 .DS_Store
 *.local
+.vite/
+.cache/
+
+# TypeScript
+*.tsbuildinfo
 
 # Logs
 logs/
 *.log
+log/
 
 # Database
 *.db
 *.sqlite
+*.sqlite3
+h2/
+derby.log
 
 # IDE
 .vscode/
 *.swp
 *.swo
+.project
+.classpath
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# IntelliJ IDEA (추가)
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+.idea_modules/
+
+# Eclipse (추가)
+.metadata
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.loadpath
+.recommenders
 
 # OS
 .DS_Store
 Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
 
 # Docker
 .docker/
-
-# Backup files
-*.backup
-*.bak
+docker-compose.override.yml
 
 # API Keys (추가 보안)
 **/api-keys/
 **/*-key.json
 **/*-credentials.json
+*.pem
+*.key
+*.cert
 
 # Temporary files
 tmp/
 temp/
+*.tmp
+
+# Test coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Maven (추가)
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Package Files (추가)
+*.7z
+*.dmg
+*.gz
+*.iso
+*.rar
+*.tar
+*.zip
+
+# System Files (추가)
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Backup files
+*.backup
+*.bak
+*~
+
+# Generated files (추가)
+generated/
+.generated/

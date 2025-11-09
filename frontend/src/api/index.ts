@@ -5,7 +5,11 @@ import type {
   AuthResponse,
   User,
   CoinInfo,
-  CoinTicker
+  CoinTicker,
+  UpdateProfileRequest,      // ✅ 추가
+  SaveApiKeysRequest,         // ✅ 추가
+  TradingSetting,             // ✅ 추가
+  TradingSettingRequest       // ✅ 추가
 } from '@/types'
 
 // Axios 인스턴스 생성
@@ -13,7 +17,7 @@ const api = axios.create({
   baseURL: '/api',
   timeout: 10000,
   headers: {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json;charset=UTF-8'  // ⭐ 수정: charset 추가
   }
 })
 
@@ -60,21 +64,17 @@ export const authApi = {
     api.get('/auth/validate')
 }
 
-// 사용자 API
+// ✅ 수정 후 (깔끔하게 정리)
 export const userApi = {
-  // 프로필 조회
   getProfile: () =>
     api.get<User>('/user/profile'),
 
-  // 프로필 수정
-  updateProfile: (data: Partial<User>) =>
+  updateProfile: (data: UpdateProfileRequest) =>
     api.put('/user/profile', data),
 
-  // API 키 저장
-  saveApiKeys: (accessKey: string, secretKey: string) =>
-    api.post('/user/api-keys', { accessKey, secretKey }),
+  saveApiKeys: (data: SaveApiKeysRequest) =>
+    api.post('/user/api-keys', data),
 
-  // API 키 삭제
   deleteApiKeys: () =>
     api.delete('/user/api-keys')
 }
@@ -105,6 +105,21 @@ export const systemApi = {
   // 헬스체크
   health: () =>
     api.get('/health')
+}
+
+// 거래 설정 API
+export const tradingApi = {
+  getSettings: () => 
+    api.get<TradingSetting>('/trading-settings'),
+  
+  createSettings: (data: TradingSettingRequest) => 
+    api.post<TradingSetting>('/trading-settings', data),
+  
+  updateSettings: (data: TradingSettingRequest) => 
+    api.put<TradingSetting>('/trading-settings', data),
+  
+  deleteSettings: () => 
+    api.delete('/trading-settings')
 }
 
 export default api

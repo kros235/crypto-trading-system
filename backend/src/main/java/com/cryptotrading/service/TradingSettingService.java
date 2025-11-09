@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -17,10 +18,16 @@ public class TradingSettingService {
 
     @Transactional(readOnly = true)
     public TradingSettingDTO getTradingSetting(String userId) {
-        TradingSetting setting = tradingSettingRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("거래 설정을 찾을 수 없습니다"));
-
-        return convertToDTO(setting);
+        log.info("거래 설정 조회: userId={}", userId);
+    
+        Optional<TradingSetting> setting = tradingSettingRepository.findByUserId(userId);
+    
+        if (setting.isEmpty()) {
+            log.info("거래 설정이 없습니다: userId={}", userId);
+            return null;  // 예외 던지지 않고 null 반환
+        }
+    
+        return convertToDTO(setting.get());
     }
 
     @Transactional

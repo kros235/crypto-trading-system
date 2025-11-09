@@ -43,6 +43,12 @@ public class SecurityConfig {
 	  .requestMatchers("/api/coins/prices").permitAll()
 	  // 코인 정보 업데이트는 관리자만
 	  .requestMatchers("/api/coins/update").hasRole("ADMIN")
+
+	  // ✨ 추가: 사용자 프로필 API - 인증된 사용자만
+	  .requestMatchers("/api/user/**").authenticated()
+    
+	  // ✨ 추가: 거래 설정 API - 인증된 사용자만
+	  .requestMatchers("/api/trading-settings/**").authenticated()
                 // Actuator 엔드포인트
                 .requestMatchers("/actuator/**").permitAll()
                 // 나머지는 인증 필요

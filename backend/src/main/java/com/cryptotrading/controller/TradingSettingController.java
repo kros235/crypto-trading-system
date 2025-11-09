@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.security.core.context.SecurityContextHolder;
+
 @RestController
 @RequestMapping("/api/trading-settings")
 @RequiredArgsConstructor
@@ -22,9 +24,18 @@ public class TradingSettingController {
     private final TradingSettingService tradingSettingService;
 
     @GetMapping
-    public ResponseEntity<TradingSettingDTO> getTradingSetting(Authentication authentication) {
-        String userId = authentication.getName();
+    public ResponseEntity<?> getTradingSetting() {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
+        log.info("거래 설정 조회 요청: userId={}", userId);
+    
         TradingSettingDTO setting = tradingSettingService.getTradingSetting(userId);
+    
+        if (setting == null) {
+            // 404 반환 (설정 없음)
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "거래 설정이 없습니다"));
+        }
+        
         return ResponseEntity.ok(setting);
     }
 

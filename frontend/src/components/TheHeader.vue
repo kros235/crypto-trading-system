@@ -24,11 +24,11 @@
 
         <v-divider />
 
-        <v-list-item disabled>
+        <v-list-item @click="$router.push('/profile')">
           <template v-slot:prepend>
             <v-icon>mdi-account-cog</v-icon>
           </template>
-          <v-list-item-title>프로필 설정 (준비중)</v-list-item-title>
+          <v-list-item-title>프로필 설정</v-list-item-title>
         </v-list-item>
 
         <v-list-item @click="handleLogout">

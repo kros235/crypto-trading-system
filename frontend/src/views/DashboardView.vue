@@ -1,8 +1,11 @@
 <template>
   <v-app>
-    <the-header />
 
-    <the-sidebar />
+    <!-- ⭐ 수정: @toggle-drawer 이벤트 핸들러 추가 -->
+    <the-header @toggle-drawer="sidebarRef.drawer = !sidebarRef.drawer" />
+
+    <!-- ⭐ 수정: ref 추가 -->
+    <the-sidebar ref="sidebarRef" />
 
     <v-main>
       <v-container fluid>
@@ -77,18 +80,17 @@
                   block
                   color="primary"
                   class="mb-2"
-                  disabled
+                  @click="$router.push('/trading-settings')"
                 >
                   <v-icon start>mdi-cog</v-icon>
-                  거래 설정 (준비중)
+                  거래 설정
                 </v-btn>
                 <v-btn
                   block
                   color="secondary"
-                  disabled
                 >
                   <v-icon start>mdi-account-cog</v-icon>
-                  프로필 설정 (준비중)
+                  프로필 설정
                 </v-btn>
               </v-card-text>
             </v-card>
@@ -162,6 +164,9 @@ import TheSidebar from '@/components/TheSidebar.vue'
 
 const authStore = useAuthStore()
 const coinStore = useCoinStore()
+
+// ⭐ 수정: 사이드바 ref 추가
+const sidebarRef = ref()
 
 const headers = [
   { title: '순위', key: 'marketCapRank', align: 'center' },

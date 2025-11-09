@@ -24,16 +24,16 @@
 
       <v-list-item
         prepend-icon="mdi-cog"
-        title="거래 설정 (준비중)"
-        disabled
+        title="거래 설정"
+        @click="$router.push('/trading-settings')"
       />
 
       <v-divider class="my-2" />
 
       <v-list-item
         prepend-icon="mdi-account-cog"
-        title="프로필 설정 (준비중)"
-        disabled
+        title="프로필 설정"
+        @click="$router.push('/profile')"
       />
 
       <v-list-item

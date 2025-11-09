@@ -1,0 +1,587 @@
+<template>
+  <v-container>
+    <v-row>
+      <v-col cols="12">
+        <h1 class="text-h4 mb-6">프로필 설정</h1>
+      </v-col>
+    </v-row>
+
+    <!-- 기본 정보 카드 -->
+    <v-row>
+      <v-col cols="12" md="6">
+        <v-card class="mb-4">
+          <v-card-title class="bg-primary text-white">
+            <v-icon icon="mdi-account-circle" class="mr-2" />
+            기본 정보
+          </v-card-title>
+
+          <v-card-text class="pt-4">
+            <v-alert
+              v-if="profileMessage"
+              :type="profileMessageType"
+              dismissible
+              class="mb-4"
+              @click:close="profileMessage = ''"
+            >
+              {{ profileMessage }}
+            </v-alert>
+
+            <v-form ref="profileFormRef" v-model="profileValid">
+              <!-- 사용자 ID (읽기 전용) -->
+              <v-text-field
+                v-model="profileForm.userId"
+                label="사용자 ID"
+                prepend-icon="mdi-account"
+                readonly
+                variant="outlined"
+                class="mb-2"
+              />
+
+              <!-- 이메일 -->
+              <v-text-field
+                v-model="profileForm.email"
+                label="이메일"
+                prepend-icon="mdi-email"
+                :rules="[rules.required, rules.email]"
+                variant="outlined"
+                class="mb-2"
+              />
+
+              <!-- 전화번호 -->
+              <v-text-field
+                v-model="profileForm.phone"
+                label="전화번호"
+                prepend-icon="mdi-phone"
+                :rules="[rules.phone]"
+                placeholder="010-XXXX-XXXX"
+                variant="outlined"
+                class="mb-2"
+              />
+
+              <!-- 역할 (읽기 전용) -->
+              <v-text-field
+                v-model="profileForm.role"
+                label="역할"
+                prepend-icon="mdi-shield-account"
+                readonly
+                variant="outlined"
+                class="mb-2"
+              />
+
+              <!-- 가입일 (읽기 전용) -->
+              <v-text-field
+                v-model="formattedJoinDate"
+                label="가입일"
+                prepend-icon="mdi-calendar"
+                readonly
+                variant="outlined"
+                class="mb-2"
+              />
+
+              <!-- 마지막 로그인 (읽기 전용) -->
+              <v-text-field
+                v-model="formattedLastLogin"
+                label="마지막 로그인"
+                prepend-icon="mdi-clock-outline"
+                readonly
+                variant="outlined"
+                class="mb-4"
+              />
+
+              <v-btn
+                color="primary"
+                block
+                size="large"
+                :loading="profileLoading"
+                :disabled="!profileValid"
+                @click="updateProfile"
+              >
+                프로필 업데이트
+              </v-btn>
+            </v-form>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <!-- 비밀번호 변경 카드 -->
+      <v-col cols="12" md="6">
+        <v-card class="mb-4">
+          <v-card-title class="bg-secondary text-white">
+            <v-icon icon="mdi-lock-reset" class="mr-2" />
+            비밀번호 변경
+          </v-card-title>
+
+          <v-card-text class="pt-4">
+            <v-alert
+              v-if="passwordMessage"
+              :type="passwordMessageType"
+              dismissible
+              class="mb-4"
+              @click:close="passwordMessage = ''"
+            >
+              {{ passwordMessage }}
+            </v-alert>
+
+            <v-form ref="passwordFormRef" v-model="passwordValid">
+              <!-- 현재 비밀번호 -->
+              <v-text-field
+                v-model="passwordForm.currentPassword"
+                label="현재 비밀번호"
+                prepend-icon="mdi-lock"
+                :type="showCurrentPassword ? 'text' : 'password'"
+                :append-icon="showCurrentPassword ? 'mdi-eye' : 'mdi-eye-off'"
+                @click:append="showCurrentPassword = !showCurrentPassword"
+                :rules="[rules.required]"
+                variant="outlined"
+                class="mb-2"
+              />
+
+              <!-- 새 비밀번호 -->
+              <v-text-field
+                v-model="passwordForm.newPassword"
+                label="새 비밀번호"
+                prepend-icon="mdi-lock-plus"
+                :type="showNewPassword ? 'text' : 'password'"
+                :append-icon="showNewPassword ? 'mdi-eye' : 'mdi-eye-off'"
+                @click:append="showNewPassword = !showNewPassword"
+                :rules="[rules.required, rules.password]"
+                hint="8-30자, 대소문자, 숫자, 특수문자 포함"
+                variant="outlined"
+                class="mb-2"
+              />
+
+              <!-- 새 비밀번호 확인 -->
+              <v-text-field
+                v-model="passwordForm.confirmPassword"
+                label="새 비밀번호 확인"
+                prepend-icon="mdi-lock-check"
+                :type="showConfirmPassword ? 'text' : 'password'"
+                :append-icon="showConfirmPassword ? 'mdi-eye' : 'mdi-eye-off'"
+                @click:append="showConfirmPassword = !showConfirmPassword"
+                :rules="[rules.required, rules.passwordMatch]"
+                variant="outlined"
+                class="mb-4"
+              />
+
+              <v-btn
+                color="secondary"
+                block
+                size="large"
+                :loading="passwordLoading"
+                :disabled="!passwordValid"
+                @click="changePassword"
+              >
+                비밀번호 변경
+              </v-btn>
+            </v-form>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- 업비트 API 키 설정 카드 -->
+    <v-row>
+      <v-col cols="12">
+        <v-card>
+          <v-card-title class="bg-success text-white">
+            <v-icon icon="mdi-key-variant" class="mr-2" />
+            업비트 API 키 설정
+          </v-card-title>
+
+          <v-card-text class="pt-4">
+            <v-alert
+              v-if="apiKeyMessage"
+              :type="apiKeyMessageType"
+              dismissible
+              class="mb-4"
+              @click:close="apiKeyMessage = ''"
+            >
+              {{ apiKeyMessage }}
+            </v-alert>
+
+            <!-- API 키 등록 상태 -->
+            <v-alert
+              :type="authStore.user?.hasApiKey ? 'success' : 'warning'"
+              class="mb-4"
+              prominent
+            >
+              <div class="d-flex align-center">
+                <v-icon
+                  :icon="authStore.user?.hasApiKey ? 'mdi-check-circle' : 'mdi-alert-circle'"
+                  size="large"
+                  class="mr-3"
+                />
+                <div>
+                  <div class="text-h6">
+                    {{ authStore.user?.hasApiKey ? 'API 키가 등록되어 있습니다' : 'API 키가 등록되지 않았습니다' }}
+                  </div>
+                  <div class="text-body-2">
+                    {{ authStore.user?.hasApiKey ? '자동매매 기능을 사용할 수 있습니다' : '자동매매를 사용하려면 API 키를 등록해주세요' }}
+                  </div>
+                </div>
+              </div>
+            </v-alert>
+
+            <v-form ref="apiKeyFormRef" v-model="apiKeyValid">
+              <!-- Access Key -->
+              <v-text-field
+                v-model="apiKeyForm.accessKey"
+                label="Access Key"
+                prepend-icon="mdi-key"
+                :rules="[rules.required]"
+                variant="outlined"
+                class="mb-2"
+                hint="업비트에서 발급받은 Access Key를 입력하세요"
+              />
+
+              <!-- Secret Key -->
+              <v-text-field
+                v-model="apiKeyForm.secretKey"
+                label="Secret Key"
+                prepend-icon="mdi-key-variant"
+                :type="showSecretKey ? 'text' : 'password'"
+                :append-icon="showSecretKey ? 'mdi-eye' : 'mdi-eye-off'"
+                @click:append="showSecretKey = !showSecretKey"
+                :rules="[rules.required]"
+                variant="outlined"
+                class="mb-4"
+                hint="업비트에서 발급받은 Secret Key를 입력하세요"
+              />
+
+              <div class="d-flex gap-2">
+                <v-btn
+                  color="success"
+                  :loading="apiKeyLoading"
+                  :disabled="!apiKeyValid"
+                  @click="saveApiKeys"
+                >
+                  <v-icon icon="mdi-content-save" class="mr-2" />
+                  API 키 저장
+                </v-btn>
+
+                <v-btn
+                  color="error"
+                  :disabled="!authStore.user?.hasApiKey"
+                  :loading="apiKeyDeleteLoading"
+                  @click="confirmDeleteApiKeys"
+                >
+                  <v-icon icon="mdi-delete" class="mr-2" />
+                  API 키 삭제
+                </v-btn>
+              </div>
+            </v-form>
+
+            <!-- API 키 보안 안내 -->
+            <v-alert
+              type="info"
+              class="mt-4"
+              icon="mdi-information"
+            >
+              <div class="text-body-2">
+                <strong>⚠️ API 키 보안 주의사항</strong>
+                <ul class="mt-2">
+                  <li>API 키는 AES-256 암호화되어 안전하게 저장됩니다</li>
+                  <li>API 키를 타인과 절대 공유하지 마세요</li>
+                  <li>업비트에서 IP 화이트리스트 설정을 권장합니다</li>
+                  <li>출금 권한은 부여하지 마세요 (자산 조회, 주문 권한만 부여)</li>
+                </ul>
+              </div>
+            </v-alert>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- API 키 삭제 확인 다이얼로그 -->
+    <v-dialog v-model="deleteDialog" max-width="400">
+      <v-card>
+        <v-card-title class="bg-error text-white">
+          <v-icon icon="mdi-alert" class="mr-2" />
+          API 키 삭제 확인
+        </v-card-title>
+
+        <v-card-text class="pt-4">
+          <p class="text-body-1">
+            정말로 API 키를 삭제하시겠습니까?
+          </p>
+          <p class="text-body-2 text-grey">
+            삭제하면 자동매매 기능을 사용할 수 없게 됩니다.
+          </p>
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            color="grey"
+            variant="text"
+            @click="deleteDialog = false"
+          >
+            취소
+          </v-btn>
+          <v-btn
+            color="error"
+            variant="elevated"
+            @click="deleteApiKeys"
+          >
+            삭제
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+  </v-container>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import { userApi } from '@/api'
+
+const authStore = useAuthStore()
+
+// 폼 Ref
+const profileFormRef = ref()
+const passwordFormRef = ref()
+const apiKeyFormRef = ref()
+
+// 유효성 검증
+const profileValid = ref(false)
+const passwordValid = ref(false)
+const apiKeyValid = ref(false)
+
+// 로딩 상태
+const profileLoading = ref(false)
+const passwordLoading = ref(false)
+const apiKeyLoading = ref(false)
+const apiKeyDeleteLoading = ref(false)
+
+// 메시지
+const profileMessage = ref('')
+const profileMessageType = ref<'success' | 'error'>('success')
+const passwordMessage = ref('')
+const passwordMessageType = ref<'success' | 'error'>('success')
+const apiKeyMessage = ref('')
+const apiKeyMessageType = ref<'success' | 'error'>('success')
+
+// 비밀번호 표시 상태
+const showCurrentPassword = ref(false)
+const showNewPassword = ref(false)
+const showConfirmPassword = ref(false)
+const showSecretKey = ref(false)
+
+// 삭제 확인 다이얼로그
+const deleteDialog = ref(false)
+
+// 프로필 폼 데이터
+const profileForm = ref({
+  userId: '',
+  email: '',
+  phone: '',
+  role: '',
+  joinDate: '',
+  lastLogin: ''
+})
+
+// 비밀번호 변경 폼 데이터
+const passwordForm = ref({
+  newPassword: '',
+  confirmPassword: ''
+})
+
+// API 키 폼 데이터
+const apiKeyForm = ref({
+  accessKey: '',
+  secretKey: ''
+})
+
+// 날짜 포맷팅
+const formattedJoinDate = computed(() => {
+  if (!profileForm.value.joinDate) return ''
+  return new Date(profileForm.value.joinDate).toLocaleString('ko-KR')
+})
+
+const formattedLastLogin = computed(() => {
+  if (!profileForm.value.lastLogin) return ''
+  return new Date(profileForm.value.lastLogin).toLocaleString('ko-KR')
+})
+
+// 유효성 검증 규칙
+const rules = {
+  required: (value: string) => !!value || '필수 입력 항목입니다',
+  email: (value: string) => {
+    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return pattern.test(value) || '올바른 이메일 형식이 아닙니다'
+  },
+  phone: (value: string) => {
+    if (!value) return true // 선택적 필드
+    const pattern = /^010-\d{4}-\d{4}$/
+    return pattern.test(value) || '올바른 전화번호 형식이 아닙니다 (010-XXXX-XXXX)'
+  },
+  password: (value: string) => {
+    const pattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,30}$/
+    return pattern.test(value) || '8-30자, 대소문자, 숫자, 특수문자를 포함해야 합니다'
+  },
+  passwordMatch: (value: string) => {
+    return value === passwordForm.value.newPassword || '비밀번호가 일치하지 않습니다'
+  }
+}
+
+// 프로필 정보 로드
+const loadProfile = async () => {
+  try {
+    const response = await userApi.getProfile()
+    const user = response.data
+
+    profileForm.value = {
+      userId: user.userId,
+      email: user.email,
+      phone: user.phone || '',
+      role: user.role,
+      joinDate: user.joinDate,
+      lastLogin: user.lastLogin
+    }
+
+    // authStore도 업데이트
+    await authStore.fetchProfile()
+  } catch (error: any) {
+    profileMessage.value = error.response?.data?.message || '프로필 정보를 불러오는데 실패했습니다'
+    profileMessageType.value = 'error'
+  }
+}
+
+// 프로필 업데이트
+const updateProfile = async () => {
+  if (!profileFormRef.value) return
+
+  const { valid } = await profileFormRef.value.validate()
+  if (!valid) return
+
+  profileLoading.value = true
+  profileMessage.value = ''
+
+  try {
+    await userApi.updateProfile({
+      email: profileForm.value.email,
+      phone: profileForm.value.phone || undefined
+    })
+
+    profileMessage.value = '프로필이 성공적으로 업데이트되었습니다'
+    profileMessageType.value = 'success'
+
+    // 프로필 다시 로드
+    await loadProfile()
+  } catch (error: any) {
+    profileMessage.value = error.response?.data?.message || '프로필 업데이트에 실패했습니다'
+    profileMessageType.value = 'error'
+  } finally {
+    profileLoading.value = false
+  }
+}
+
+// 비밀번호 변경
+const changePassword = async () => {
+  if (!passwordFormRef.value) return
+
+  const { valid } = await passwordFormRef.value.validate()
+  if (!valid) return
+
+  passwordLoading.value = true
+  passwordMessage.value = ''
+
+  try {
+    await userApi.updateProfile({
+      password: passwordForm.value.newPassword
+    })
+
+    passwordMessage.value = '비밀번호가 성공적으로 변경되었습니다'
+    passwordMessageType.value = 'success'
+
+    // 폼 초기화
+    passwordForm.value = {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    }
+    passwordFormRef.value.reset()
+  } catch (error: any) {
+    passwordMessage.value = error.response?.data?.message || '비밀번호 변경에 실패했습니다'
+    passwordMessageType.value = 'error'
+  } finally {
+    passwordLoading.value = false
+  }
+}
+
+// API 키 저장
+const saveApiKeys = async () => {
+  if (!apiKeyFormRef.value) return
+
+  const { valid } = await apiKeyFormRef.value.validate()
+  if (!valid) return
+
+  apiKeyLoading.value = true
+  apiKeyMessage.value = ''
+
+  try {
+    await userApi.saveApiKeys({
+      accessKey: apiKeyForm.value.accessKey,
+      secretKey: apiKeyForm.value.secretKey
+    })
+
+    apiKeyMessage.value = 'API 키가 안전하게 저장되었습니다'
+    apiKeyMessageType.value = 'success'
+
+    // 폼 초기화
+    apiKeyForm.value = {
+      accessKey: '',
+      secretKey: ''
+    }
+    apiKeyFormRef.value.reset()
+
+    // 프로필 다시 로드 (hasApiKey 업데이트)
+    await loadProfile()
+  } catch (error: any) {
+    apiKeyMessage.value = error.response?.data?.message || 'API 키 저장에 실패했습니다'
+    apiKeyMessageType.value = 'error'
+  } finally {
+    apiKeyLoading.value = false
+  }
+}
+
+// API 키 삭제 확인
+const confirmDeleteApiKeys = () => {
+  deleteDialog.value = true
+}
+
+// API 키 삭제
+const deleteApiKeys = async () => {
+  apiKeyDeleteLoading.value = true
+  apiKeyMessage.value = ''
+
+  try {
+    await userApi.deleteApiKeys()
+
+    apiKeyMessage.value = 'API 키가 삭제되었습니다'
+    apiKeyMessageType.value = 'success'
+
+    deleteDialog.value = false
+
+    // 프로필 다시 로드 (hasApiKey 업데이트)
+    await loadProfile()
+  } catch (error: any) {
+    apiKeyMessage.value = error.response?.data?.message || 'API 키 삭제에 실패했습니다'
+    apiKeyMessageType.value = 'error'
+  } finally {
+    apiKeyDeleteLoading.value = false
+  }
+}
+
+// 컴포넌트 마운트 시 프로필 로드
+onMounted(() => {
+  loadProfile()
+})
+</script>
+
+<style scoped>
+.gap-2 {
+  gap: 8px;
+}
+</style>

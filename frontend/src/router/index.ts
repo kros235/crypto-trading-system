@@ -26,8 +26,19 @@ const router = createRouter({
       name: 'dashboard',
       component: () => import('../views/DashboardView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: () => import('../views/ProfileView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/trading-settings',
+      name: 'trading-settings',
+      component: () => import('../views/TradingSettingsView.vue'),
+      meta: { requiresAuth: true }
     }
-    // ProfileView, SettingsView는 Day 7에 생성 예정
   ]
 })
 

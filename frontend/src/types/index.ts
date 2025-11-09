@@ -58,3 +58,45 @@ export interface CoinTicker {
 export interface ApiError {
   error: string
 }
+
+// 프로필 수정 요청 타입
+export interface UpdateProfileRequest {
+  email?: string
+  phone?: string
+  password?: string
+}
+
+// API 키 저장 요청 타입
+export interface SaveApiKeysRequest {
+  accessKey: string
+  secretKey: string
+}
+
+// 거래 설정 타입
+export interface TradingSetting {
+  id?: number
+  coinSymbols: string[]
+  basePeriod: number
+  buyThresholdPct: number
+  sellTargetPct: number
+  stopLossPct: number
+  maxHoldingsPerCoin: number
+  dailyLimitAmount: number
+  useAiAnalysis: boolean
+  useTrailingStop: boolean
+  trailingStopPct: number
+}
+
+// 거래 설정 요청 타입
+export interface TradingSettingRequest {
+  coinSymbols: string[]
+  basePeriod: number
+  buyThresholdPct: number
+  sellTargetPct: number
+  stopLossPct: number
+  maxHoldingsPerCoin: number
+  dailyLimitAmount: number
+  useAiAnalysis: boolean
+  useTrailingStop: boolean
+  trailingStopPct: number
+}

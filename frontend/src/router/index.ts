@@ -38,6 +38,18 @@ const router = createRouter({
       name: 'trading-settings',
       component: () => import('../views/TradingSettingsView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/transactions',
+      name: 'transactions',
+      component: () => import('../views/TransactionHistoryView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/holdings',
+      name: 'holdings',
+      component: () => import('../views/HoldingsView.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })

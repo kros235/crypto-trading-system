@@ -291,31 +291,84 @@
 
 ---
 
+### ✅ Day 8 (2025-11-23) - 거래 내역 및 보유 자산 관리
+**완료 항목:**
+- 거래 내역 API (Backend)
+  - Transaction 엔티티
+  - TransactionRepository (복합 조건 검색)
+  - TransactionDTO, DashboardStatsDTO
+  - TransactionService (CRUD, 통계)
+  - TransactionController (REST API)
+- 대시보드 통계 API
+  - 총 자산 평가액
+  - 실시간 수익률 계산
+  - 일별 거래 통계
+- 거래 내역 페이지 (Frontend)
+  - TransactionHistoryView.vue
+  - 검색 필터 (코인, 상태, 날짜)
+  - 페이지네이션
+  - 매도 처리 기능
+- 보유 자산 페이지 (Frontend)
+  - HoldingsView.vue
+  - 실시간 평가손익 표시
+  - 통계 요약 카드
+  - 매도 처리 기능
+- 보안 설정 업데이트
+  - SecurityConfig에 거래 API 권한 추가
+
+**API 엔드포인트:**
+| Method | Endpoint | 인증 | 설명 |
+|--------|----------|------|------|
+| GET | /api/transactions | ✅ | 전체 거래 내역 (페이징) |
+| GET | /api/transactions/search | ✅ | 거래 내역 검색 |
+| GET | /api/transactions/holdings | ✅ | 보유 자산 조회 |
+| GET | /api/transactions/{id} | ✅ | 특정 거래 상세 |
+| POST | /api/transactions | ✅ | 거래 생성 (매수) |
+| PUT | /api/transactions/{id} | ✅ | 거래 수정 (메모) |
+| POST | /api/transactions/{id}/sell | ✅ | 매도 처리 |
+| GET | /api/transactions/dashboard-stats | ✅ | 대시보드 통계 |
+
+**주요 기능:**
+- 복합 조건 검색: 코인, 상태, 날짜 범위
+- 실시간 현재가 연동 (업비트 API)
+- 평가 손익 자동 계산
+- 매도 처리 및 실현 손익 기록
+- 페이지네이션 (20개/페이지)
+
+**테스트 완료:**
+- ✅ 거래 내역 조회 (페이징)
+- ✅ 복합 조건 검색
+- ✅ 보유 자산 조회
+- ✅ 대시보드 통계
+- ✅ 실시간 평가손익 계산
+- ✅ 거래 내역 페이지 렌더링
+- ✅ 보유 자산 페이지 렌더링
+
+---
+
 ## 📊 현재 진행 상황
-- **전체 진척도**: 약 45%
-- **Phase 1 (핵심 기능)**: 75% 완료
-- **Phase 2 (고도화)**: 25% 진행중
+- **전체 진척도**: 약 52%
+- **Phase 1 (핵심 기능)**: 85% 완료
+- **Phase 2 (고도화)**: 30% 진행중
 - **Phase 3 (안정화)**: 0%
 
 ---
 
-## 🎯 다음 단계 (Day 8)
+## 🎯 다음 단계 (Day 9)
 
 ### 예정 작업:
-1. **거래 내역 조회 API**
-   - TradeHistory 엔티티
-   - 거래 이력 CRUD
-   - 필터링 및 정렬
-2. **보유 자산 조회 API**
-   - Holdings 엔티티
-   - 실시간 수익률 계산
-3. **대시보드 통계 API**
-   - 총 자산 평가액
-   - 일별 수익률
-   - 거래 통계
-4. **실시간 가격 업데이트**
-   - WebSocket 또는 폴링
-   - 프론트엔드 실시간 갱신
+1. **자동매매 봇 구현**
+   - 거래 신호 감지 로직
+   - 자동 매수/매도 실행
+   - 스케줄링 (5분마다)
+2. **기술적 지표 계산**
+   - 이동평균선 (MA)
+   - RSI 계산
+   - 볼린저 밴드
+3. **리스크 관리**
+   - 손절매 자동 실행
+   - 일일 거래 한도 체크
+   - 종목당 보유 건수 제한
 
 ---
 

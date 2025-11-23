@@ -6,10 +6,15 @@ import type {
   User,
   CoinInfo,
   CoinTicker,
-  UpdateProfileRequest,      // ✅ 추가
-  SaveApiKeysRequest,         // ✅ 추가
-  TradingSetting,             // ✅ 추가
-  TradingSettingRequest       // ✅ 추가
+  UpdateProfileRequest,  
+  SaveApiKeysRequest,   
+  TradingSetting,           
+  TradingSettingRequest,
+  Transaction,              
+  CreateTransactionRequest,
+  SellTransactionRequest,  
+  DashboardStats,           
+  PageResponse             
 } from '@/types'
 
 // Axios 인스턴스 생성
@@ -120,6 +125,50 @@ export const tradingApi = {
   
   deleteSettings: () => 
     api.delete('/trading-settings')
+}
+
+// 거래 내역 API
+export const transactionApi = {
+  // 전체 거래 내역 조회 (페이징)
+  getAll: (page = 0, size = 20) =>
+    api.get<PageResponse<Transaction>>('/transactions', {
+      params: { page, size }
+    }),
+
+  // 거래 내역 검색
+  search: (params: {
+    coinSymbol?: string
+    status?: 'HOLDING' | 'SOLD' | 'CANCELLED'
+    startDate?: string
+    endDate?: string
+    page?: number
+    size?: number
+  }) =>
+    api.get<PageResponse<Transaction>>('/transactions/search', { params }),
+
+  // 보유 자산 조회
+  getHoldings: () =>
+    api.get<Transaction[]>('/transactions/holdings'),
+
+  // 특정 거래 조회
+  getOne: (transactionId: number) =>
+    api.get<Transaction>(`/transactions/${transactionId}`),
+
+  // 거래 생성 (매수)
+  create: (data: CreateTransactionRequest) =>
+    api.post('/transactions', data),
+
+  // 거래 수정 (메모)
+  update: (transactionId: number, data: { note?: string }) =>
+    api.put(`/transactions/${transactionId}`, data),
+
+  // 매도 처리
+  sell: (transactionId: number, data: SellTransactionRequest) =>
+    api.post(`/transactions/${transactionId}/sell`, data),
+
+  // 대시보드 통계
+  getStats: () =>
+    api.get<DashboardStats>('/transactions/dashboard-stats')
 }
 
 export default api

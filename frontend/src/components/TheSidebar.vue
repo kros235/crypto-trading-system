@@ -11,15 +11,15 @@
       />
 
       <v-list-item
-        prepend-icon="mdi-chart-line"
-        title="거래 현황 (준비중)"
-        disabled
+        prepend-icon="mdi-wallet"
+        title="보유 자산"
+        @click="$router.push('/holdings')"
       />
 
       <v-list-item
         prepend-icon="mdi-history"
-        title="거래 이력 (준비중)"
-        disabled
+        title="거래 내역"
+        @click="$router.push('/transactions')"
       />
 
       <v-list-item

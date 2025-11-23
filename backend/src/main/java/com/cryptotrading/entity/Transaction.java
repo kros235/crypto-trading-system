@@ -1,19 +1,17 @@
 package com.cryptotrading.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "transactions", indexes = {
-    @Index(name = "idx_user_symbol_status", columnList = "user_id, coin_symbol, status"),
-    @Index(name = "idx_created_at", columnList = "created_at"),
-    @Index(name = "idx_status", columnList = "status")
-})
-@Getter
-@Setter
+@Table(name = "transactions")
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -31,22 +29,22 @@ public class Transaction {
     private String coinSymbol;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "type", nullable = false, length = 4)
+    @Column(nullable = false, length = 10)
     private TransactionType type;
 
-    @Column(name = "quantity", nullable = false, precision = 20, scale = 8)
+    @Column(nullable = false, precision = 20, scale = 8)
     private BigDecimal quantity;
 
-    @Column(name = "price", nullable = false, precision = 15, scale = 2)
+    @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal price;
 
-    @Column(name = "fee", precision = 15, scale = 2)
+    @Column(precision = 15, scale = 2)
     private BigDecimal fee = BigDecimal.ZERO;
 
     @Column(name = "total_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal totalAmount;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "sold_at")
@@ -68,21 +66,28 @@ public class Transaction {
     private BigDecimal stopLossPrice;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", length = 10)
+    @Column(nullable = false, length = 20)
     private TransactionStatus status = TransactionStatus.HOLDING;
 
-    @Column(name = "note", columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT")
     private String note;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", referencedColumnName = "user_id", 
-                insertable = false, updatable = false)
-    private User user;
-
     @PrePersist
-    public void prePersist() {
+    protected void onCreate() {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }
+    }
+
+    // 거래 유형 Enum
+    public enum TransactionType {
+        BUY, SELL
+    }
+
+    // 거래 상태 Enum
+    public enum TransactionStatus {
+        HOLDING,    // 보유 중
+        SOLD,       // 매도 완료
+        CANCELLED   // 취소됨
     }
 }

@@ -49,6 +49,9 @@ public class SecurityConfig {
     
 	  // ✨ 추가: 거래 설정 API - 인증된 사용자만
 	  .requestMatchers("/api/trading-settings/**").authenticated()
+
+	  .requestMatchers("/api/transactions/**").authenticated()
+
                 // Actuator 엔드포인트
                 .requestMatchers("/actuator/**").permitAll()
                 // 나머지는 인증 필요

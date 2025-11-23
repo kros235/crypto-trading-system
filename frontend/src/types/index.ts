@@ -100,3 +100,72 @@ export interface TradingSettingRequest {
   useTrailingStop: boolean
   trailingStopPct: number
 }
+
+// 거래 내역 타입
+export interface Transaction {
+  transactionId: number
+  userId: string
+  coinSymbol: string
+  type: 'BUY' | 'SELL'
+  quantity: number
+  price: number
+  fee: number
+  totalAmount: number
+  createdAt: string
+  soldAt?: string
+  soldPrice?: number
+  profitLoss?: number
+  profitLossPct?: number
+  targetSellPrice?: number
+  stopLossPrice?: number
+  status: 'HOLDING' | 'SOLD' | 'CANCELLED'
+  note?: string
+  currentPrice?: number
+  currentProfitLoss?: number
+  currentProfitLossPct?: number
+}
+
+// 거래 생성 요청 타입
+export interface CreateTransactionRequest {
+  coinSymbol: string
+  type: 'BUY' | 'SELL'
+  quantity: number
+  price: number
+  totalAmount: number
+  targetSellPrice?: number
+  stopLossPrice?: number
+  note?: string
+}
+
+// 매도 요청 타입
+export interface SellTransactionRequest {
+  soldPrice: number
+}
+
+// 대시보드 통계 타입
+export interface DashboardStats {
+  totalHoldingAmount: number
+  totalCurrentValue: number
+  totalProfitLoss: number
+  totalProfitLossPct: number
+  realizedProfitLoss: number
+  soldCount: number
+  totalBuyCount: number
+  totalSellCount: number
+  currentHoldingCount: number
+  todayBuyAmount: number
+  todaySellAmount: number
+  todayBuyCount: number
+  todaySellCount: number
+  dailyLimitAmount: number
+  remainingDailyLimit: number
+}
+
+// 페이지 응답 타입
+export interface PageResponse<T> {
+  content: T[]
+  totalElements: number
+  totalPages: number
+  size: number
+  number: number
+}

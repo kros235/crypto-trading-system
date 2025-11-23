@@ -335,14 +335,30 @@
 - 매도 처리 및 실현 손익 기록
 - 페이지네이션 (20개/페이지)
 
+**해결한 주요 이슈:**
+1. **500 Internal Server Error**
+   - TransactionController에서 @AuthenticationPrincipal UserDetails → String으로 타입 변경
+   - JwtAuthenticationFilter의 principal 타입과 일치시킴
+2. **NullPointerException**
+   - UserDetails 캐스팅 오류 해결
+   - SecurityContextHolder에서 String(userId) 직접 사용
+
 **테스트 완료:**
-- ✅ 거래 내역 조회 (페이징)
-- ✅ 복합 조건 검색
-- ✅ 보유 자산 조회
-- ✅ 대시보드 통계
-- ✅ 실시간 평가손익 계산
-- ✅ 거래 내역 페이지 렌더링
-- ✅ 보유 자산 페이지 렌더링
+- ✅ 거래 내역 조회 (페이징) - 브라우저
+- ✅ 복합 조건 검색 (코인, 상태, 날짜) - 브라우저
+- ✅ 보유 자산 조회 - 브라우저
+- ✅ 대시보드 통계 - 브라우저
+- ✅ 실시간 평가손익 계산 - 브라우저
+- ✅ 거래 내역 페이지 렌더링 - 브라우저
+- ✅ 보유 자산 페이지 렌더링 - 브라우저
+- ✅ 거래 생성 (매수) - Postman
+- ✅ 거래 수정 (메모) - Postman
+- ✅ 매도 처리 - Postman
+- ✅ 거래 검색 API - Postman
+
+**참고사항:**
+- 프론트엔드 매수/매도/수정 버튼은 미구현 상태
+- Postman으로 백엔드 API 기능 검증 완료
 
 ---
 

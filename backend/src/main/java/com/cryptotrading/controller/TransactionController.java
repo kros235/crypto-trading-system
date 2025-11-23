@@ -35,13 +35,13 @@ public class TransactionController {
      */
     @GetMapping
     public ResponseEntity<Page<TransactionDTO>> getAllTransactions(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal String userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         
         Pageable pageable = PageRequest.of(page, size);
         Page<TransactionDTO> transactions = transactionService
-                .getAllTransactions(userDetails.getUsername(), pageable);
+                .getAllTransactions(userId, pageable);
         
         return ResponseEntity.ok(transactions);
     }
@@ -51,7 +51,7 @@ public class TransactionController {
      */
     @GetMapping("/search")
     public ResponseEntity<Page<TransactionDTO>> searchTransactions(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal String userId,
             @RequestParam(required = false) String coinSymbol,
             @RequestParam(required = false) TransactionStatus status,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
@@ -61,7 +61,7 @@ public class TransactionController {
         
         Pageable pageable = PageRequest.of(page, size);
         Page<TransactionDTO> transactions = transactionService.searchTransactions(
-                userDetails.getUsername(), coinSymbol, status, startDate, endDate, pageable);
+                userId, coinSymbol, status, startDate, endDate, pageable);
         
         return ResponseEntity.ok(transactions);
     }
@@ -71,10 +71,10 @@ public class TransactionController {
      */
     @GetMapping("/holdings")
     public ResponseEntity<List<TransactionDTO>> getHoldings(
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @AuthenticationPrincipal String userId) {
         
         List<TransactionDTO> holdings = transactionService
-                .getHoldings(userDetails.getUsername());
+                .getHoldings(userId);
         
         return ResponseEntity.ok(holdings);
     }
@@ -84,11 +84,11 @@ public class TransactionController {
      */
     @GetMapping("/{transactionId}")
     public ResponseEntity<TransactionDTO> getTransaction(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal String userId,
             @PathVariable Long transactionId) {
         
         TransactionDTO transaction = transactionService
-                .getTransaction(userDetails.getUsername(), transactionId);
+                .getTransaction(userId, transactionId);
         
         return ResponseEntity.ok(transaction);
     }
@@ -98,12 +98,12 @@ public class TransactionController {
      */
     @PostMapping
     public ResponseEntity<Map<String, Object>> createTransaction(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal String userId,
             @Valid @RequestBody TransactionDTO dto) {
         
         try {
             TransactionDTO created = transactionService
-                    .createTransaction(userDetails.getUsername(), dto);
+                    .createTransaction(userId, dto);
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -125,13 +125,13 @@ public class TransactionController {
      */
     @PutMapping("/{transactionId}")
     public ResponseEntity<Map<String, Object>> updateTransaction(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal String userId,
             @PathVariable Long transactionId,
             @RequestBody TransactionDTO dto) {
         
         try {
             TransactionDTO updated = transactionService
-                    .updateTransaction(userDetails.getUsername(), transactionId, dto);
+                    .updateTransaction(userId, transactionId, dto);
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -153,7 +153,7 @@ public class TransactionController {
      */
     @PostMapping("/{transactionId}/sell")
     public ResponseEntity<Map<String, Object>> sellTransaction(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal String userId,
             @PathVariable Long transactionId,
             @RequestBody Map<String, BigDecimal> request) {
         
@@ -164,7 +164,7 @@ public class TransactionController {
             }
             
             TransactionDTO sold = transactionService
-                    .sellTransaction(userDetails.getUsername(), transactionId, soldPrice);
+                    .sellTransaction(userId, transactionId, soldPrice);
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -186,10 +186,10 @@ public class TransactionController {
      */
     @GetMapping("/dashboard-stats")
     public ResponseEntity<DashboardStatsDTO> getDashboardStats(
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @AuthenticationPrincipal String userId) {
         
         DashboardStatsDTO stats = transactionService
-                .getDashboardStats(userDetails.getUsername());
+                .getDashboardStats(userId);
         
         return ResponseEntity.ok(stats);
     }

@@ -491,8 +491,12 @@ crypto-trading-system/
 │   │   ├── repository/        # 데이터 접근 계층
 │   │   ├── entity/            # JPA 엔티티
 │   │   ├── dto/               # 데이터 전송 객체
+│   │   │   ├── bot/           # ⭐ 봇 관련 DTO
+│   │   │   ├── indicator/     # ⭐ 기술적 지표 DTO
+│   │   │   └── upbit/         # 업비트 API DTO
 │   │   ├── config/            # 설정 클래스
 │   │   ├── filter/            # 필터 (JWT 인증)
+│   │   ├── scheduler/         # ⭐ 스케줄러 (자동매매)
 │   │   ├── util/              # 유틸리티
 │   │   └── exception/         # 예외 처리
 │   ├── src/main/resources/

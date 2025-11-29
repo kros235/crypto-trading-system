@@ -9,6 +9,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import java.time.LocalDateTime;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -86,4 +89,18 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     @Query("SELECT COALESCE(SUM(t.totalAmount), 0) FROM Transaction t " +
            "WHERE t.userId = :userId AND t.status = 'HOLDING'")
     BigDecimal sumHoldingAmount(@Param("userId") String userId);
+
+    // 오늘 매수 총액 조회
+    @Query("SELECT COALESCE(SUM(t.totalAmount), 0) FROM Transaction t " +
+           "WHERE t.userId = :userId AND t.type = 'BUY' " +
+           "AND t.createdAt BETWEEN :startOfDay AND :endOfDay")
+    BigDecimal sumTodayBuyAmount(@Param("userId") String userId, 
+                                  @Param("startOfDay") LocalDateTime startOfDay,
+                                  @Param("endOfDay") LocalDateTime endOfDay);
+    
+    // 특정 종목 보유 건수 조회
+    long countByUserIdAndCoinSymbolAndStatus(String userId, String coinSymbol, TransactionStatus status);
+    
+    // 특정 종목의 보유 거래 조회
+    List<Transaction> findByUserIdAndCoinSymbolAndStatus(String userId, String coinSymbol, TransactionStatus status);
 }

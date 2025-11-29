@@ -3,6 +3,7 @@ package com.cryptotrading.service;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.cryptotrading.dto.upbit.*;
+import com.cryptotrading.dto.upbit.UpbitCandleDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -203,4 +204,42 @@ public class UpbitApiService {
                 .doOnError(error -> log.error("주문 취소 실패: {}", error.getMessage()))
                 .block();
     }
+   
+    /**
+     * 7. 일봉 캔들 조회 (공개 API) - 기술적 지표 계산용
+     */
+    public List<UpbitCandleDTO> getDayCandles(String market, int count) {
+        log.info("일봉 조회: market={}, count={}", market, count);
+        
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/candles/days")
+                        .queryParam("market", market)
+                        .queryParam("count", count)
+                        .build())
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<List<UpbitCandleDTO>>() {})
+                .doOnSuccess(candles -> log.info("일봉 {}개 조회 완료: {}", candles.size(), market))
+                .doOnError(error -> log.error("일봉 조회 실패: {}", error.getMessage()))
+                .block();
+    }
+    
+    /**
+     * 8. 분봉 캔들 조회 (공개 API) - 실시간 모니터링용
+     */
+    public List<UpbitCandleDTO> getMinuteCandles(String market, int unit, int count) {
+        log.info("분봉 조회: market={}, unit={}분, count={}", market, unit, count);
+        
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/candles/minutes/" + unit)
+                        .queryParam("market", market)
+                        .queryParam("count", count)
+                        .build())
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<List<UpbitCandleDTO>>() {})
+                .doOnSuccess(candles -> log.info("분봉 {}개 조회 완료: {}", candles.size(), market))
+                .doOnError(error -> log.error("분봉 조회 실패: {}", error.getMessage()))
+                .block();
+    }   
 }

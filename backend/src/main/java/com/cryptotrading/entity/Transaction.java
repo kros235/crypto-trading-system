@@ -72,6 +72,9 @@ public class Transaction {
     @Column(columnDefinition = "TEXT")
     private String note;
 
+    @Column(name = "highest_price", precision = 20, scale = 8)
+    private BigDecimal highestPrice;  // 보유 기간 중 최고가 (트레일링 스톱용)
+
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {

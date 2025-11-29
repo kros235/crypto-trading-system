@@ -1,6 +1,11 @@
 <template>
-  <v-container>
-    <v-row>
+  <v-app>
+    <the-header @toggle-drawer="sidebarRef.drawer = !sidebarRef.drawer" />
+    <the-sidebar ref="sidebarRef" />
+    
+    <v-main>
+      <v-container>
+        <v-row>
       <v-col cols="12">
         <h1 class="text-h4 mb-6">거래 설정</h1>
       </v-col>
@@ -320,13 +325,20 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </v-container>
+      </v-container>
+    </v-main>
+  </v-app>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { coinApi, tradingApi } from '@/api'
 import type { CoinInfo } from '@/types'
+import TheHeader from '@/components/TheHeader.vue'
+import TheSidebar from '@/components/TheSidebar.vue'
+
+// 사이드바 Ref
+const sidebarRef = ref()
 
 // 폼 Ref
 const formRef = ref()

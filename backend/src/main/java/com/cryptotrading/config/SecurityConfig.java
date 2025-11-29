@@ -54,6 +54,9 @@ public class SecurityConfig {
 
                 // Actuator 엔드포인트
                 .requestMatchers("/actuator/**").permitAll()
+
+                .requestMatchers("/api/bot/**").authenticated()
+
                 // 나머지는 인증 필요
                 .anyRequest().authenticated()
             )

@@ -54,6 +54,8 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       JWT_EXPIRATION: ${JWT_EXPIRATION}
       AES_SECRET_KEY: ${AES_SECRET_KEY}
+      DISCORD_ENABLED: ${DISCORD_ENABLED:-false}
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
     depends_on:
       mysql:
         condition: service_healthy

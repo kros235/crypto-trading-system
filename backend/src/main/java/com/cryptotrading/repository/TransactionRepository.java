@@ -103,4 +103,13 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     
     // 특정 종목의 보유 거래 조회
     List<Transaction> findByUserIdAndCoinSymbolAndStatus(String userId, String coinSymbol, TransactionStatus status);
+
+    // 특정 기간 내 생성된 거래
+    List<Transaction> findByUserIdAndCreatedAtBetween(String userId, LocalDateTime start, LocalDateTime end);
+    
+    // 특정 기간 내 매도된 거래
+    @Query("SELECT t FROM Transaction t WHERE t.userId = :userId AND t.soldAt BETWEEN :start AND :end")
+    List<Transaction> findByUserIdAndSoldAtBetween(@Param("userId") String userId, 
+                                                    @Param("start") LocalDateTime start, 
+                                                    @Param("end") LocalDateTime end);
 }

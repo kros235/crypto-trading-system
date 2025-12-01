@@ -57,6 +57,8 @@ public class SecurityConfig {
 
                 .requestMatchers("/api/bot/**").authenticated()
 
+                .requestMatchers("/api/notifications/**").authenticated()
+
                 // 나머지는 인증 필요
                 .anyRequest().authenticated()
             )

@@ -94,3 +94,9 @@ logging:
     name: logs/crypto-trading.log
     max-size: 10MB
     max-history: 30
+
+# 알림 설정
+notification:
+  discord:
+    enabled: ${DISCORD_ENABLED:false}
+    webhook-url: ${DISCORD_WEBHOOK_URL:}

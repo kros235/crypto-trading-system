@@ -37,6 +37,7 @@ public class TradingBotService {
     private final TransactionRepository transactionRepository;
     private final TradingSettingRepository tradingSettingRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
     
     private static final BigDecimal FEE_RATE = new BigDecimal("0.0005");  // 0.05%
     private static final int SCALE = 8;
@@ -176,6 +177,12 @@ public class TradingBotService {
             
             transactionRepository.save(transaction);
             
+            // 알림 발송
+            notificationService.notifyBuyExecuted(
+                userId, market, signal.getCurrentPrice(), 
+                transaction.getQuantity(), buyAmount
+            );
+
             result.addBuy(market, buyAmount);
             log.info("매수 완료: {} - {}원 (주문ID: {})", market, buyAmount, order.getUuid());
             
@@ -214,6 +221,12 @@ public class TradingBotService {
             BigDecimal fee = sellAmount.multiply(FEE_RATE);
             BigDecimal profitLoss = sellAmount.subtract(fee)
                     .subtract(holding.getTotalAmount());
+
+            // ⭐ 추가: 수익률 계산
+            BigDecimal profitRate = holding.getTotalAmount().compareTo(BigDecimal.ZERO) > 0
+                    ? profitLoss.divide(holding.getTotalAmount(), 4, RoundingMode.HALF_UP)
+                            .multiply(new BigDecimal("100"))
+                    : BigDecimal.ZERO;
             
             holding.setStatus(TransactionStatus.SOLD);
             holding.setSoldAt(LocalDateTime.now());
@@ -222,6 +235,20 @@ public class TradingBotService {
             
             transactionRepository.save(holding);
             
+            // 알림 발송
+            if (signal.getSignalType() == SignalType.STOP_LOSS) {
+                notificationService.notifyStopLoss(
+                    holding.getUserId(), holding.getCoinSymbol(),
+                    sellPrice, profitLoss, profitRate    
+                );
+            } else {
+                notificationService.notifySellExecuted(
+                    holding.getUserId(), holding.getCoinSymbol(),
+                    sellPrice, holding.getQuantity(), sellAmount,   
+                    profitLoss, profitRate
+                );
+            }
+
             result.addSell(holding.getCoinSymbol(), sellAmount, profitLoss);
             log.info("매도 완료: {} - {}원, 손익: {}원 (주문ID: {})", 
                     holding.getCoinSymbol(), sellAmount, profitLoss, order.getUuid());

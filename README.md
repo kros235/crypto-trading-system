@@ -362,8 +362,6 @@
 
 ---
 
----
-
 ### ✅ Day 9 (2025-11-29) - 자동매매 봇 핵심 구현
 **완료 항목:**
 - 기술적 지표 계산 서비스
@@ -418,27 +416,116 @@
 
 ---
 
+### ✅ Day 10 (2025-12-01) - 알림 시스템 및 대시보드 고도화
+**완료 항목:**
+- Discord 웹훅 알림 시스템
+  - NotificationService: Discord 알림 발송
+  - NotificationConfig: 웹훅 설정 관리
+  - 매수/매도 체결 시 실시간 알림
+  - 손절매 발생 시 경고 알림
+- 일일 리포트 시스템
+  - DailyReportService: 일일 거래 현황 집계
+  - 실현 손익 / 평가 손익 계산
+  - 코인별 상세 현황
+  - 23:50 자동 리포트 발송 스케줄러
+- 알림 API
+  - 알림 상태 조회
+  - 테스트 알림 발송
+  - 일일 리포트 미리보기/발송
+- 봇 모니터링 페이지 (Frontend)
+  - BotMonitorView.vue
+  - 봇 상태 카드 (실행 중/대기 중)
+  - 다음 실행 시간 표시
+  - 오늘 매수/매도 건수
+  - 수동 매매 실행 버튼
+  - 기술적 지표 테이블 (RSI, BB, MA, 신호)
+  - 30초 자동 새로고침
+- 일일 리포트 페이지 (Frontend)
+  - DailyReportView.vue
+  - 총 손익 요약 카드
+  - 손익 상세 (실현/평가/총)
+  - Discord 리포트 발송 버튼
+  - 코인별 현황 테이블
+- 사이드바 메뉴 추가
+  - 봇 모니터링 (mdi-robot)
+  - 일일 리포트 (mdi-file-chart)
+- TypeScript 타입 정의
+  - bot.ts: 지표, 신호, 봇 상태, 리포트 타입
+
+**API 엔드포인트:**
+| Method | Endpoint | 인증 | 설명 |
+|--------|----------|------|------|
+| GET | /api/notifications/status | ✅ | 알림 상태 조회 |
+| POST | /api/notifications/test | ✅ | 테스트 알림 발송 |
+| GET | /api/notifications/daily-report/preview | ✅ | 일일 리포트 미리보기 |
+| POST | /api/notifications/daily-report/send | ✅ | 일일 리포트 발송 |
+
+**생성된 파일 (Backend):**
+- `config/NotificationConfig.java` - Discord 설정
+- `dto/notification/NotificationDTO.java` - 알림 DTO
+- `dto/notification/DailyReportDTO.java` - 리포트 DTO
+- `service/NotificationService.java` - 알림 발송
+- `service/DailyReportService.java` - 리포트 생성
+- `controller/NotificationController.java` - 알림 API
+
+**생성된 파일 (Frontend):**
+- `types/bot.ts` - TypeScript 타입 정의
+- `views/BotMonitorView.vue` - 봇 모니터링 페이지
+- `views/DailyReportView.vue` - 일일 리포트 페이지
+
+**수정된 파일:**
+- `scheduler/TradingScheduler.java` - 23:50 리포트 스케줄러 추가
+- `components/TheSidebar.vue` - 메뉴 2개 추가
+- `router/index.ts` - 라우트 2개 추가
+- `docker-compose.yml` - Discord 환경변수 추가
+
+**환경 설정 (Discord 알림):**
+```properties
+# .env 파일에 추가
+DISCORD_ENABLED=true
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your_webhook_url
+```
+
+**테스트 완료:**
+- ✅ 알림 상태 조회 - Postman
+- ✅ 테스트 알림 발송 - Postman
+- ✅ 일일 리포트 미리보기 - Postman
+- ✅ 일일 리포트 발송 - Postman
+- ✅ 기술적 지표 조회 (단일) - Postman
+- ✅ 기술적 지표 조회 (다중) - Postman
+- ✅ 봇 상태 조회 - Postman
+- ✅ 수동 자동매매 실행 - Postman
+- ✅ 사이드바 메뉴 표시 - 브라우저
+- ✅ 봇 모니터링 페이지 - 브라우저
+- ✅ 일일 리포트 페이지 - 브라우저
+- ✅ Discord 알림 수신 - Discord
+
+---
+
 ## 📊 현재 진행 상황
-- **전체 진척도**: 약 57%
-- **Phase 1 (핵심 기능)**: 90% 완료
-- **Phase 2 (고도화)**: 35% 진행중
+- **전체 진척도**: 약 62%
+- **Phase 1 (핵심 기능)**: 95% 완료
+- **Phase 2 (고도화)**: 50% 진행중
 - **Phase 3 (안정화)**: 0%
 
 ---
 
-## 🎯 다음 단계 (Day 10)
+## 🎯 다음 단계 (Day 11)
 
 ### 예정 작업:
-1. **실시간 알림 시스템**
-   - Discord 웹훅 연동
-   - 매수/매도 체결 알림
-   - 일일 수익 리포트
-2. **대시보드 고도화**
-   - 실시간 수익률 차트
-   - 봇 상태 모니터링 UI
-   - 기술적 지표 시각화
-3. **백테스팅 기능 (선택)**
+1. **TradingBotService 알림 연동 완료**
+   - 매수 체결 시 Discord 자동 알림
+   - 매도 체결 시 Discord 자동 알림
+   - 손절매 발생 시 경고 알림
+2. **백테스팅 기능**
    - 과거 데이터 기반 전략 테스트
+   - 수익률 시뮬레이션
+3. **이메일 알림 (선택)**
+   - SMTP 연동
+   - 일일 리포트 이메일 발송
+4. **관리자 페이지**
+   - 사용자 관리
+   - 시스템 모니터링
 
 ---
 
@@ -455,6 +542,10 @@ JWT_EXPIRATION=1800000
 AES_SECRET_KEY=12345678901234567890123456789012
 UPBIT_ACCESS_KEY=your_upbit_access_key
 UPBIT_SECRET_KEY=your_upbit_secret_key
+
+# Discord 알림 설정 (선택)
+DISCORD_ENABLED=true
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your_webhook_url
 ```
 
 ### 2. Docker 실행
@@ -483,20 +574,42 @@ docker-compose down
 
 ## 📁 프로젝트 구조
 ```
+## 📁 프로젝트 구조
+```
 crypto-trading-system/
 ├── backend/                    # Spring Boot 백엔드
 │   ├── src/main/java/com/cryptotrading/
 │   │   ├── controller/        # REST API 컨트롤러
+│   │   │   ├── AuthController.java
+│   │   │   ├── UserController.java
+│   │   │   ├── CoinController.java
+│   │   │   ├── TradingSettingController.java
+│   │   │   ├── TransactionController.java
+│   │   │   ├── BotController.java
+│   │   │   └── NotificationController.java 
 │   │   ├── service/           # 비즈니스 로직
+│   │   │   ├── TechnicalIndicatorService.java
+│   │   │   ├── SignalDetectorService.java
+│   │   │   ├── RiskManagementService.java
+│   │   │   ├── TradingBotService.java
+│   │   │   ├── NotificationService.java      
+│   │   │   └── DailyReportService.java      
+│   │   ├── scheduler/         # 스케줄러
+│   │   │   └── TradingScheduler.java
 │   │   ├── repository/        # 데이터 접근 계층
 │   │   ├── entity/            # JPA 엔티티
 │   │   ├── dto/               # 데이터 전송 객체
-│   │   │   ├── bot/           # ⭐ 봇 관련 DTO
-│   │   │   ├── indicator/     # ⭐ 기술적 지표 DTO
-│   │   │   └── upbit/         # 업비트 API DTO
+│   │   │   ├── indicator/     # 기술적 지표 DTO
+│   │   │   ├── bot/           # 봇 관련 DTO
+│   │   │   ├── upbit/         # 업비트 API DTO
+│   │   │   └── notification/  # ⭐ Day 10 알림 DTO
+│   │   │       ├── NotificationDTO.java
+│   │   │       └── DailyReportDTO.java
 │   │   ├── config/            # 설정 클래스
+│   │   │   ├── SecurityConfig.java
+│   │   │   ├── RedisConfig.java
+│   │   │   └── NotificationConfig.java        
 │   │   ├── filter/            # 필터 (JWT 인증)
-│   │   ├── scheduler/         # ⭐ 스케줄러 (자동매매)
 │   │   ├── util/              # 유틸리티
 │   │   └── exception/         # 예외 처리
 │   ├── src/main/resources/
@@ -507,20 +620,35 @@ crypto-trading-system/
 │   ├── src/
 │   │   ├── api/               # API 클라이언트
 │   │   ├── components/        # Vue 컴포넌트
+│   │   │   ├── TheHeader.vue
+│   │   │   └── TheSidebar.vue
 │   │   ├── views/             # 페이지 컴포넌트
+│   │   │   ├── LoginView.vue
+│   │   │   ├── SignupView.vue
+│   │   │   ├── DashboardView.vue
+│   │   │   ├── ProfileView.vue
+│   │   │   ├── TradingSettingsView.vue
+│   │   │   ├── TransactionHistoryView.vue
+│   │   │   ├── HoldingsView.vue
+│   │   │   ├── BotMonitorView.vue            
+│   │   │   └── DailyReportView.vue            
 │   │   ├── stores/            # Pinia 상태 관리
 │   │   ├── router/            # Vue Router
 │   │   ├── types/             # TypeScript 타입
+│   │   │   ├── index.ts
+│   │   │   └── bot.ts   
 │   │   └── App.vue            # 루트 컴포넌트
 │   ├── nginx.conf             # Nginx 설정
 │   └── package.json           # npm 의존성
 │
-├── mysql/
-│   └── init.sql               # 데이터베이스 초기화
+├── docker/
+│   └── mysql/
+│       └── init.sql           # 데이터베이스 초기화
 │
 ├── docker-compose.yml         # Docker 서비스 설정
 ├── .env                       # 환경변수 (보안)
 └── README.md                  # 프로젝트 문서
+```
 ```
 
 ---

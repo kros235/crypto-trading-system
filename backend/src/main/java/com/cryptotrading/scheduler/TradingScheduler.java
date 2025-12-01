@@ -2,6 +2,8 @@ package com.cryptotrading.scheduler;
 
 import com.cryptotrading.service.TradingBotService;
 import com.cryptotrading.service.TradingBotService.BotExecutionResult;
+import com.cryptotrading.service.DailyReportService;
+import com.cryptotrading.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -17,6 +19,8 @@ import java.util.List;
 public class TradingScheduler {
 
     private final TradingBotService tradingBotService;
+    private final DailyReportService dailyReportService;
+    private final NotificationService notificationService;
     
     // 업비트 점검 시간 (매일 09:00 ~ 09:10 KST)
     private static final LocalTime MAINTENANCE_START = LocalTime.of(9, 0);
@@ -93,5 +97,23 @@ public class TradingScheduler {
      */
     private boolean isMaintenanceTime(LocalTime time) {
         return !time.isBefore(MAINTENANCE_START) && time.isBefore(MAINTENANCE_END);
+    }
+
+     /**
+     * 매일 23:50에 일일 리포트 발송
+     */
+    @Scheduled(cron = "0 50 23 * * *")
+    public void sendDailyReports() {
+        log.info("========================================");
+        log.info("일일 리포트 발송 시작: {}", LocalDateTime.now());
+        log.info("========================================");
+        
+        try {
+            dailyReportService.sendDailyReportsForAllUsers();
+            log.info("일일 리포트 발송 완료");
+        } catch (Exception e) {
+            log.error("일일 리포트 발송 오류: {}", e.getMessage(), e);
+            notificationService.notifySystemError("일일 리포트 발송 실패: " + e.getMessage());
+        }
     }
 }

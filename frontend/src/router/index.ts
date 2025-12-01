@@ -50,6 +50,18 @@ const router = createRouter({
       name: 'holdings',
       component: () => import('../views/HoldingsView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/bot-monitor',
+      name: 'bot-monitor',
+      component: () => import('../views/BotMonitorView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/daily-report',
+      name: 'daily-report',
+      component: () => import('../views/DailyReportView.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })

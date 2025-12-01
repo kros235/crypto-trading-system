@@ -171,4 +171,35 @@ export const transactionApi = {
     api.get<DashboardStats>('/transactions/dashboard-stats')
 }
 
+// 봇 API
+export const botApi = {
+  // 봇 상태 조회
+  getStatus: () => api.get('/bot/status'),
+  
+  // 수동 실행
+  execute: () => api.post('/bot/execute'),
+  
+  // 기술적 지표 조회 (단일)
+  getIndicator: (market: string) => api.get(`/bot/indicators/${market}`),
+  
+  // 기술적 지표 조회 (다중)
+  getIndicators: (markets: string[]) => 
+    api.get('/bot/indicators', { params: { markets: markets.join(',') } }),
+}
+
+// 알림 API
+export const notificationApi = {
+  // 테스트 알림
+  sendTest: () => api.post('/notifications/test'),
+  
+  // 일일 리포트 미리보기
+  getDailyReportPreview: () => api.get('/notifications/daily-report/preview'),
+  
+  // 일일 리포트 발송
+  sendDailyReport: () => api.post('/notifications/daily-report/send'),
+  
+  // 알림 상태
+  getStatus: () => api.get('/notifications/status'),
+}
+
 export default api

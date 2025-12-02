@@ -30,18 +30,22 @@
 
       <v-divider class="my-2" />
 
-      <!-- ⭐ 추가: 봇 모니터링 메뉴 -->
       <v-list-item
         prepend-icon="mdi-robot"
         title="봇 모니터링"
         @click="$router.push('/bot-monitor')"
       />
 
-      <!-- ⭐ 추가: 일일 리포트 메뉴 -->
       <v-list-item
         prepend-icon="mdi-file-chart"
         title="일일 리포트"
         @click="$router.push('/daily-report')"
+      />
+
+      <v-list-item
+        prepend-icon="mdi-chart-timeline-variant"
+        title="백테스팅"
+        @click="$router.push('/backtest')"
       />
 
       <v-divider class="my-2" />

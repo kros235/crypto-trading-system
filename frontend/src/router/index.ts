@@ -62,6 +62,12 @@ const router = createRouter({
       name: 'daily-report',
       component: () => import('../views/DailyReportView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/backtest',
+      name: 'Backtest',
+      component: () => import('@/views/BacktestView.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })

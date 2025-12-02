@@ -202,4 +202,34 @@ export const notificationApi = {
   getStatus: () => api.get('/notifications/status'),
 }
 
+// 백테스트 API
+export const backtestApi = {
+  // 백테스트 실행
+  run: (data: {
+    coinSymbols: string[];
+    startDate: string;
+    endDate: string;
+    initialBalance: number;
+    basePeriod?: number;
+    buyThresholdPct?: number;
+    sellTargetPct?: number;
+    stopLossPct?: number;
+    maxHoldingsPerCoin?: number;
+    useTrailingStop?: boolean;
+    trailingStopPct?: number;
+  }) => api.post('/backtest/run', data),
+  
+  // 빠른 백테스트
+  quick: (coins: string[], days: number = 30, initialBalance: number = 1000000) =>
+    api.get('/backtest/quick', { 
+      params: { coins: coins.join(','), days, initialBalance } 
+    }),
+  
+  // 백테스트 가능 코인 목록
+  getAvailableCoins: () => api.get('/backtest/available-coins'),
+  
+  // 기본 설정값
+  getDefaultSettings: () => api.get('/backtest/default-settings'),
+}
+
 export default api

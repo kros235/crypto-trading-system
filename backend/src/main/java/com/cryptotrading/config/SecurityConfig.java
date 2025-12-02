@@ -59,6 +59,8 @@ public class SecurityConfig {
 
                 .requestMatchers("/api/notifications/**").authenticated()
 
+	  .requestMatchers("/api/backtest/**").authenticated()
+
                 // 나머지는 인증 필요
                 .anyRequest().authenticated()
             )

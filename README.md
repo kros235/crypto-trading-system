@@ -502,30 +502,130 @@ DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your_webhook_url
 
 ---
 
+**테스트 완료:**
+- ✅ 알림 상태 조회 - Postman
+- ✅ 테스트 알림 발송 - Postman
+...
+- ✅ Discord 알림 수신 - Discord
+
+---
+
+### ✅ Day 11 (2025-12-02) - 백테스팅 기능 구현
+**완료 항목:**
+- 백테스팅 시스템 (Backend)
+  - BacktestRequestDTO: 백테스트 요청 파라미터
+  - BacktestResultDTO: 결과 데이터 (수익률, 승률, MDD 등)
+  - BacktestService: 과거 데이터 기반 시뮬레이션 엔진
+  - BacktestController: 백테스트 API
+- 백테스팅 로직
+  - 이동평균선(MA) 기반 매수 신호 감지
+  - RSI 과매도 조건 조합
+  - 목표 수익률/손절매/트레일링 스톱 매도
+  - 수수료(0.05%) 반영
+  - 일별 자산 변동 추적
+- 성과 지표 계산
+  - 총 수익률, 승률
+  - 최대 낙폭(MDD)
+  - 샤프 비율
+  - 손익비(Profit Factor)
+  - 코인별 성과 분석
+- 백테스팅 페이지 (Frontend)
+  - BacktestView.vue
+  - 코인/기간/투자금 설정 폼
+  - 고급 설정 (MA기간, 매수/매도 조건)
+  - 트레일링 스톱 옵션
+  - 결과 요약 카드 (수익, 승률, 거래횟수, MDD)
+  - 상세 지표 표시
+  - 자산 변동 차트 (v-sparkline)
+  - 마우스 호버 시 일별 정보 툴팁
+  - 초기 투자금 기준선 (점선)
+  - 코인별 성과 테이블
+  - 거래 내역 테이블 (페이지네이션)
+- 사이드바 메뉴 추가
+  - 백테스팅 (mdi-chart-timeline-variant)
+- TypeScript 타입 정의
+  - backtest.ts: 요청/결과/성과 타입
+
+**API 엔드포인트:**
+| Method | Endpoint | 인증 | 설명 |
+|--------|----------|------|------|
+| POST | /api/backtest/run | ✅ | 백테스트 실행 |
+| GET | /api/backtest/quick | ✅ | 빠른 백테스트 |
+| GET | /api/backtest/available-coins | ✅ | 가능 코인 목록 |
+| GET | /api/backtest/default-settings | ✅ | 기본 설정값 |
+
+**생성된 파일 (Backend):**
+- `dto/backtest/BacktestRequestDTO.java` - 요청 DTO
+- `dto/backtest/BacktestResultDTO.java` - 결과 DTO
+- `service/BacktestService.java` - 백테스트 엔진
+- `controller/BacktestController.java` - 백테스트 API
+
+**생성된 파일 (Frontend):**
+- `types/backtest.ts` - TypeScript 타입
+- `views/BacktestView.vue` - 백테스팅 페이지
+
+**수정된 파일:**
+- `config/SecurityConfig.java` - 백테스트 API 권한 추가
+- `api/index.ts` - backtestApi 추가
+- `router/index.ts` - 백테스팅 라우트 추가
+- `components/TheSidebar.vue` - 메뉴 추가
+- `index.html` - CSP 메타 태그 추가
+- `nginx.conf` - CSP 헤더 추가
+
+**해결한 주요 이슈:**
+1. **컴파일 오류 (toLocalDate)**
+   - UpbitCandleDTO의 candleDateTimeKst가 String 타입
+   - parseToLocalDate() 헬퍼 메서드 추가로 해결
+2. **@Builder 기본값 무시**
+   - @Builder.Default 어노테이션 추가
+3. **CSP 차단 (Chart.js eval)**
+   - Chart.js → Vuetify v-sparkline으로 대체
+   - index.html에 CSP 메타 태그 추가
+4. **코인 목록 조회 실패**
+   - response.coins → response.data.coins 수정
+
+**테스트 완료:**
+- ✅ 로그인 및 토큰 발급 - Postman
+- ✅ 가능 코인 목록 조회 - Postman
+- ✅ 기본 설정값 조회 - Postman
+- ✅ 백테스트 실행 (30일) - Postman
+- ✅ 빠른 백테스트 - Postman
+- ✅ 백테스팅 페이지 렌더링 - 브라우저
+- ✅ 코인 선택 드롭다운 - 브라우저
+- ✅ 백테스트 실행 및 결과 표시 - 브라우저
+- ✅ 자산 변동 차트 (v-sparkline) - 브라우저
+- ✅ 차트 호버 툴팁 - 브라우저
+- ✅ 초기 투자금 기준선 - 브라우저
+- ✅ 코인별 성과 테이블 - 브라우저
+- ✅ 거래 내역 테이블 - 브라우저
+
+---
+
 ## 📊 현재 진행 상황
-- **전체 진척도**: 약 62%
-- **Phase 1 (핵심 기능)**: 95% 완료
-- **Phase 2 (고도화)**: 50% 진행중
+- **전체 진척도**: 약 68%
+- **Phase 1 (핵심 기능)**: 100% 완료 ✅
+- **Phase 2 (고도화)**: 60% 진행중
 - **Phase 3 (안정화)**: 0%
 
 ---
 
-## 🎯 다음 단계 (Day 11)
+## 🎯 다음 단계 (Day 12)
 
 ### 예정 작업:
-1. **TradingBotService 알림 연동 완료**
-   - 매수 체결 시 Discord 자동 알림
-   - 매도 체결 시 Discord 자동 알림
-   - 손절매 발생 시 경고 알림
-2. **백테스팅 기능**
-   - 과거 데이터 기반 전략 테스트
-   - 수익률 시뮬레이션
-3. **이메일 알림 (선택)**
+1. **이메일 알림 시스템**
    - SMTP 연동
    - 일일 리포트 이메일 발송
-4. **관리자 페이지**
+   - 거래 알림 이메일 옵션
+2. **관리자 페이지**
    - 사용자 관리
    - 시스템 모니터링
+   - 전체 통계 대시보드
+3. **성능 최적화**
+   - 캐싱 전략 개선
+   - API 응답 속도 향상
+4. **UI/UX 개선**
+   - 대시보드 고도화
+   - 모바일 반응형 개선
 
 ---
 
@@ -587,6 +687,7 @@ crypto-trading-system/
 │   │   │   ├── TransactionController.java
 │   │   │   ├── BotController.java
 │   │   │   └── NotificationController.java 
+│   │   │   └── BacktestController.java      
 │   │   ├── service/           # 비즈니스 로직
 │   │   │   ├── TechnicalIndicatorService.java
 │   │   │   ├── SignalDetectorService.java
@@ -594,6 +695,7 @@ crypto-trading-system/
 │   │   │   ├── TradingBotService.java
 │   │   │   ├── NotificationService.java      
 │   │   │   └── DailyReportService.java      
+│   │   │   └── BacktestService.java         
 │   │   ├── scheduler/         # 스케줄러
 │   │   │   └── TradingScheduler.java
 │   │   ├── repository/        # 데이터 접근 계층
@@ -602,9 +704,12 @@ crypto-trading-system/
 │   │   │   ├── indicator/     # 기술적 지표 DTO
 │   │   │   ├── bot/           # 봇 관련 DTO
 │   │   │   ├── upbit/         # 업비트 API DTO
-│   │   │   └── notification/  # ⭐ Day 10 알림 DTO
-│   │   │       ├── NotificationDTO.java
-│   │   │       └── DailyReportDTO.java
+│   │   │   ├── notification/  # 알림 DTO
+│   │   │   │   ├── NotificationDTO.java
+│   │   │   │   └── DailyReportDTO.java
+│   │   │   └── backtest/      # 백테스팅 DTO
+│   │   │       ├── BacktestRequestDTO.java
+│   │   │       └── BacktestResultDTO.java
 │   │   ├── config/            # 설정 클래스
 │   │   │   ├── SecurityConfig.java
 │   │   │   ├── RedisConfig.java
@@ -631,12 +736,14 @@ crypto-trading-system/
 │   │   │   ├── TransactionHistoryView.vue
 │   │   │   ├── HoldingsView.vue
 │   │   │   ├── BotMonitorView.vue            
-│   │   │   └── DailyReportView.vue            
+│   │   │   └── DailyReportView.vue         
+│   │   │   └── BacktestView.vue             
 │   │   ├── stores/            # Pinia 상태 관리
 │   │   ├── router/            # Vue Router
 │   │   ├── types/             # TypeScript 타입
 │   │   │   ├── index.ts
 │   │   │   └── bot.ts   
+│   │   │   └── backtest.ts                 
 │   │   └── App.vue            # 루트 컴포넌트
 │   ├── nginx.conf             # Nginx 설정
 │   └── package.json           # npm 의존성

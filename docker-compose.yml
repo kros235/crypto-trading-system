@@ -56,6 +56,11 @@ services:
       AES_SECRET_KEY: ${AES_SECRET_KEY}
       DISCORD_ENABLED: ${DISCORD_ENABLED:-false}
       DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
     depends_on:
       mysql:
         condition: service_healthy

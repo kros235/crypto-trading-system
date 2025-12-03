@@ -105,7 +105,17 @@
                   @click="sendTestNotification"
                 >
                   <v-icon left>mdi-bell</v-icon>
-                  테스트 알림
+                  디스코드 테스트 알림
+                </v-btn>
+                <v-btn 
+                  color="success" 
+                  size="large"
+                  :loading="sendingEmailTest"
+                  @click="sendTestEmail"
+                  class="ml-4"
+                >
+                  <v-icon left>mdi-email</v-icon>
+                  이메일 테스트
                 </v-btn>
               </v-card-text>
               
@@ -259,6 +269,7 @@ const loading = ref(false)
 const executing = ref(false)
 const refreshing = ref(false)
 const sendingTest = ref(false)
+const sendingEmailTest = ref(false) 
 const indicators = ref<IndicatorResult[]>([])
 const executionResult = ref<BotExecutionResult | null>(null)
 const botRunning = ref(true)
@@ -352,6 +363,19 @@ const sendTestNotification = async () => {
     showSnackbar('알림 발송에 실패했습니다.', 'error')
   } finally {
     sendingTest.value = false
+  }
+}
+
+const sendTestEmail = async () => {
+  sendingEmailTest.value = true
+  try {
+    await api.post('/notifications/email/test')
+    showSnackbar('테스트 이메일이 발송되었습니다.', 'success')
+  } catch (error) {
+    console.error('이메일 발송 실패:', error)
+    showSnackbar('이메일 발송에 실패했습니다.', 'error')
+  } finally {
+    sendingEmailTest.value = false
   }
 }
 

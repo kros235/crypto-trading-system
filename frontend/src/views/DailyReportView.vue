@@ -168,6 +168,18 @@
                     <v-icon left>mdi-send</v-icon>
                     Discord로 리포트 발송
                   </v-btn>
+
+                  <v-btn
+                    color="success"
+                    block
+                    size="large"
+                    :loading="sendingEmailReport"
+                    @click="sendEmailReport"
+                    class="mb-4"
+                  >
+                    <v-icon left>mdi-email-send</v-icon>
+                    이메일로 리포트 발송
+                  </v-btn>
                   
                   <v-alert type="info" variant="tonal" class="mt-2">
                     매일 23:50에 자동으로 일일 리포트가 발송됩니다.
@@ -299,6 +311,7 @@ const api = {
 // 상태
 const loading = ref(false)
 const sendingReport = ref(false)
+const sendingEmailReport = ref(false)
 const report = ref<DailyReport | null>(null)
 
 const snackbar = ref(false)
@@ -339,6 +352,19 @@ const sendReport = async () => {
     showSnackbar('리포트 발송에 실패했습니다.', 'error')
   } finally {
     sendingReport.value = false
+  }
+}
+
+const sendEmailReport = async () => {
+  sendingEmailReport.value = true
+  try {
+    await api.post('/notifications/email/daily-report')
+    showSnackbar('일일 리포트가 이메일로 발송되었습니다.', 'success')
+  } catch (error) {
+    console.error('이메일 발송 실패:', error)
+    showSnackbar('이메일 발송에 실패했습니다.', 'error')
+  } finally {
+    sendingEmailReport.value = false
   }
 }
 

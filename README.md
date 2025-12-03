@@ -601,31 +601,165 @@ DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your_webhook_url
 
 ---
 
-## 📊 현재 진행 상황
-- **전체 진척도**: 약 68%
-- **Phase 1 (핵심 기능)**: 100% 완료 ✅
-- **Phase 2 (고도화)**: 60% 진행중
-- **Phase 3 (안정화)**: 0%
+### ✅ Day 12 (2025-12-03) - 이메일 알림 및 관리자 페이지
+**완료 항목:**
+- 이메일 알림 시스템 (Backend)
+  - EmailService: SMTP 연동 이메일 발송
+  - Thymeleaf 이메일 템플릿
+  - 테스트 이메일, 일일 리포트 이메일
+- 관리자 대시보드 (Backend)
+  - AdminService: 시스템 통계, 사용자 관리
+  - AdminController: 관리자 전용 API
+  - 시스템 현황 (총 사용자, 거래, 수익)
+  - 알림 상태 (Discord, Email)
+- 관리자 대시보드 (Frontend)
+  - AdminDashboardView.vue
+  - 시스템 통계 카드 (사용자, 거래, 수익)
+  - 알림 상태 칩 (Discord/Email 활성화)
+  - 사용자 목록 테이블 (활성/비활성 상태)
+- UI/UX 개선
+  - 일일 리포트 페이지에 이메일 발송 버튼 추가
+  - 봇 모니터링 페이지에 이메일 테스트 버튼 추가
+  - 백테스팅 차트에 최고/최저 자산 기준선 추가
+
+**API 엔드포인트:**
+| Method | Endpoint | 인증 | 설명 |
+|--------|----------|------|------|
+| GET | /api/admin/stats | 🔐 | 시스템 통계 (관리자) |
+| GET | /api/admin/users | 🔐 | 사용자 목록 (관리자) |
+| POST | /api/notifications/email/test | ✅ | 테스트 이메일 발송 |
+| POST | /api/notifications/email/daily-report | ✅ | 일일 리포트 이메일 |
+
+**생성된 파일 (Backend):**
+- `service/EmailService.java` - 이메일 발송 서비스
+- `service/AdminService.java` - 관리자 서비스
+- `controller/AdminController.java` - 관리자 API
+- `dto/admin/SystemStatsDTO.java` - 시스템 통계 DTO
+- `dto/admin/AdminUserDTO.java` - 관리자용 사용자 DTO
+- `templates/email/test-email.html` - 테스트 이메일 템플릿
+- `templates/email/daily-report.html` - 일일 리포트 템플릿
+
+**생성된 파일 (Frontend):**
+- `views/AdminDashboardView.vue` - 관리자 대시보드
+
+**수정된 파일:**
+- `docker-compose.yml` - 이메일 환경변수 추가
+- `api/index.ts` - adminApi, emailApi 추가
+- `router/index.ts` - 관리자 라우트 추가
+- `components/TheSidebar.vue` - 관리자 메뉴 추가
+- `DailyReportView.vue` - 이메일 발송 버튼 추가
+- `BotMonitorView.vue` - 이메일 테스트 버튼 추가
+- `BacktestView.vue` - 최고/최저 기준선 추가
+- `SignupRequest.java` - 전화번호 검증 패턴 수정
+
+**해결한 주요 이슈:**
+1. **이메일 발송 실패**
+   - docker-compose.yml에 이메일 환경변수 누락 → 추가
+2. **일일 리포트 이메일 템플릿 오류**
+   - DTO 필드명 불일치 (quantity → totalQuantity) 수정
+3. **관리자 API 500 에러**
+   - apiClient → api 변수명 수정
+   - TransactionStatus enum 타입 사용
+4. **사용자 상태 표시 오류**
+   - Java boolean isActive → JSON 직렬화 시 active로 변환
+   - 프론트엔드 필드명 일치시킴
+5. **회원가입 전화번호 검증 실패**
+   - 문제: 선택사항인 전화번호를 입력하지 않으면 400 에러 발생
+   - 원인: SignupRequest.java의 @Pattern이 빈 문자열 불허
+   - 해결: 정규식 `^010-\\d{4}-\\d{4}$` → `^$|^010-\\d{4}-\\d{4}$` 수정
+   - 빈 문자열(`^$`) 허용 추가로 선택사항 정상 동작
+
+**환경 설정 (이메일):**
+```properties
+# .env 파일에 추가
+EMAIL_ENABLED=true
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your_email@gmail.com
+SMTP_PASSWORD=your_app_password
+```
+
+**테스트 완료:**
+- ✅ 테스트 이메일 발송 - Postman
+- ✅ 일일 리포트 이메일 발송 - Postman
+- ✅ 시스템 통계 조회 - Postman
+- ✅ 사용자 목록 조회 - Postman
+- ✅ 관리자 대시보드 렌더링 - 브라우저
+- ✅ 사용자 상태 표시 (활성/비활성) - 브라우저
+- ✅ 이메일 발송 버튼 동작 - 브라우저
+- ✅ 회원가입 (전화번호 미입력) - 브라우저
 
 ---
 
-## 🎯 다음 단계 (Day 12)
+### ✅ Day 13 (2025-12-04) - 백테스팅 차트 고도화
+**완료 항목:**
+- 백테스팅 차트 전면 개편
+  - v-sparkline → 커스텀 SVG 차트로 변경
+  - 데이터 포인트 점 표시 (수익: 녹색, 손실: 빨간색, 보합: 파란색)
+  - 기준선 라벨 위치 정확도 개선
+  - 차트 높이 증가 (200px → 350px)
+- 차트 보기 모드 추가
+  - 전체 보기: 모든 데이터를 화면 너비에 맞춤
+  - 스크롤 보기: 점 간격 고정, 좌우 스크롤로 상세 확인
+  - 60일 이상 데이터일 때만 토글 버튼 표시
+- 마우스 호버 인터랙션
+  - 호버 시 점 크기 확대
+  - 일자별 자산/수익률 툴팁 표시
+
+**수정된 파일:**
+- `BacktestView.vue` - 차트 전면 개편
+  - 템플릿: SVG 차트, 보기 모드 토글, 스크롤 컨테이너
+  - 스크립트: chartViewMode, dynamicSvgWidth, chartPoints 등 computed 추가
+  - 스타일: 스크롤 모드 CSS, 차트 높이 증가
+
+**차트 기능:**
+| 기능 | 설명 |
+|------|------|
+| 데이터 포인트 | 각 일자에 점 표시 |
+| 점 색상 | 녹색(수익), 빨간색(손실), 파란색(보합) |
+| 기준선 | 초기(주황), 최고(녹색), 최저(빨간) 점선 |
+| 전체 보기 | 모든 데이터를 화면에 압축 표시 |
+| 스크롤 보기 | 점 간격 25px 고정, 좌우 스크롤 |
+| 툴팁 | 마우스 호버 시 일자/자산/수익률 표시 |
+
+**테스트 완료:**
+- ✅ 차트 렌더링 - 브라우저
+- ✅ 데이터 포인트 점 표시 - 브라우저
+- ✅ 기준선 라벨 위치 - 브라우저
+- ✅ 전체 보기 모드 - 브라우저
+- ✅ 스크롤 보기 모드 - 브라우저
+- ✅ 마우스 호버 툴팁 - 브라우저
+
+---
+
+## 📊 현재 진행 상황
+- **전체 진척도**: 약 80%
+- **Phase 1 (핵심 기능)**: 100% 완료 ✅
+- **Phase 2 (고도화)**: 90% 완료 ✅
+- **Phase 3 (안정화)**: 10% 진행중
+
+---
+
+## 🎯 다음 단계 (Day 14)
 
 ### 예정 작업:
-1. **이메일 알림 시스템**
-   - SMTP 연동
-   - 일일 리포트 이메일 발송
-   - 거래 알림 이메일 옵션
-2. **관리자 페이지**
-   - 사용자 관리
-   - 시스템 모니터링
-   - 전체 통계 대시보드
-3. **성능 최적화**
-   - 캐싱 전략 개선
+1. **Phase 3: 안정화 시작**
+   - 예외처리 강화
+   - 에러 핸들링 개선
+   - 입력값 검증 강화
+2. **성능 최적화**
+   - Redis 캐싱 전략 개선
    - API 응답 속도 향상
-4. **UI/UX 개선**
-   - 대시보드 고도화
-   - 모바일 반응형 개선
+   - 데이터베이스 쿼리 최적화
+3. **보안 점검**
+   - 보안 취약점 점검
+   - API 접근 제어 강화
+   - 로그 모니터링
+4. **운영 문서 작성**
+   - 배포 가이드
+   - 운영 매뉴얼
+   - API 문서화
+```
 
 ---
 
@@ -673,8 +807,7 @@ docker-compose down
 ---
 
 ## 📁 프로젝트 구조
-```
-## 📁 프로젝트 구조
+
 ```
 crypto-trading-system/
 ├── backend/                    # Spring Boot 백엔드
@@ -686,16 +819,19 @@ crypto-trading-system/
 │   │   │   ├── TradingSettingController.java
 │   │   │   ├── TransactionController.java
 │   │   │   ├── BotController.java
-│   │   │   └── NotificationController.java 
-│   │   │   └── BacktestController.java      
+│   │   │   ├── NotificationController.java 
+│   │   │   ├── BacktestController.java    
+│   │   │   └── AdminController.java   
 │   │   ├── service/           # 비즈니스 로직
 │   │   │   ├── TechnicalIndicatorService.java
 │   │   │   ├── SignalDetectorService.java
 │   │   │   ├── RiskManagementService.java
 │   │   │   ├── TradingBotService.java
 │   │   │   ├── NotificationService.java      
-│   │   │   └── DailyReportService.java      
-│   │   │   └── BacktestService.java         
+│   │   │   ├── DailyReportService.java      
+│   │   │   ├── BacktestService.java    
+│   │   │   ├── EmailService.java     
+│   │   │   └── AdminService.java
 │   │   ├── scheduler/         # 스케줄러
 │   │   │   └── TradingScheduler.java
 │   │   ├── repository/        # 데이터 접근 계층
@@ -736,13 +872,14 @@ crypto-trading-system/
 │   │   │   ├── TransactionHistoryView.vue
 │   │   │   ├── HoldingsView.vue
 │   │   │   ├── BotMonitorView.vue            
-│   │   │   └── DailyReportView.vue         
-│   │   │   └── BacktestView.vue             
+│   │   │   ├── DailyReportView.vue         
+│   │   │   ├── BacktestView.vue         
+│   │   │   └── AdminDashboardView.vue   
 │   │   ├── stores/            # Pinia 상태 관리
 │   │   ├── router/            # Vue Router
 │   │   ├── types/             # TypeScript 타입
 │   │   │   ├── index.ts
-│   │   │   └── bot.ts   
+│   │   │   ├── bot.ts   
 │   │   │   └── backtest.ts                 
 │   │   └── App.vue            # 루트 컴포넌트
 │   ├── nginx.conf             # Nginx 설정

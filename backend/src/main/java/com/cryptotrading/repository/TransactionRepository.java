@@ -112,4 +112,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findByUserIdAndSoldAtBetween(@Param("userId") String userId, 
                                                     @Param("start") LocalDateTime start, 
                                                     @Param("end") LocalDateTime end);
+
+    int countByUserId(String userId);
+
+    int countByUserIdAndStatus(String userId, TransactionStatus status);
 }

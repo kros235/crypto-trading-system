@@ -61,6 +61,9 @@ public class SecurityConfig {
 
 	  .requestMatchers("/api/backtest/**").authenticated()
 
+	  .requestMatchers("/api/admin/**").hasRole("ADMIN")
+	  .requestMatchers("/api/notifications/email/**").authenticated()
+
                 // 나머지는 인증 필요
                 .anyRequest().authenticated()
             )

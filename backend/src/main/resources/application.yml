@@ -50,6 +50,22 @@ spring:
       write-dates-as-timestamps: false
     time-zone: Asia/Seoul
 
+  mail:
+      host: ${SMTP_HOST:smtp.gmail.com}
+      port: ${SMTP_PORT:587}
+      username: ${SMTP_USERNAME:}
+      password: ${SMTP_PASSWORD:}
+      properties:
+        mail:
+          smtp:
+            auth: true
+            starttls:
+              enable: true
+              required: true
+            connectiontimeout: 5000
+            timeout: 5000
+            writetimeout: 5000
+
 # JWT Configuration
 jwt:
   secret-key: ${JWT_SECRET_KEY:your_jwt_secret_key_here_minimum_256_bits}
@@ -100,3 +116,10 @@ notification:
   discord:
     enabled: ${DISCORD_ENABLED:false}
     webhook-url: ${DISCORD_WEBHOOK_URL:}
+
+# App Email Settings
+app:
+  email:
+    enabled: ${EMAIL_ENABLED:false}
+    from: ${SMTP_USERNAME:noreply@cryptobot.com}
+    from-name: 코인 자동매매 시스템

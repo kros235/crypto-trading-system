@@ -68,6 +68,12 @@ const router = createRouter({
       name: 'Backtest',
       component: () => import('@/views/BacktestView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/admin',
+      name: 'Admin',
+      component: () => import('@/views/AdminDashboardView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true }
     }
   ]
 })

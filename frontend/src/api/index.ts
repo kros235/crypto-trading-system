@@ -232,4 +232,24 @@ export const backtestApi = {
   getDefaultSettings: () => api.get('/backtest/default-settings'),
 }
 
+// Admin API
+export const adminApi = {
+  getStats: () => api.get('/admin/stats'),
+  getUsers: (params?: { page?: number; size?: number }) => 
+    api.get('/admin/users', { params }),
+  getUserDetail: (userId: string) => api.get(`/admin/users/${userId}`),
+  toggleUserActive: (userId: string) => 
+    api.put(`/admin/users/${userId}/toggle-active`),
+  changeUserRole: (userId: string, role: string) => 
+    api.put(`/admin/users/${userId}/role`, { role }),
+  forceLogout: (userId: string) => 
+    api.post(`/admin/users/${userId}/logout`)
+}
+
+// Email Notification API (추가)
+export const emailApi = {
+  sendTest: () => api.post('/notifications/email/test'),
+  sendDailyReport: () => api.post('/notifications/email/daily-report')
+}
+
 export default api

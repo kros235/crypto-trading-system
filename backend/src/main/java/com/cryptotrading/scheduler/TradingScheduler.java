@@ -4,6 +4,11 @@ import com.cryptotrading.service.TradingBotService;
 import com.cryptotrading.service.TradingBotService.BotExecutionResult;
 import com.cryptotrading.service.DailyReportService;
 import com.cryptotrading.service.NotificationService;
+import com.cryptotrading.service.EmailService;
+import com.cryptotrading.entity.User;
+import com.cryptotrading.repository.UserRepository;
+import com.cryptotrading.dto.notification.DailyReportDTO;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -21,6 +26,8 @@ public class TradingScheduler {
     private final TradingBotService tradingBotService;
     private final DailyReportService dailyReportService;
     private final NotificationService notificationService;
+    private final EmailService emailService;
+    private final UserRepository userRepository;
     
     // 업비트 점검 시간 (매일 09:00 ~ 09:10 KST)
     private static final LocalTime MAINTENANCE_START = LocalTime.of(9, 0);
@@ -102,18 +109,36 @@ public class TradingScheduler {
      /**
      * 매일 23:50에 일일 리포트 발송
      */
-    @Scheduled(cron = "0 50 23 * * *")
-    public void sendDailyReports() {
-        log.info("========================================");
-        log.info("일일 리포트 발송 시작: {}", LocalDateTime.now());
-        log.info("========================================");
+     @Scheduled(cron = "0 50 23 * * *")  // 매일 23:50
+     public void sendDailyReport() {
+         log.info("========== 일일 리포트 발송 시작 ==========");
+    
+         try {
+             List<User> users = userRepository.findAll();
         
-        try {
-            dailyReportService.sendDailyReportsForAllUsers();
-            log.info("일일 리포트 발송 완료");
-        } catch (Exception e) {
-            log.error("일일 리포트 발송 오류: {}", e.getMessage(), e);
-            notificationService.notifySystemError("일일 리포트 발송 실패: " + e.getMessage());
-        }
-    }
+             for (User user : users) {
+                 try {
+                     DailyReportDTO report = dailyReportService.generateDailyReport(user.getUserId());
+                
+                     // Discord 알림 (기존 로직)
+                     notificationService.sendDailyReport(report);
+                
+                     // 이메일 알림 (신규 추가) ★★★ 추가 부분 ★★★
+                     if (user.getEmail() != null && !user.getEmail().isEmpty()) {
+                         emailService.sendDailyReport(user.getEmail(), report);
+                     }
+                
+                     log.info("사용자 {} 일일 리포트 발송 완료", user.getUserId());
+                
+                 } catch (Exception e) {
+                     log.error("사용자 {} 일일 리포트 발송 실패: {}", user.getUserId(), e.getMessage());
+                 }
+             }
+        
+         } catch (Exception e) {
+             log.error("일일 리포트 발송 중 오류: {}", e.getMessage());
+         }
+    
+         log.info("========== 일일 리포트 발송 완료 ==========");
+     }
 }

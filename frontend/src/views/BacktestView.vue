@@ -266,52 +266,144 @@
 
  	 <!-- 자산 변동 차트 -->
               <v-card class="mt-4">
-                <v-card-title>
-                  <v-icon class="mr-2">mdi-chart-line</v-icon>
-                  자산 변동 추이
-                </v-card-title>
-                <v-card-text>
-                  <div 
-                    class="chart-wrapper"
-                    @mousemove="handleChartHover"
-                    @mouseleave="hoveredIndex = -1"
-                  >
-                    <!-- 초기 투자금 기준선 -->
-                    <div 
-                      class="baseline"
-                      :style="{ bottom: baselinePosition + '%' }"
-                    >
-                      <span class="baseline-label">초기: {{ formatCurrency(result.initialBalance) }}</span>
-                    </div>
-                    <v-sparkline
-                      :model-value="chartBalances"
-                      :gradient="['#1976D2', '#42A5F5']"
-                      :line-width="2"
-                      :padding="16"
-                      :height="150"
-                      :fill="true"
-                      auto-draw
-                      smooth
-                    />
-                    <!-- 툴팁 -->
-                    <div 
-                      v-if="hoveredIndex >= 0 && hoveredData"
-                      class="chart-tooltip"
-                      :style="{ left: tooltipX + 'px' }"
-                    >
-                      <div class="font-weight-bold">{{ hoveredData.date }}</div>
-                      <div>자산: {{ formatCurrency(hoveredData.balance) }}</div>
-                      <div :class="hoveredData.profitRate >= 0 ? 'text-success' : 'text-error'">
-                        수익률: {{ hoveredData.profitRate >= 0 ? '+' : '' }}{{ hoveredData.profitRate.toFixed(2) }}%
-                      </div>
-                    </div>
-                  </div>
-                  <div class="d-flex justify-space-between text-caption text-grey mt-2">
-                    <span>{{ result.startDate }}</span>
-                    <span>{{ result.endDate }}</span>
-                  </div>
-                </v-card-text>
-              </v-card>
+  <v-card-title class="d-flex align-center">
+    <v-icon class="mr-2">mdi-chart-line</v-icon>
+    자산 변동 추이
+    
+    <!-- ★★★ 추가: 보기 모드 토글 (60일 이상일 때만 표시) ★★★ -->
+    <v-spacer />
+    <v-btn-toggle
+      v-if="result.dailyBalances.length > 60"
+      v-model="chartViewMode"
+      density="compact"
+      mandatory
+      color="primary"
+      class="ml-4"
+    >
+      <v-btn value="full" size="small">
+        <v-icon size="small" class="mr-1">mdi-fit-to-screen</v-icon>
+        전체 보기
+      </v-btn>
+      <v-btn value="scroll" size="small">
+        <v-icon size="small" class="mr-1">mdi-arrow-left-right</v-icon>
+        스크롤 보기
+      </v-btn>
+    </v-btn-toggle>
+  </v-card-title>
+  <v-card-text>
+    <!-- ★★★ 수정: 스크롤 모드 지원 래퍼 ★★★ -->
+    <div 
+      class="chart-scroll-container"
+      :class="{ 'scroll-mode': isScrollMode }"
+    >
+      <div 
+        class="chart-wrapper"
+        :style="{ width: chartWrapperWidth }"
+        @mousemove="handleChartHover"
+        @mouseleave="hoveredIndex = -1"
+      >
+        <svg 
+          class="custom-chart"
+          :viewBox="`0 0 ${dynamicSvgWidth} ${svgHeight}`"
+          preserveAspectRatio="none"
+        >
+          <!-- 그라데이션 정의 -->
+          <defs>
+            <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:#42A5F5;stop-opacity:0.6" />
+              <stop offset="100%" style="stop-color:#42A5F5;stop-opacity:0.1" />
+            </linearGradient>
+          </defs>
+          
+          <!-- 영역 채우기 -->
+          <path :d="areaPath" fill="url(#areaGradient)" />
+          
+          <!-- 기준선들 -->
+          <line 
+            :x1="svgPadding" 
+            :y1="getYPosition(result.initialBalance)" 
+            :x2="dynamicSvgWidth - svgPadding" 
+            :y2="getYPosition(result.initialBalance)"
+            stroke="#FF9800" 
+            stroke-width="2" 
+            stroke-dasharray="6,4"
+          />
+          <line 
+            :x1="svgPadding" 
+            :y1="getYPosition(maxBalance)" 
+            :x2="dynamicSvgWidth - svgPadding" 
+            :y2="getYPosition(maxBalance)"
+            stroke="#4CAF50" 
+            stroke-width="2" 
+            stroke-dasharray="6,4"
+          />
+          <line 
+            :x1="svgPadding" 
+            :y1="getYPosition(minBalance)" 
+            :x2="dynamicSvgWidth - svgPadding" 
+            :y2="getYPosition(minBalance)"
+            stroke="#F44336" 
+            stroke-width="2" 
+            stroke-dasharray="6,4"
+          />
+          
+          <!-- 라인 차트 -->
+          <path :d="linePath" fill="none" stroke="#1976D2" stroke-width="2.5" />
+          
+          <!-- 데이터 포인트 -->
+          <circle
+            v-for="(point, index) in chartPoints"
+            :key="index"
+            :cx="point.x"
+            :cy="point.y"
+            :r="hoveredIndex === index ? 8 : pointRadius"
+            :fill="getPointColor(index)"
+            stroke="white"
+            stroke-width="2"
+            class="chart-point"
+          />
+        </svg>
+        
+        <!-- 기준선 라벨 (스크롤 모드에서는 고정) -->
+        <div class="chart-labels" :class="{ 'labels-fixed': isScrollMode }">
+          <span class="chart-label label-max" :style="{ top: getLabelPosition(maxBalance) + '%' }">
+            최고: {{ formatCurrency(maxBalance) }}
+          </span>
+          <span class="chart-label label-initial" :style="{ top: getLabelPosition(result.initialBalance) + '%' }">
+            초기: {{ formatCurrency(result.initialBalance) }}
+          </span>
+          <span class="chart-label label-min" :style="{ top: getLabelPosition(minBalance) + '%' }">
+            최저: {{ formatCurrency(minBalance) }}
+          </span>
+        </div>
+        
+        <!-- 툴팁 -->
+        <div 
+          v-if="hoveredIndex >= 0 && hoveredData"
+          class="chart-tooltip"
+          :style="{ left: tooltipX + 'px' }"
+        >
+          <div class="font-weight-bold">{{ hoveredData.date }}</div>
+          <div>자산: {{ formatCurrency(hoveredData.balance) }}</div>
+          <div :class="hoveredData.profitRate >= 0 ? 'text-success' : 'text-error'">
+            수익률: {{ hoveredData.profitRate >= 0 ? '+' : '' }}{{ hoveredData.profitRate.toFixed(2) }}%
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 스크롤 힌트 -->
+    <div v-if="isScrollMode" class="text-center text-caption text-grey mt-1">
+      <v-icon size="small">mdi-gesture-swipe-horizontal</v-icon>
+      좌우로 스크롤하여 전체 기간을 확인하세요
+    </div>
+    
+    <div class="d-flex justify-space-between text-caption text-grey mt-2">
+      <span>{{ result.startDate }}</span>
+      <span>{{ result.endDate }}</span>
+    </div>
+  </v-card-text>
+</v-card>
 
               <!-- 코인별 성과 -->
               <v-card class="mt-4">
@@ -421,6 +513,39 @@ const sidebarRef = ref()
 const hoveredIndex = ref(-1)
 const tooltipX = ref(0)
 
+const chartViewMode = ref<'full' | 'scroll'>('full')
+
+const isScrollMode = computed(() => {
+  if (!result.value?.dailyBalances?.length) return false
+  return chartViewMode.value === 'scroll' && result.value.dailyBalances.length > 60
+})
+
+// 스크롤 모드에서 점 간격 (px)
+const pointSpacing = 25
+
+// 동적 SVG 너비
+const dynamicSvgWidth = computed(() => {
+  if (!result.value?.dailyBalances?.length) return svgWidth
+  if (isScrollMode.value) {
+    // 스크롤 모드: 데이터 개수 × 점 간격
+    return Math.max(svgWidth, result.value.dailyBalances.length * pointSpacing + svgPadding * 2)
+  }
+  return svgWidth
+})
+
+// 차트 래퍼 너비
+const chartWrapperWidth = computed(() => {
+  if (isScrollMode.value) {
+    return dynamicSvgWidth.value + 'px'
+  }
+  return '100%'
+})
+
+// 점 크기 (스크롤 모드에서 더 크게)
+const pointRadius = computed(() => {
+  return isScrollMode.value ? 6 : 4
+})
+
 // 상태
 const loading = ref(false)
 const availableCoins = ref<AvailableCoin[]>([])
@@ -472,27 +597,91 @@ const tradeHeaders = [
 // 차트 데이터
 import { computed } from 'vue'
 
-const chartBalances = computed(() => {
-  if (!result.value?.dailyBalances) return []
-  return result.value.dailyBalances.map(d => d.balance)
-})
+
 
 const hoveredData = computed(() => {
   if (hoveredIndex.value < 0 || !result.value?.dailyBalances) return null
   return result.value.dailyBalances[hoveredIndex.value]
 })
 
-const baselinePosition = computed(() => {
-  if (!result.value?.dailyBalances?.length) return 50
-  const balances = result.value.dailyBalances.map(d => d.balance)
-  const min = Math.min(...balances)
-  const max = Math.max(...balances)
-  if (max === min) return 50
-  const initial = result.value.initialBalance
-  // 차트 padding 고려 (상하 약 10%)
-  const position = ((initial - min) / (max - min)) * 80 + 10
-  return Math.max(5, Math.min(95, position))
+const svgWidth = 800
+const svgHeight = 350
+const svgPadding = 40
+
+const maxBalance = computed(() => {
+  if (!result.value?.dailyBalances?.length) return 0
+  return Math.max(...result.value.dailyBalances.map(d => d.balance))
 })
+
+const minBalance = computed(() => {
+  if (!result.value?.dailyBalances?.length) return 0
+  return Math.min(...result.value.dailyBalances.map(d => d.balance))
+})
+
+const getYPosition = (balance: number) => {
+  if (!result.value?.dailyBalances?.length) return svgHeight / 2
+  const max = maxBalance.value
+  const min = minBalance.value
+  const range = max - min || 1
+  // Y는 위가 0, 아래가 height
+  return svgPadding + ((max - balance) / range) * (svgHeight - svgPadding * 2)
+}
+
+const getXPosition = (index: number, total: number) => {
+  if (total <= 1) return dynamicSvgWidth.value / 2
+  return svgPadding + (index / (total - 1)) * (dynamicSvgWidth.value - svgPadding * 2)
+}
+
+const chartPoints = computed(() => {
+  if (!result.value?.dailyBalances?.length) return []
+  const total = result.value.dailyBalances.length
+  return result.value.dailyBalances.map((d, index) => ({
+    x: getXPosition(index, total),
+    y: getYPosition(d.balance),
+    balance: d.balance
+  }))
+})
+
+const linePath = computed(() => {
+  if (!chartPoints.value.length) return ''
+  return chartPoints.value
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`)
+    .join(' ')
+})
+
+const areaPath = computed(() => {
+  if (!chartPoints.value.length) return ''
+  const points = chartPoints.value
+  const firstX = points[0].x
+  const lastX = points[points.length - 1].x
+  const bottomY = svgHeight - svgPadding
+  
+  return `
+    M ${firstX} ${bottomY}
+    L ${points.map(p => `${p.x} ${p.y}`).join(' L ')}
+    L ${lastX} ${bottomY}
+    Z
+  `
+})
+
+const getLabelPosition = (balance: number) => {
+  if (!result.value?.dailyBalances?.length) return 50
+  const max = maxBalance.value
+  const min = minBalance.value
+  const range = max - min || 1
+  const paddingPercent = (svgPadding / svgHeight) * 100
+  const usableHeight = 100 - paddingPercent * 2
+  return paddingPercent + ((max - balance) / range) * usableHeight
+}
+
+const getPointColor = (index: number) => {
+  if (!result.value?.dailyBalances?.length) return '#1976D2'
+  const balance = result.value.dailyBalances[index].balance
+  const initial = result.value.initialBalance
+  if (balance > initial * 1.01) return '#4CAF50'
+  if (balance < initial * 0.99) return '#F44336'
+  return '#1976D2'
+}
 
 // 초기화
 onMounted(async () => {
@@ -566,41 +755,119 @@ function handleChartHover(event: MouseEvent) {
 </script>
 
 <style scoped>
+.text-success {
+  color: #4CAF50 !important;
+  font-weight: bold;
+}
+
+.text-error {
+  color: #F44336 !important;
+  font-weight: bold;
+}
+
 .chart-wrapper {
   position: relative;
   cursor: crosshair;
+  height: 350px;
+}
+
+.custom-chart {
+  width: 100%;
+  height: 100%;
+}
+
+.chart-point {
+  transition: r 0.2s ease;
+  cursor: pointer;
+}
+
+.chart-labels {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  pointer-events: none;
+}
+
+.chart-label {
+  position: absolute;
+  right: 5px;
+  font-size: 11px;
+  padding: 2px 6px;
+  background: white;
+  border-radius: 3px;
+  font-weight: 500;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.label-max {
+  color: #4CAF50;
+}
+
+.label-initial {
+  color: #FF9800;
+}
+
+.label-min {
+  color: #F44336;
 }
 
 .chart-tooltip {
   position: absolute;
   top: 10px;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.85);
   color: white;
   padding: 8px 12px;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 12px;
   pointer-events: none;
   z-index: 10;
   white-space: nowrap;
-}
-.baseline {
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  border-top: 2px dashed #FF9800;
-  pointer-events: none;
-  z-index: 5;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
-.baseline-label {
-  position: absolute;
-  right: 0;
-  top: -18px;
-  font-size: 11px;
-  color: #FF9800;
-  background: white;
-  padding: 0 4px;
-  font-weight: 500;
+.chart-scroll-container {
+  position: relative;
+  width: 100%;
 }
+
+.chart-scroll-container.scroll-mode {
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding-bottom: 8px;
+}
+
+.chart-scroll-container.scroll-mode::-webkit-scrollbar {
+  height: 8px;
+}
+
+.chart-scroll-container.scroll-mode::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.chart-scroll-container.scroll-mode::-webkit-scrollbar-thumb {
+  background: #1976D2;
+  border-radius: 4px;
+}
+
+.chart-scroll-container.scroll-mode::-webkit-scrollbar-thumb:hover {
+  background: #1565C0;
+}
+
+/* 스크롤 모드에서 라벨 고정 */
+.labels-fixed {
+  position: fixed !important;
+  right: 20px !important;
+}
+
+/* 스크롤 모드에서 차트 래퍼 */
+.scroll-mode .chart-wrapper {
+  min-width: 100%;
+}
+
 </style>

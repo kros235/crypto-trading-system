@@ -58,9 +58,9 @@
 
       <v-list-item
         v-if="authStore.isAdmin"
+        :to="'/admin'"
         prepend-icon="mdi-shield-crown"
-        title="관리자 페이지 (준비중)"
-        disabled
+        title="관리자"
       />
     </v-list>
   </v-navigation-drawer>

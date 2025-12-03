@@ -32,6 +32,6 @@ public class SignupRequest {
     @Email(message = "올바른 이메일 형식이 아닙니다")
     private String email;
 
-    @Pattern(regexp = "^010-\\d{4}-\\d{4}$", message = "올바른 전화번호 형식이 아닙니다 (010-XXXX-XXXX)")
+    @Pattern(regexp = "^$|^010-\\d{4}-\\d{4}$", message = "휴대폰 전화번호 형식이 아닙니다 (010-XXXX-XXXX)")
     private String phone;
 }

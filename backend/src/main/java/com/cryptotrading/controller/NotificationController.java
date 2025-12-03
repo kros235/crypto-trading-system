@@ -4,11 +4,16 @@ import com.cryptotrading.config.NotificationConfig;
 import com.cryptotrading.dto.notification.DailyReportDTO;
 import com.cryptotrading.service.DailyReportService;
 import com.cryptotrading.service.NotificationService;
+import com.cryptotrading.service.EmailService;
+import com.cryptotrading.entity.User;
+import com.cryptotrading.repository.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,7 +27,8 @@ public class NotificationController {
     private final NotificationService notificationService;
     private final DailyReportService dailyReportService;
     private final NotificationConfig notificationConfig;
-
+    private final EmailService emailService;
+    private final UserRepository userRepository;
     /**
      * 알림 상태 조회
      */
@@ -101,5 +107,59 @@ public class NotificationController {
             response.put("message", "리포트 발송에 실패했습니다: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
         }
+    }
+
+    /**
+     * 테스트 이메일 발송
+     */
+    @PostMapping("/email/test")
+    public ResponseEntity<Map<String, Object>> sendTestEmail(
+            @AuthenticationPrincipal String userId) {
+        
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        if (user.getEmail() == null || user.getEmail().isEmpty()) {
+            response.put("success", false);
+            response.put("message", "이메일이 설정되지 않았습니다.");
+            return ResponseEntity.badRequest().body(response);
+        }
+    
+        boolean success = emailService.sendTestEmail(user.getEmail());
+        response.put("success", success);
+        response.put("message", success ? "테스트 이메일이 발송되었습니다." : "이메일 발송에 실패했습니다.");
+        response.put("email", user.getEmail());
+    
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 일일 리포트 이메일 발송
+     */
+    @PostMapping("/email/daily-report")
+    public ResponseEntity<Map<String, Object>> sendDailyReportEmail(
+            @AuthenticationPrincipal String userId) {
+        
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+    
+        Map<String, Object> response = new HashMap<>();
+    
+        if (user.getEmail() == null || user.getEmail().isEmpty()) {
+            response.put("success", false);
+            response.put("message", "이메일이 설정되지 않았습니다.");
+            return ResponseEntity.badRequest().body(response);
+        }
+    
+        DailyReportDTO report = dailyReportService.generateDailyReport(userId);
+        emailService.sendDailyReport(user.getEmail(), report);
+        
+        response.put("success", true);
+        response.put("message", "일일 리포트 이메일이 발송되었습니다.");
+        response.put("email", user.getEmail());
+        
+        return ResponseEntity.ok(response);
     }
 }

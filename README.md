@@ -759,6 +759,19 @@ SMTP_PASSWORD=your_app_password
    - 배포 가이드
    - 운영 매뉴얼
    - API 문서화
+5. **기술적 지표 설정 UI 추가** ⭐ NEW
+   - RSI 설정 (거래 설정 & 백테스팅)
+     - RSI 기간 (기본값: 14일)
+     - 매수 신호 임계값 (기본값: 30 이하)
+     - 매도 신호 임계값 (기본값: 70 이상)
+   - 볼린저 밴드 설정 (거래 설정 & 백테스팅)
+     - 볼린저 밴드 기간 (기본값: 20일)
+     - 표준편차 승수 (기본값: 2배)
+   - 거래량 설정
+     - 거래량 급증 기준 (기본값: 150%)
+   - 수정 대상 파일:
+     - Backend: TradingSettings, TradingSettingsDTO, BacktestRequestDTO, TechnicalIndicatorService, SignalDetectorService, BacktestService
+     - Frontend: TradingSettingsView.vue, BacktestView.vue, types/settings.ts
 ```
 
 ---

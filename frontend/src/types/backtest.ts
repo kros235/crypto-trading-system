@@ -11,6 +11,12 @@ export interface BacktestRequest {
   maxHoldingsPerCoin?: number;
   useTrailingStop?: boolean;
   trailingStopPct?: number;
+  rsiPeriod?: number;
+  rsiBuyThreshold?: number;
+  rsiSellThreshold?: number;
+  bbPeriod?: number;
+  bbMultiplier?: number;
+  volumeThreshold?: number;
 }
 
 // 백테스트 결과

@@ -57,6 +57,27 @@ public class TradingSetting extends BaseEntity {
     @Column(name = "trailing_stop_pct", precision = 5, scale = 2)
     private BigDecimal trailingStopPct = new BigDecimal("-5.00");
 
+    // RSI 설정
+    @Column(name = "rsi_period")
+    private Integer rsiPeriod = 14;
+
+    @Column(name = "rsi_buy_threshold")
+    private Integer rsiBuyThreshold = 30;
+
+    @Column(name = "rsi_sell_threshold")
+    private Integer rsiSellThreshold = 70;
+
+    // 볼린저 밴드 설정
+    @Column(name = "bb_period")
+    private Integer bbPeriod = 20;
+
+    @Column(name = "bb_multiplier")
+    private Integer bbMultiplier = 2;
+
+    // 거래량 설정
+    @Column(name = "volume_threshold")
+    private Integer volumeThreshold = 150;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "user_id", 
                 insertable = false, updatable = false)

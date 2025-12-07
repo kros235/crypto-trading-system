@@ -34,10 +34,19 @@ public class SignalDetectorService {
     public TradingSignalDTO detectBuySignal(String market, TradingSetting setting) {
         log.debug("매수 신호 감지 시작: {}", market);
         
-        IndicatorResultDTO indicators = indicatorService.calculateIndicators(market);
-        if (indicators == null) {
-            return createHoldSignal(market, "지표 데이터 부족");
-        }
+        IndicatorResultDTO indicators = indicatorService.calculateIndicators(
+                    market,
+                    setting.getRsiPeriod() != null ? setting.getRsiPeriod() : 14,
+                    setting.getRsiBuyThreshold() != null ? setting.getRsiBuyThreshold() : 30,
+                    setting.getRsiSellThreshold() != null ? setting.getRsiSellThreshold() : 70,
+                    setting.getBbPeriod() != null ? setting.getBbPeriod() : 20,
+                    setting.getBbMultiplier() != null ? setting.getBbMultiplier() : 2,
+                    setting.getVolumeThreshold() != null ? setting.getVolumeThreshold() : 150
+            );
+    
+            if (indicators == null) {
+                return createHoldSignal(market, "지표 데이터 부족");
+            }
         
         List<String> reasons = new ArrayList<>();
         int conditionsMet = 0;
@@ -107,7 +116,16 @@ public class SignalDetectorService {
         String market = transaction.getCoinSymbol();
         log.debug("매도 신호 감지 시작: {} (거래ID: {})", market, transaction.getTransactionId());
         
-        IndicatorResultDTO indicators = indicatorService.calculateIndicators(market);
+        IndicatorResultDTO indicators = indicatorService.calculateIndicators(
+                market,
+                setting.getRsiPeriod() != null ? setting.getRsiPeriod() : 14,
+                setting.getRsiBuyThreshold() != null ? setting.getRsiBuyThreshold() : 30,
+                setting.getRsiSellThreshold() != null ? setting.getRsiSellThreshold() : 70,
+                setting.getBbPeriod() != null ? setting.getBbPeriod() : 20,
+                setting.getBbMultiplier() != null ? setting.getBbMultiplier() : 2,
+                setting.getVolumeThreshold() != null ? setting.getVolumeThreshold() : 150
+        );
+    
         if (indicators == null) {
             return createHoldSignal(market, "지표 데이터 부족");
         }

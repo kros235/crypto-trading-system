@@ -732,46 +732,119 @@ SMTP_PASSWORD=your_app_password
 
 ---
 
-## 📊 현재 진행 상황
-- **전체 진척도**: 약 80%
-- **Phase 1 (핵심 기능)**: 100% 완료 ✅
-- **Phase 2 (고도화)**: 90% 완료 ✅
-- **Phase 3 (안정화)**: 10% 진행중
+### ✅ Day 14 (2025-12-07) - 기술적 지표 설정 UI 추가
+**완료 항목:**
+- 기술적 지표 사용자 설정 기능 (Backend)
+  - TradingSetting Entity 확장 (6개 필드 추가)
+  - TradingSettingDTO Validation 추가
+  - TradingSettingService 수정
+  - BacktestRequestDTO 확장
+  - BacktestService 사용자 설정 적용
+  - TechnicalIndicatorService 오버로드 메서드 추가
+  - SignalDetectorService 사용자 설정 연동
+- 데이터베이스 스키마 업데이트
+  - trading_settings 테이블에 6개 컬럼 추가
+- 거래 설정 페이지 UI 확장 (Frontend)
+  - RSI 설정 섹션 (기간, 매수 임계값, 매도 임계값)
+  - 볼린저 밴드 설정 섹션 (기간, 표준편차 승수)
+  - 거래량 급증 기준 슬라이더
+- 백테스팅 페이지 UI 확장 (Frontend)
+  - 고급 설정에 기술적 지표 설정 추가
+  - RSI, 볼린저 밴드, 거래량 설정 필드
+- TypeScript 타입 정의 확장
+  - TradingSetting, TradingSettingRequest 인터페이스
+  - BacktestRequest 인터페이스
+
+**추가된 설정 필드:**
+| 필드 | 설명 | 기본값 | 범위 |
+|------|------|--------|------|
+| rsiPeriod | RSI 계산 기간 | 14일 | 5~50 |
+| rsiBuyThreshold | RSI 매수 신호 (이하) | 30 | 10~50 |
+| rsiSellThreshold | RSI 매도 신호 (이상) | 70 | 50~90 |
+| bbPeriod | 볼린저 밴드 기간 | 20일 | 10~50 |
+| bbMultiplier | 표준편차 승수 | 2배 | 1~4 |
+| volumeThreshold | 거래량 급증 기준 | 150% | 100~500 |
+
+**수정된 파일 (Backend):**
+- `entity/TradingSetting.java` - 6개 필드 추가
+- `dto/TradingSettingDTO.java` - Validation 추가, @Max import
+- `service/TradingSettingService.java` - 새 필드 처리
+- `dto/backtest/BacktestRequestDTO.java` - 6개 필드 추가
+- `controller/BacktestController.java` - 기본값 추가
+- `service/TechnicalIndicatorService.java` - 오버로드 메서드
+- `service/SignalDetectorService.java` - 사용자 설정 적용
+- `service/BacktestService.java` - checkBuySignal, 누락 메서드 추가
+
+**수정된 파일 (Frontend):**
+- `views/TradingSettingsView.vue` - 기술적 지표 설정 UI
+- `views/BacktestView.vue` - 고급 설정 확장
+- `types/index.ts` - TradingSetting 타입 확장
+- `types/backtest.ts` - BacktestRequest 타입 확장
+
+**DB 마이그레이션:**
+```sql
+ALTER TABLE trading_settings 
+ADD COLUMN rsi_period INT DEFAULT 14,
+ADD COLUMN rsi_buy_threshold INT DEFAULT 30,
+ADD COLUMN rsi_sell_threshold INT DEFAULT 70,
+ADD COLUMN bb_period INT DEFAULT 20,
+ADD COLUMN bb_multiplier INT DEFAULT 2,
+ADD COLUMN volume_threshold INT DEFAULT 150;
+```
+
+**해결한 주요 이슈:**
+1. **@Max import 누락**
+   - TradingSettingDTO.java에 `jakarta.validation.constraints.Max` import 추가
+2. **BacktestService 메서드 누락**
+   - checkSellSignals, canBuy, recordDailyBalance 메서드 추가
+   - executeBuy 호출 시 signal 파라미터 추가
+3. **Vue 객체 쉼표 누락**
+   - settings, defaultSettings, loadSettings, saveSettings에서 쉼표 추가
+4. **업비트 API 200개 제한**
+   - 백테스트 기간 200일 이내 권장 (API 페이징 미구현)
+
+**테스트 완료:**
+- ✅ DB 스키마 업데이트 - MySQL
+- ✅ 거래 설정 조회 (새 필드 포함) - Postman
+- ✅ 거래 설정 생성/수정 - Postman
+- ✅ 백테스트 실행 (느슨한 조건) - Postman
+- ✅ 백테스트 기본 설정 조회 - Postman
+- ✅ 거래 설정 페이지 UI - 브라우저
+- ✅ 백테스팅 페이지 고급 설정 - 브라우저
+- ✅ 설정 변경 후 백테스트 실행 - 브라우저
 
 ---
 
-## 🎯 다음 단계 (Day 14)
+## 📊 현재 진행 상황
+- **전체 진척도**: 약 83%
+- **Phase 1 (핵심 기능)**: 100% 완료 ✅
+- **Phase 2 (고도화)**: 95% 완료 ✅
+- **Phase 3 (안정화)**: 20% 진행중
+
+---
+
+## 🎯 다음 단계 (Day 15)
 
 ### 예정 작업:
-1. **Phase 3: 안정화 시작**
+1. **Phase 3: 안정화**
    - 예외처리 강화
    - 에러 핸들링 개선
    - 입력값 검증 강화
+
 2. **성능 최적화**
    - Redis 캐싱 전략 개선
    - API 응답 속도 향상
    - 데이터베이스 쿼리 최적화
+
 3. **보안 점검**
    - 보안 취약점 점검
    - API 접근 제어 강화
    - 로그 모니터링
+
 4. **운영 문서 작성**
    - 배포 가이드
    - 운영 매뉴얼
    - API 문서화
-5. **기술적 지표 설정 UI 추가** ⭐ NEW
-   - RSI 설정 (거래 설정 & 백테스팅)
-     - RSI 기간 (기본값: 14일)
-     - 매수 신호 임계값 (기본값: 30 이하)
-     - 매도 신호 임계값 (기본값: 70 이상)
-   - 볼린저 밴드 설정 (거래 설정 & 백테스팅)
-     - 볼린저 밴드 기간 (기본값: 20일)
-     - 표준편차 승수 (기본값: 2배)
-   - 거래량 설정
-     - 거래량 급증 기준 (기본값: 150%)
-   - 수정 대상 파일:
-     - Backend: TradingSettings, TradingSettingsDTO, BacktestRequestDTO, TechnicalIndicatorService, SignalDetectorService, BacktestService
-     - Frontend: TradingSettingsView.vue, BacktestView.vue, types/settings.ts
 ```
 
 ---

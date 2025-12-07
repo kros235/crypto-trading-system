@@ -20,20 +20,40 @@ public class TechnicalIndicatorService {
     private final UpbitApiService upbitApiService;
     
     private static final int SCALE = 8;  // 소수점 자릿수
-    private static final BigDecimal RSI_BUY_THRESHOLD = new BigDecimal("30");
-    private static final BigDecimal RSI_SELL_THRESHOLD = new BigDecimal("70");
-    private static final BigDecimal VOLUME_THRESHOLD = new BigDecimal("1.5");  // 150%
+    
+    // ★★★ 기본값 (상수 → 기본 파라미터용) ★★★
+    private static final int DEFAULT_RSI_PERIOD = 14;
+    private static final int DEFAULT_RSI_BUY_THRESHOLD = 30;
+    private static final int DEFAULT_RSI_SELL_THRESHOLD = 70;
+    private static final int DEFAULT_BB_PERIOD = 20;
+    private static final int DEFAULT_BB_MULTIPLIER = 2;
+    private static final int DEFAULT_VOLUME_THRESHOLD = 150;
 
     /**
-     * 특정 코인의 모든 기술적 지표 계산
+     * 기본 설정으로 기술적 지표 계산 (기존 메서드 - 호환성 유지)
      */
     public IndicatorResultDTO calculateIndicators(String market) {
-        log.info("기술적 지표 계산 시작: {}", market);
+        return calculateIndicators(market, 
+                DEFAULT_RSI_PERIOD, DEFAULT_RSI_BUY_THRESHOLD, DEFAULT_RSI_SELL_THRESHOLD,
+                DEFAULT_BB_PERIOD, DEFAULT_BB_MULTIPLIER, DEFAULT_VOLUME_THRESHOLD);
+    }
+
+    /**
+     * ★★★ 신규 추가: 사용자 설정으로 기술적 지표 계산 ★★★
+     */
+    public IndicatorResultDTO calculateIndicators(String market,
+                                                   int rsiPeriod, int rsiBuyThreshold, int rsiSellThreshold,
+                                                   int bbPeriod, int bbMultiplier, int volumeThreshold) {
+        log.info("기술적 지표 계산 시작: {} (RSI:{}, BB:{}/{}배, 거래량:{}%)", 
+                market, rsiPeriod, bbPeriod, bbMultiplier, volumeThreshold);
         
-        // 일봉 데이터 조회 (30일치)
-        List<UpbitCandleDTO> candles = upbitApiService.getDayCandles(market, 30);
+        // 필요한 데이터 개수 계산 (가장 긴 기간 + 여유분)
+        int requiredDays = Math.max(Math.max(rsiPeriod, bbPeriod), 30) + 10;
         
-        if (candles == null || candles.size() < 20) {
+        // 일봉 데이터 조회
+        List<UpbitCandleDTO> candles = upbitApiService.getDayCandles(market, requiredDays);
+        
+        if (candles == null || candles.size() < bbPeriod) {
             log.warn("일봉 데이터 부족: {} ({}개)", market, candles != null ? candles.size() : 0);
             return null;
         }
@@ -61,11 +81,11 @@ public class TechnicalIndicatorService {
         BigDecimal ma20 = calculateMA(closePrices, 20);
         BigDecimal ma30 = calculateMA(closePrices, 30);
         
-        // RSI 계산 (14일)
-        BigDecimal rsi14 = calculateRSI(closePrices, 14);
+        // ★ RSI 계산 (사용자 설정 기간)
+        BigDecimal rsi = calculateRSI(closePrices, rsiPeriod);
         
-        // 볼린저 밴드 계산 (20일, 2 표준편차)
-        BigDecimal[] bollingerBands = calculateBollingerBands(closePrices, 20, 2);
+        // ★ 볼린저 밴드 계산 (사용자 설정 기간/승수)
+        BigDecimal[] bollingerBands = calculateBollingerBands(closePrices, bbPeriod, bbMultiplier);
         
         // 평균 거래량 계산 (20일)
         BigDecimal avgVolume = calculateMA(volumes, 20);
@@ -73,6 +93,11 @@ public class TechnicalIndicatorService {
         BigDecimal volumeRatio = avgVolume.compareTo(BigDecimal.ZERO) > 0 
                 ? currentVolume.divide(avgVolume, SCALE, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
+        
+        // ★ 임계값을 BigDecimal로 변환
+        BigDecimal rsiBuyThresholdBD = new BigDecimal(rsiBuyThreshold);
+        BigDecimal rsiSellThresholdBD = new BigDecimal(rsiSellThreshold);
+        BigDecimal volumeThresholdBD = new BigDecimal(volumeThreshold).divide(new BigDecimal("100"), SCALE, RoundingMode.HALF_UP);
         
         // 결과 생성
         IndicatorResultDTO result = IndicatorResultDTO.builder()
@@ -84,24 +109,24 @@ public class TechnicalIndicatorService {
                 .ma14(ma14)
                 .ma20(ma20)
                 .ma30(ma30)
-                .rsi14(rsi14)
+                .rsi14(rsi)  // 필드명은 rsi14 유지 (호환성), 실제 계산은 rsiPeriod 사용
                 .bbUpper(bollingerBands[0])
                 .bbMiddle(bollingerBands[1])
                 .bbLower(bollingerBands[2])
                 .avgVolume(avgVolume)
                 .currentVolume(currentVolume)
                 .volumeRatio(volumeRatio)
-                // 신호 플래그
+                // ★ 신호 플래그 (사용자 설정 임계값 적용)
                 .belowMA20(currentPrice.compareTo(ma20) < 0)
-                .rsiBuySignal(rsi14 != null && rsi14.compareTo(RSI_BUY_THRESHOLD) <= 0)
-                .rsiSellSignal(rsi14 != null && rsi14.compareTo(RSI_SELL_THRESHOLD) >= 0)
+                .rsiBuySignal(rsi != null && rsi.compareTo(rsiBuyThresholdBD) <= 0)
+                .rsiSellSignal(rsi != null && rsi.compareTo(rsiSellThresholdBD) >= 0)
                 .belowBBLower(currentPrice.compareTo(bollingerBands[2]) <= 0)
                 .aboveBBUpper(currentPrice.compareTo(bollingerBands[0]) >= 0)
-                .highVolume(volumeRatio.compareTo(VOLUME_THRESHOLD) >= 0)
+                .highVolume(volumeRatio.compareTo(volumeThresholdBD) >= 0)
                 .build();
         
         log.info("기술적 지표 계산 완료: {} - MA20={}, RSI={}, BB하단={}", 
-                market, ma20, rsi14, bollingerBands[2]);
+                market, ma20, rsi, bollingerBands[2]);
         
         return result;
     }

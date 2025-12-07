@@ -137,6 +137,87 @@
                           :step="0.5"
                           thumb-label
                         />
+
+                        <v-divider class="my-4" />
+
+                        <div class="text-subtitle-2 mb-3">
+                          <v-icon size="small" class="mr-1">mdi-chart-bell-curve-cumulative</v-icon>
+                          기술적 지표 설정
+                        </div>
+
+                        <!-- RSI 설정 -->
+                        <div class="text-caption text-grey mb-2">RSI (상대강도지수)</div>
+                        <v-row dense>
+                          <v-col cols="4">
+                            <v-text-field
+                              v-model.number="request.rsiPeriod"
+                              label="기간"
+                              type="number"
+                              density="compact"
+                              suffix="일"
+                              hide-details
+                            />
+                          </v-col>
+                          <v-col cols="4">
+                            <v-text-field
+                              v-model.number="request.rsiBuyThreshold"
+                              label="매수 ≤"
+                              type="number"
+                              density="compact"
+                              hide-details
+                            />
+                          </v-col>
+                          <v-col cols="4">
+                            <v-text-field
+                              v-model.number="request.rsiSellThreshold"
+                              label="매도 ≥"
+                              type="number"
+                              density="compact"
+                              hide-details
+                            />
+                          </v-col>
+                        </v-row>
+
+                        <!-- 볼린저 밴드 설정 -->
+                        <div class="text-caption text-grey mb-2 mt-4">볼린저 밴드</div>
+                        <v-row dense>
+                          <v-col cols="6">
+                            <v-text-field
+                              v-model.number="request.bbPeriod"
+                              label="기간"
+                              type="number"
+                              density="compact"
+                              suffix="일"
+                              hide-details
+                            />
+                          </v-col>
+                          <v-col cols="6">
+                            <v-select
+                              v-model="request.bbMultiplier"
+                              :items="[1, 2, 3, 4]"
+                              label="표준편차"
+                              density="compact"
+                              suffix="배"
+                              hide-details
+                            />
+                          </v-col>
+                        </v-row>
+                        
+                        <!-- 거래량 설정 -->
+                        <div class="text-caption text-grey mb-2 mt-4">거래량 급증 기준</div>
+                        <v-slider
+                          v-model="request.volumeThreshold"
+                          :min="100"
+                          :max="500"
+                          :step="10"
+                          thumb-label
+                          hide-details
+                        >
+                          <template v-slot:append>
+                            <span class="text-body-2">{{ request.volumeThreshold }}%</span>
+                          </template>
+                        </v-slider>
+                        
                       </v-expansion-panel-text>
                     </v-expansion-panel>
                   </v-expansion-panels>
@@ -565,6 +646,15 @@ const request = ref({
   maxHoldingsPerCoin: 3,
   useTrailingStop: false,
   trailingStopPct: 5,
+  // ★★★ 신규 추가: RSI 설정 ★★★
+  rsiPeriod: 14,
+  rsiBuyThreshold: 30,
+  rsiSellThreshold: 70,
+  // ★★★ 신규 추가: 볼린저 밴드 설정 ★★★
+  bbPeriod: 20,
+  bbMultiplier: 2,
+  // ★★★ 신규 추가: 거래량 설정 ★★★
+  volumeThreshold: 150
 })
 
 // 스낵바

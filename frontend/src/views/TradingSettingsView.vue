@@ -219,6 +219,121 @@
 
               <v-divider class="my-6" />
 
+
+              <!-- ★★★ 신규 추가: 기술적 지표 설정 ★★★ -->
+              <v-card class="mb-4">
+                <v-card-title class="d-flex align-center">
+                  <v-icon class="mr-2">mdi-chart-bell-curve-cumulative</v-icon>
+                  기술적 지표 설정
+                </v-card-title>
+                <v-card-text>
+                  <!-- RSI 설정 -->
+                  <div class="text-subtitle-2 text-grey mb-2">
+                    <v-icon size="small" class="mr-1">mdi-chart-line</v-icon>
+                    RSI (상대강도지수)
+                  </div>
+                  <v-row>
+                    <v-col cols="12" md="4">
+                      <v-text-field
+                        v-model.number="settings.rsiPeriod"
+                        label="RSI 기간 (일)"
+                        type="number"
+                        :rules="[v => v >= 5 && v <= 50 || '5~50 사이 입력']"
+                        hint="기본값: 14일"
+                        persistent-hint
+                        density="compact"
+                      />
+                    </v-col>
+                    <v-col cols="12" md="4">
+                      <v-text-field
+                        v-model.number="settings.rsiBuyThreshold"
+                        label="매수 신호 (이하)"
+                        type="number"
+                        :rules="[v => v >= 10 && v <= 50 || '10~50 사이 입력']"
+                        hint="기본값: 30 이하"
+                        persistent-hint
+                        density="compact"
+                      />
+                    </v-col>
+                    <v-col cols="12" md="4">
+                      <v-text-field
+                        v-model.number="settings.rsiSellThreshold"
+                        label="매도 신호 (이상)"
+                        type="number"
+                        :rules="[v => v >= 50 && v <= 90 || '50~90 사이 입력']"
+                        hint="기본값: 70 이상"
+                        persistent-hint
+                        density="compact"
+                      />
+                    </v-col>
+                  </v-row>
+
+                  <v-divider class="my-4" />
+
+                  <!-- 볼린저 밴드 설정 -->
+                  <div class="text-subtitle-2 text-grey mb-2">
+                    <v-icon size="small" class="mr-1">mdi-chart-bell-curve</v-icon>
+                    볼린저 밴드
+                  </div>
+                  <v-row>
+                    <v-col cols="12" md="6">
+                      <v-text-field
+                        v-model.number="settings.bbPeriod"
+                        label="볼린저 밴드 기간 (일)"
+                        type="number"
+                        :rules="[v => v >= 10 && v <= 50 || '10~50 사이 입력']"
+                        hint="기본값: 20일"
+                        persistent-hint
+                        density="compact"
+                      />
+                    </v-col>
+                    <v-col cols="12" md="6">
+                      <v-select
+                        v-model="settings.bbMultiplier"
+                        :items="[1, 2, 3, 4]"
+                        label="표준편차 승수"
+                        hint="기본값: 2배"
+                        persistent-hint
+                        density="compact"
+                      />
+                    </v-col>
+                  </v-row>
+
+                  <v-divider class="my-4" />
+
+                  <!-- 거래량 설정 -->
+                  <div class="text-subtitle-2 text-grey mb-2">
+                    <v-icon size="small" class="mr-1">mdi-chart-bar</v-icon>
+                    거래량 분석
+                  </div>
+                  <v-row>
+                    <v-col cols="12">
+                      <v-slider
+                        v-model="settings.volumeThreshold"
+                        label="거래량 급증 기준 (%)"
+                        :min="100"
+                        :max="500"
+                        :step="10"
+                        thumb-label
+                        class="mt-2"
+                      >
+                        <template v-slot:append>
+                          <v-chip size="small" color="primary">
+                            {{ settings.volumeThreshold }}%
+                          </v-chip>
+                        </template>
+                      </v-slider>
+                      <p class="text-caption text-grey">
+                        평균 거래량 대비 {{ settings.volumeThreshold }}% 이상일 때 거래량 급증으로 판단합니다.
+                      </p>
+                    </v-col>
+                  </v-row>
+                </v-card-text>
+              </v-card>
+
+
+
+
               <!-- 추가 옵션 -->
               <div class="mb-6">
                 <h3 class="text-h6 mb-3">
@@ -373,7 +488,13 @@ const settings = ref({
   dailyLimitAmount: 1000000,
   useTrailingStop: false,
   trailingStopPct: -5,  // ← 이 줄 추가
-  useAiAnalysis: false
+  useAiAnalysis: false,
+  rsiPeriod: 14,
+  rsiBuyThreshold: 30,
+  rsiSellThreshold: 70,
+  bbPeriod: 20,
+  bbMultiplier: 2,
+  volumeThreshold: 150
 })
 
 // 기본값 (초기화용)
@@ -387,7 +508,13 @@ const defaultSettings = {
   dailyLimitAmount: 1000000,
   useTrailingStop: false,
   trailingStopPct: -5,
-  useAiAnalysis: false
+  useAiAnalysis: false,
+  rsiPeriod: 14,
+  rsiBuyThreshold: 30,
+  rsiSellThreshold: 70,
+  bbPeriod: 20,
+  bbMultiplier: 2,
+  volumeThreshold: 150
 }
 
 // 유효성 검증 규칙
@@ -467,7 +594,13 @@ const loadSettings = async () => {
         dailyLimitAmount: data.dailyLimitAmount || 1000000,
         useTrailingStop: data.useTrailingStop || false,
         trailingStopPct: data.trailingStopPct || -5,  // ← 이 줄 추가
-        useAiAnalysis: data.useAiAnalysis || false
+        useAiAnalysis: data.useAiAnalysis || false,
+        rsiPeriod: data.rsiPeriod || 14,
+        rsiBuyThreshold: data.rsiBuyThreshold || 30,
+        rsiSellThreshold: data.rsiSellThreshold || 70,
+        bbPeriod: data.bbPeriod || 20,
+        bbMultiplier: data.bbMultiplier || 2,
+        volumeThreshold: data.volumeThreshold || 150
       }
 
       hasExistingSettings.value = true
@@ -505,7 +638,13 @@ const saveSettings = async () => {
       dailyLimitAmount: Number(settings.value.dailyLimitAmount),
       useTrailingStop: Boolean(settings.value.useTrailingStop),
       trailingStopPct: Number(settings.value.trailingStopPct),
-      useAiAnalysis: Boolean(settings.value.useAiAnalysis)
+      useAiAnalysis: Boolean(settings.value.useAiAnalysis),
+      rsiPeriod: Number(settings.value.rsiPeriod),
+      rsiBuyThreshold: Number(settings.value.rsiBuyThreshold),
+      rsiSellThreshold: Number(settings.value.rsiSellThreshold),
+      bbPeriod: Number(settings.value.bbPeriod),
+      bbMultiplier: Number(settings.value.bbMultiplier),
+      volumeThreshold: Number(settings.value.volumeThreshold)
     }
 
     console.log('Sending payload:', payload) // 디버깅용

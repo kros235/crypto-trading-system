@@ -85,6 +85,12 @@ export interface TradingSetting {
   useAiAnalysis: boolean
   useTrailingStop: boolean
   trailingStopPct: number
+  rsiPeriod: number
+  rsiBuyThreshold: number
+  rsiSellThreshold: number
+  bbPeriod: number
+  bbMultiplier: number
+  volumeThreshold: number
 }
 
 // 거래 설정 요청 타입
@@ -99,6 +105,12 @@ export interface TradingSettingRequest {
   useAiAnalysis: boolean
   useTrailingStop: boolean
   trailingStopPct: number
+  rsiPeriod: number
+  rsiBuyThreshold: number
+  rsiSellThreshold: number
+  bbPeriod: number
+  bbMultiplier: number
+  volumeThreshold: number
 }
 
 // 거래 내역 타입

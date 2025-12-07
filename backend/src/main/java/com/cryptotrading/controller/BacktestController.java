@@ -118,6 +118,12 @@ public class BacktestController {
                 .maxHoldingsPerCoin(3)
                 .useTrailingStop(false)
                 .trailingStopPct(new BigDecimal("5"))
+                .rsiPeriod(14)
+	  .rsiBuyThreshold(30)
+                .rsiSellThreshold(70)
+                .bbPeriod(20)
+                .bbMultiplier(2)
+                .volumeThreshold(150)
                 .build();
         
         return ResponseEntity.ok(defaults);

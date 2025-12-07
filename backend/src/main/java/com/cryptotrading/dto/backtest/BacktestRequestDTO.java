@@ -62,4 +62,36 @@ public class BacktestRequestDTO {
     @DecimalMax(value = "10", message = "트레일링 스톱은 10% 이하")
     @Builder.Default
     private BigDecimal trailingStopPct = new BigDecimal("5");
+
+    @Min(value = 5, message = "RSI 기간은 5일 이상")
+    @Max(value = 50, message = "RSI 기간은 50일 이하")
+    @Builder.Default
+    private Integer rsiPeriod = 14;
+
+    @Min(value = 10, message = "RSI 매수 임계값은 10 이상")
+    @Max(value = 50, message = "RSI 매수 임계값은 50 이하")
+    @Builder.Default
+    private Integer rsiBuyThreshold = 30;
+
+    @Min(value = 50, message = "RSI 매도 임계값은 50 이상")
+    @Max(value = 90, message = "RSI 매도 임계값은 90 이하")
+    @Builder.Default
+    private Integer rsiSellThreshold = 70;
+
+    // ★★★ 신규 추가: 볼린저 밴드 설정 ★★★
+    @Min(value = 10, message = "볼린저 밴드 기간은 10일 이상")
+    @Max(value = 50, message = "볼린저 밴드 기간은 50일 이하")
+    @Builder.Default
+    private Integer bbPeriod = 20;
+
+    @Min(value = 1, message = "표준편차 승수는 1 이상")
+    @Max(value = 4, message = "표준편차 승수는 4 이하")
+    @Builder.Default
+    private Integer bbMultiplier = 2;
+
+    // ★★★ 신규 추가: 거래량 설정 ★★★
+    @Min(value = 100, message = "거래량 기준은 100% 이상")
+    @Max(value = 500, message = "거래량 기준은 500% 이하")
+    @Builder.Default
+    private Integer volumeThreshold = 150;
 }

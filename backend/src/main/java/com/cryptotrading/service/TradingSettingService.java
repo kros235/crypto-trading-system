@@ -48,6 +48,12 @@ public class TradingSettingService {
                 .useAiAnalysis(dto.getUseAiAnalysis())
                 .useTrailingStop(dto.getUseTrailingStop())
                 .trailingStopPct(dto.getTrailingStopPct())
+                .rsiPeriod(dto.getRsiPeriod() != null ? dto.getRsiPeriod() : 14)
+                .rsiBuyThreshold(dto.getRsiBuyThreshold() != null ? dto.getRsiBuyThreshold() : 30)
+                .rsiSellThreshold(dto.getRsiSellThreshold() != null ? dto.getRsiSellThreshold() : 70)
+                .bbPeriod(dto.getBbPeriod() != null ? dto.getBbPeriod() : 20)
+                .bbMultiplier(dto.getBbMultiplier() != null ? dto.getBbMultiplier() : 2)
+                .volumeThreshold(dto.getVolumeThreshold() != null ? dto.getVolumeThreshold() : 150)
                 .build();
 
         TradingSetting saved = tradingSettingRepository.save(setting);
@@ -71,6 +77,13 @@ public class TradingSettingService {
         setting.setUseAiAnalysis(dto.getUseAiAnalysis());
         setting.setUseTrailingStop(dto.getUseTrailingStop());
         setting.setTrailingStopPct(dto.getTrailingStopPct());
+        setting.setRsiPeriod(dto.getRsiPeriod() != null ? dto.getRsiPeriod() : 14);
+        setting.setRsiBuyThreshold(dto.getRsiBuyThreshold() != null ? dto.getRsiBuyThreshold() : 30);
+        setting.setRsiSellThreshold(dto.getRsiSellThreshold() != null ? dto.getRsiSellThreshold() : 70);
+        setting.setBbPeriod(dto.getBbPeriod() != null ? dto.getBbPeriod() : 20);
+        setting.setBbMultiplier(dto.getBbMultiplier() != null ? dto.getBbMultiplier() : 2);
+        setting.setVolumeThreshold(dto.getVolumeThreshold() != null ? dto.getVolumeThreshold() : 150);
+
 
         TradingSetting updated = tradingSettingRepository.save(setting);
         log.info("거래 설정 수정 완료: userId={}", userId);
@@ -100,6 +113,12 @@ public class TradingSettingService {
                 .useAiAnalysis(setting.getUseAiAnalysis())
                 .useTrailingStop(setting.getUseTrailingStop())
                 .trailingStopPct(setting.getTrailingStopPct())
+                .rsiPeriod(setting.getRsiPeriod())
+                .rsiBuyThreshold(setting.getRsiBuyThreshold())
+                .rsiSellThreshold(setting.getRsiSellThreshold())
+                .bbPeriod(setting.getBbPeriod())
+                .bbMultiplier(setting.getBbMultiplier())
+                .volumeThreshold(setting.getVolumeThreshold())
                 .build();
     }
 }

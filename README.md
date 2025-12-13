@@ -815,36 +815,118 @@ ADD COLUMN volume_threshold INT DEFAULT 150;
 
 ---
 
-## 📊 현재 진행 상황
-- **전체 진척도**: 약 83%
-- **Phase 1 (핵심 기능)**: 100% 완료 ✅
-- **Phase 2 (고도화)**: 95% 완료 ✅
-- **Phase 3 (안정화)**: 20% 진행중
+### ✅ Day 15 (2025-12-13) - 예외처리 강화 및 에러 핸들링 개선
+**완료 항목:**
+- 에러 코드 체계화 (Backend)
+  - ErrorCode Enum: 9개 카테고리, 30+ 에러 코드 정의
+  - 커스텀 예외 클래스 체계 구축
+    - BusinessException (기본 비즈니스 예외)
+    - EntityNotFoundException (리소스 미발견)
+    - DuplicateResourceException (중복 리소스)
+    - UnauthorizedException (인증 실패)
+    - UpbitApiException (업비트 API 오류)
+    - TradingException (거래 관련 오류)
+- API 응답 표준화 (Backend)
+  - ApiResponse 래퍼 클래스 (success, error, timestamp)
+  - ErrorResponse 내부 클래스 (code, message, detail, fieldErrors)
+  - PageResponse 페이징 응답 클래스
+- GlobalExceptionHandler 고도화 (Backend)
+  - 12개 예외 타입별 세분화 처리
+  - Validation, 인증, 타입 불일치, JSON 파싱 등
+  - 상세 에러 로깅 추가
+- Security 인증 예외 핸들러 (Backend)
+  - CustomAuthenticationEntryPoint: 401 응답 표준화
+  - CustomAccessDeniedHandler: 403 응답 표준화
+  - JWT 에러 타입별 코드 분기 (만료/무효/미인증)
+- AuthController 예외 처리 개선 (Backend)
+  - 로그인/회원가입 에러 응답 표준화
+  - 중복 아이디 에러 코드 적용 (U002)
+- Frontend 에러 핸들링 개선
+  - error.ts: 에러 타입 정의 및 메시지 매핑
+  - Axios 인터셉터 고도화 (에러 타입별 처리)
+  - 로그인 실패 시 페이지 새로고침 방지
+  - useErrorHandler Composable
+  - useSnackbar Composable
+  - GlobalSnackbar 컴포넌트
+
+**에러 코드 체계:**
+| 카테고리 | 코드 범위 | 예시 |
+|----------|----------|------|
+| Common | C0XX | C001 (잘못된 입력값) |
+| Authentication | A0XX | A001 (인증 필요), A005 (로그인 실패) |
+| User | U0XX | U002 (중복 아이디) |
+| API Key | K0XX | K001 (API 키 미등록) |
+| Trading | T0XX | T004 (일일 한도 초과) |
+| Transaction | X0XX | X001 (거래 미발견) |
+| Upbit API | P0XX | P001 (API 호출 실패) |
+| Notification | N0XX | N002 (이메일 발송 실패) |
+| Backtest | B0XX | B001 (기간 오류) |
+
+**생성된 파일 (Backend):**
+- `exception/ErrorCode.java` - 에러 코드 Enum
+- `exception/BusinessException.java` - 기본 비즈니스 예외
+- `exception/EntityNotFoundException.java` - 리소스 미발견 예외
+- `exception/DuplicateResourceException.java` - 중복 리소스 예외
+- `exception/UnauthorizedException.java` - 인증 실패 예외
+- `exception/UpbitApiException.java` - 업비트 API 예외
+- `exception/TradingException.java` - 거래 관련 예외
+- `dto/common/ApiResponse.java` - API 응답 표준 클래스
+- `dto/common/PageResponse.java` - 페이징 응답 클래스
+- `config/security/CustomAuthenticationEntryPoint.java` - 인증 예외 핸들러
+- `config/security/CustomAccessDeniedHandler.java` - 접근 거부 핸들러
+
+**생성된 파일 (Frontend):**
+- `types/error.ts` - 에러 타입 및 메시지 매핑
+- `composables/useErrorHandler.ts` - 에러 핸들러
+- `composables/useSnackbar.ts` - Snackbar 유틸
+- `components/GlobalSnackbar.vue` - 전역 알림 컴포넌트
+
+**수정된 파일:**
+- `exception/GlobalExceptionHandler.java` - 전면 개편
+- `controller/AuthController.java` - 에러 응답 표준화
+- `config/SecurityConfig.java` - 예외 핸들러 등록
+- `filter/JwtAuthenticationFilter.java` - 에러 메시지 저장
+- `api/index.ts` - Axios 인터셉터 개선
+- `App.vue` - GlobalSnackbar 추가
+
+**테스트 완료:**
+- ✅ Validation 에러 (C001 + fieldErrors) - Postman
+- ✅ 로그인 실패 (A005) - Postman
+- ✅ 토큰 없이 API 호출 (A001) - Postman
+- ✅ 잘못된 토큰 (A002) - Postman
+- ✅ 존재하지 않는 거래 조회 - Postman
+- ✅ 중복 회원가입 (U002) - Postman
+- ✅ 잘못된 HTTP 메서드 (C004) - Postman
+- ✅ JSON 파싱 오류 (C001) - Postman
+- ✅ 타입 불일치 (C003) - Postman
+- ✅ 브라우저 로그인 실패 표시 - 브라우저
+- ✅ 거래설정 Validation 표시 - 브라우저
 
 ---
 
-## 🎯 다음 단계 (Day 15)
+## 📊 현재 진행 상황
+- **전체 진척도**: 약 88%
+- **Phase 1 (핵심 기능)**: 100% 완료 ✅
+- **Phase 2 (고도화)**: 95% 완료 ✅
+- **Phase 3 (안정화)**: 50% 진행중
+
+---
+
+## 🎯 다음 단계 (Day 16)
 
 ### 예정 작업:
-1. **Phase 3: 안정화**
-   - 예외처리 강화
-   - 에러 핸들링 개선
-   - 입력값 검증 강화
-
-2. **성능 최적화**
+1. **성능 최적화**
    - Redis 캐싱 전략 개선
    - API 응답 속도 향상
    - 데이터베이스 쿼리 최적화
 
-3. **보안 점검**
+2. **보안 점검**
    - 보안 취약점 점검
    - API 접근 제어 강화
-   - 로그 모니터링
 
-4. **운영 문서 작성**
+3. **운영 문서 작성**
+   - API 문서화 (Swagger/OpenAPI)
    - 배포 가이드
-   - 운영 매뉴얼
-   - API 문서화
 ```
 
 ---
@@ -918,37 +1000,55 @@ crypto-trading-system/
 │   │   │   ├── BacktestService.java    
 │   │   │   ├── EmailService.java     
 │   │   │   └── AdminService.java
+│   │   ├── config/            # 설정 클래스
+│   │   │   ├── SecurityConfig.java
+│   │   │   ├── NotificationConfig.java
+│   │   │   └── security/      # ⭐ 추가: Security 핸들러
+│   │   │       ├── CustomAuthenticationEntryPoint.java
+│   │   │       └── CustomAccessDeniedHandler.java
+│   │   ├── exception/         # ⭐ 확장: 예외 처리
+│   │   │   ├── GlobalExceptionHandler.java
+│   │   │   ├── ErrorCode.java              # ⭐ 추가
+│   │   │   ├── BusinessException.java      # ⭐ 추가
+│   │   │   ├── EntityNotFoundException.java    # ⭐ 추가
+│   │   │   ├── DuplicateResourceException.java # ⭐ 추가
+│   │   │   ├── UnauthorizedException.java  # ⭐ 추가
+│   │   │   ├── UpbitApiException.java      # ⭐ 추가
+│   │   │   └── TradingException.java       # ⭐ 추가
 │   │   ├── scheduler/         # 스케줄러
 │   │   │   └── TradingScheduler.java
 │   │   ├── repository/        # 데이터 접근 계층
 │   │   ├── entity/            # JPA 엔티티
 │   │   ├── dto/               # 데이터 전송 객체
+│   │   │   ├── common/        # ⭐ 추가: 공통 DTO
+│   │   │   │   ├── ApiResponse.java
+│   │   │   │   └── PageResponse.java
 │   │   │   ├── indicator/     # 기술적 지표 DTO
 │   │   │   ├── bot/           # 봇 관련 DTO
 │   │   │   ├── upbit/         # 업비트 API DTO
 │   │   │   ├── notification/  # 알림 DTO
-│   │   │   │   ├── NotificationDTO.java
-│   │   │   │   └── DailyReportDTO.java
-│   │   │   └── backtest/      # 백테스팅 DTO
-│   │   │       ├── BacktestRequestDTO.java
-│   │   │       └── BacktestResultDTO.java
-│   │   ├── config/            # 설정 클래스
-│   │   │   ├── SecurityConfig.java
-│   │   │   ├── RedisConfig.java
-│   │   │   └── NotificationConfig.java        
-│   │   ├── filter/            # 필터 (JWT 인증)
-│   │   ├── util/              # 유틸리티
-│   │   └── exception/         # 예외 처리
-│   ├── src/main/resources/
-│   │   └── application.yml    # 애플리케이션 설정
-│   └── pom.xml                # Maven 의존성
+│   │   │   ├── backtest/      # 백테스트 DTO
+│   │   │   └── admin/         # 관리자 DTO
+│   │   ├── filter/            # 필터
+│   │   │   └── JwtAuthenticationFilter.java
+│   │   └── util/              # 유틸리티
+│   │       ├── JwtUtil.java
+│   │       └── EncryptionUtil.java
+│   └── src/main/resources/
+│       ├── application.yml
+│       └── templates/email/   # 이메일 템플릿
 │
 ├── frontend/                   # Vue.js 프론트엔드
 │   ├── src/
 │   │   ├── api/               # API 클라이언트
-│   │   ├── components/        # Vue 컴포넌트
+│   │   │   └── index.ts
+│   │   ├── components/        # 공통 컴포넌트
 │   │   │   ├── TheHeader.vue
-│   │   │   └── TheSidebar.vue
+│   │   │   ├── TheSidebar.vue
+│   │   │   └── GlobalSnackbar.vue    # ⭐ 추가
+│   │   ├── composables/       # ⭐ 추가: Composition API 유틸
+│   │   │   ├── useErrorHandler.ts
+│   │   │   └── useSnackbar.ts
 │   │   ├── views/             # 페이지 컴포넌트
 │   │   │   ├── LoginView.vue
 │   │   │   ├── SignupView.vue
@@ -957,28 +1057,29 @@ crypto-trading-system/
 │   │   │   ├── TradingSettingsView.vue
 │   │   │   ├── TransactionHistoryView.vue
 │   │   │   ├── HoldingsView.vue
-│   │   │   ├── BotMonitorView.vue            
-│   │   │   ├── DailyReportView.vue         
-│   │   │   ├── BacktestView.vue         
-│   │   │   └── AdminDashboardView.vue   
+│   │   │   ├── BotMonitorView.vue
+│   │   │   ├── DailyReportView.vue
+│   │   │   ├── BacktestView.vue
+│   │   │   └── AdminDashboardView.vue
 │   │   ├── stores/            # Pinia 상태 관리
-│   │   ├── router/            # Vue Router
+│   │   │   ├── auth.ts
+│   │   │   └── coin.ts
 │   │   ├── types/             # TypeScript 타입
 │   │   │   ├── index.ts
-│   │   │   ├── bot.ts   
-│   │   │   └── backtest.ts                 
-│   │   └── App.vue            # 루트 컴포넌트
-│   ├── nginx.conf             # Nginx 설정
-│   └── package.json           # npm 의존성
+│   │   │   ├── bot.ts
+│   │   │   ├── backtest.ts
+│   │   │   └── error.ts       # ⭐ 추가
+│   │   ├── router/            # Vue Router
+│   │   │   └── index.ts
+│   │   ├── App.vue
+│   │   └── main.ts
+│   ├── index.html
+│   └── vite.config.ts
 │
-├── docker/
-│   └── mysql/
-│       └── init.sql           # 데이터베이스 초기화
-│
-├── docker-compose.yml         # Docker 서비스 설정
-├── .env                       # 환경변수 (보안)
-└── README.md                  # 프로젝트 문서
-```
+├── docker-compose.yml
+├── .env.example
+├── .gitignore
+└── README.md
 ```
 
 ---

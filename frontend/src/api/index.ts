@@ -1,4 +1,5 @@
 import axios from 'axios'
+import type { AxiosError } from 'axios'
 import type {
   LoginRequest,
   SignupRequest,
@@ -16,6 +17,8 @@ import type {
   DashboardStats,           
   PageResponse             
 } from '@/types'
+import type { ApiErrorResponse } from '@/types/error'
+import { getErrorMessage } from '@/types/error'  
 
 // Axios 인스턴스 생성
 const api = axios.create({
@@ -41,16 +44,56 @@ api.interceptors.request.use(
 )
 
 // 응답 인터셉터: 에러 처리
+// 응답 인터셉터: 에러 처리 (개선)
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // 토큰 만료 시 로그아웃
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      window.location.href = '/login'
+  (error: AxiosError<ApiErrorResponse>) => {
+    const status = error.response?.status
+    const errorData = error.response?.data
+    
+    // 네트워크 오류
+    if (!error.response) {
+      console.error('네트워크 오류:', error.message)
+      return Promise.reject({
+        code: 'NETWORK_ERROR',
+        message: '네트워크 연결을 확인해주세요.',
+        originalError: error
+      })
     }
-    return Promise.reject(error)
+    
+    // 401 Unauthorized - 토큰 만료/무효
+    if (status === 401) {
+      const errorCode = errorData?.error?.code
+      // 로그인 API 경로이거나 로그인 실패(A005)인 경우 리다이렉트하지 않음
+      const isLoginRequest = error.config?.url?.includes('/auth/login')
+      const isSignupRequest = error.config?.url?.includes('/auth/signup')
+      
+      if (!isLoginRequest && !isSignupRequest && errorCode !== 'A005') {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        window.location.href = '/login'
+      }
+    }
+    
+    // 에러 응답이 새 형식인 경우 (ApiResponse)
+    if (errorData?.error) {
+      const apiError = errorData.error
+      return Promise.reject({
+        code: apiError.code,
+        message: getErrorMessage(apiError.code, apiError.message),
+        detail: apiError.detail,
+        fieldErrors: apiError.fieldErrors,
+        status: status
+      })
+    }
+    
+    // 기존 형식 에러 (하위 호환)
+    return Promise.reject({
+      code: 'UNKNOWN',
+      message: error.response?.data?.message || error.response?.data?.error || '오류가 발생했습니다.',
+      status: status,
+      originalError: error
+    })
   }
 )
 

@@ -3,6 +3,9 @@ package com.cryptotrading.controller;
 import com.cryptotrading.dto.AuthResponse;
 import com.cryptotrading.dto.LoginRequest;
 import com.cryptotrading.dto.SignupRequest;
+import com.cryptotrading.dto.common.ApiResponse; 
+import com.cryptotrading.dto.common.ApiResponse.ErrorResponse;  
+import com.cryptotrading.exception.ErrorCode;  
 import com.cryptotrading.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,9 +32,19 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (RuntimeException e) {
             log.error("회원가입 실패: {}", e.getMessage());
-            Map<String, String> error = new HashMap<>();
-            error.put("error", e.getMessage());
-            return ResponseEntity.badRequest().body(error);
+            
+            ErrorCode errorCode = e.getMessage().contains("이미 존재") 
+                    ? ErrorCode.DUPLICATE_USER_ID 
+                    : ErrorCode.INVALID_INPUT_VALUE;
+            
+            ErrorResponse error = ErrorResponse.builder()
+                    .code(errorCode.getCode())
+                    .message(e.getMessage())
+                    .build();
+            
+            return ResponseEntity
+                    .status(errorCode.getHttpStatus())
+                    .body(ApiResponse.error(error));
         }
     }
 
@@ -42,9 +55,15 @@ public class AuthController {
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             log.error("로그인 실패: {}", e.getMessage());
-            Map<String, String> error = new HashMap<>();
-            error.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+            ErrorResponse error = ErrorResponse.builder()
+                    .code(ErrorCode.LOGIN_FAILED.getCode())
+                    .message(ErrorCode.LOGIN_FAILED.getMessage())
+                    .detail(e.getMessage())
+                    .build();
+            
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(error));
         }
     }
 
@@ -53,14 +72,16 @@ public class AuthController {
         try {
             // "Bearer " 제거
             String token = authHeader.substring(7);
-            Map<String, Object> response = new HashMap<>();
-            response.put("valid", true);
-            response.put("message", "유효한 토큰입니다");
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(ApiResponse.success("유효한 토큰입니다")); 
         } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "유효하지 않은 토큰입니다");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+            ErrorResponse error = ErrorResponse.builder()
+                    .code(ErrorCode.INVALID_TOKEN.getCode())
+                    .message(ErrorCode.INVALID_TOKEN.getMessage())
+                    .build();
+            
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(error));
         }
     }
 }

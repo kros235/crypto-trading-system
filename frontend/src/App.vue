@@ -1,10 +1,12 @@
 <template>
+  <GlobalSnackbar />
   <router-view />
 </template>
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import GlobalSnackbar from '@/components/GlobalSnackbar.vue'
 
 const authStore = useAuthStore()
 

@@ -17,6 +17,10 @@ export interface BacktestRequest {
   bbPeriod?: number;
   bbMultiplier?: number;
   volumeThreshold?: number;
+  // ★★★ 신규 추가: 리스크 관리 설정 ★★★
+  dailyTradeLimitPct?: number;   // 일일 거래 한도 (%)
+  maxPositionPct?: number;       // 단일 종목 비중 제한 (%)
+  dailyStopLossPct?: number;     // 긴급 정지 조건 (%)
 }
 
 // 백테스트 결과
@@ -89,6 +93,8 @@ export interface BacktestTrade {
 export interface AvailableCoin {
   symbol: string;
   name: string;
+  rank?: number;                        // ★★★ 신규: 시가총액 순위 ★★★
+  accTradePrice24h?: number;      // ★★★ 신규: 24시간 거래대금 ★★★
 }
 
 export interface AvailableCoinsResponse {

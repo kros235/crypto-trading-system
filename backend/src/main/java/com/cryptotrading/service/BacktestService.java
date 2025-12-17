@@ -67,20 +67,62 @@ public class BacktestService {
      */
     private Map<String, List<UpbitCandleDTO>> fetchCandleData(
             List<String> coinSymbols, LocalDate startDate, LocalDate endDate) {
-        
+    
         Map<String, List<UpbitCandleDTO>> result = new HashMap<>();
-        int count = (int) ChronoUnit.DAYS.between(startDate, endDate) + 50; // 지표 계산용 여유분
-        
+        // ★★★ 수정: 최대 1년(365일) + 지표 계산용 여유분(50일) ★★★
+        int totalDays = (int) ChronoUnit.DAYS.between(startDate, endDate) + 50;
+    
         for (String symbol : coinSymbols) {
             try {
-                List<UpbitCandleDTO> candles = upbitApiService.getDayCandles(symbol, count);
+                List<UpbitCandleDTO> allCandles = new ArrayList<>();
+            
+                // ★★★ 수정: 업비트 API 200개 제한 대응 - 페이징 처리 ★★★
+                if (totalDays <= 200) {
+                    // 200개 이하면 한 번에 조회
+                    allCandles = upbitApiService.getDayCandles(symbol, totalDays);
+                } else {
+                    // 200개 초과 시 여러 번 나눠서 조회
+                    int remaining = totalDays;
+                    String toDate = null; // null이면 최신 데이터부터
                 
+                    while (remaining > 0) {
+                        int fetchCount = Math.min(remaining, 200);
+                        List<UpbitCandleDTO> candles;
+                    
+                        if (toDate == null) {
+                            candles = upbitApiService.getDayCandles(symbol, fetchCount);
+                        } else {
+                            candles = upbitApiService.getDayCandlesWithTo(symbol, fetchCount, toDate);
+                        }
+                    
+                        if (candles == null || candles.isEmpty()) {
+                            break;
+                        }
+                    
+                        allCandles.addAll(candles);
+                        remaining -= candles.size();
+                    
+                        // 다음 조회를 위한 기준 시간 설정 (가장 오래된 캔들의 시간)
+                        if (!candles.isEmpty()) {
+                            toDate = candles.get(candles.size() - 1).getCandleDateTimeKst();
+                        }
+                    
+                        // API 호출 제한 방지
+                        Thread.sleep(100);
+                    
+                        // 더 이상 데이터가 없으면 종료
+                        if (candles.size() < fetchCount) {
+                            break;
+                        }
+                    }
+                }
+            
                 // 날짜순 정렬 (오래된 순)
-                candles.sort(Comparator.comparing(UpbitCandleDTO::getCandleDateTimeKst));
-                
-                result.put(symbol, candles);
-                log.info("캔들 데이터 조회: {} - {}개", symbol, candles.size());
-                
+                allCandles.sort(Comparator.comparing(UpbitCandleDTO::getCandleDateTimeKst));
+            
+                result.put(symbol, allCandles);
+                log.info("캔들 데이터 조회: {} - {}개", symbol, allCandles.size());
+            
                 // API 호출 제한 방지
                 Thread.sleep(100);
             } catch (Exception e) {
@@ -92,11 +134,40 @@ public class BacktestService {
     }
 
     /**
-     * 일별 시뮬레이션
-     */
+      * 일별 시뮬레이션
+      */
     private void simulateDay(LocalDate date, Map<String, List<UpbitCandleDTO>> candleDataMap,
                               BacktestRequestDTO request, SimulationState state) {
+    
+        // ★★★ 신규 추가: 날짜 변경 시 일일 상태 초기화 ★★★
+        if (state.getCurrentTradeDate() == null || !state.getCurrentTradeDate().equals(date)) {
+            state.setCurrentTradeDate(date);
+            state.setDailyBuyAmount(BigDecimal.ZERO);
+            state.setDailyStopTriggered(false);
         
+            // 당일 시작 잔고 계산
+            BigDecimal holdingValue = calculateHoldingValue(state.getPositions(), candleDataMap, date);
+            state.setDailyStartBalance(state.getCashBalance().add(holdingValue));
+        }
+    
+        // ★★★ 신규 추가: 긴급 정지 체크 ★★★
+        if (request.getDailyStopLossPct() > -100) {
+            BigDecimal holdingValue = calculateHoldingValue(state.getPositions(), candleDataMap, date);
+            BigDecimal currentBalance = state.getCashBalance().add(holdingValue);
+            BigDecimal dailyProfitRate = state.getDailyStartBalance().compareTo(BigDecimal.ZERO) > 0
+                    ? currentBalance.subtract(state.getDailyStartBalance())
+                        .divide(state.getDailyStartBalance(), 4, RoundingMode.HALF_UP)
+                        .multiply(new BigDecimal("100"))
+                    : BigDecimal.ZERO;
+        
+            if (dailyProfitRate.compareTo(new BigDecimal(request.getDailyStopLossPct())) <= 0) {
+                state.setDailyStopTriggered(true);
+                log.info("긴급 정지 발동: {} - 일일 손실률 {}%", date, dailyProfitRate);
+            }
+        }
+    
+
+
         for (String coinSymbol : request.getCoinSymbols()) {
             List<UpbitCandleDTO> candles = candleDataMap.get(coinSymbol);
             UpbitCandleDTO todayCandle = findCandleByDate(candles, date);
@@ -189,13 +260,26 @@ public class BacktestService {
 
     /**
      * 과거 캔들 데이터 추출 (특정 날짜 기준)
+     * ★★★ 버그 수정: targetDate 기준 최근 count개 데이터를 역순(최신→과거)으로 반환 ★★★
      */
     private List<UpbitCandleDTO> getHistoricalCandles(List<UpbitCandleDTO> candles, 
                                                        LocalDate targetDate, int count) {
-        return candles.stream()
+        // targetDate 이전 데이터만 필터링 (candles는 오래된 순 정렬 상태)
+        List<UpbitCandleDTO> filtered = candles.stream()
                 .filter(c -> !parseToLocalDate(c.getCandleDateTimeKst()).isAfter(targetDate))
-                .limit(count)
                 .toList();
+    
+        int size = filtered.size();
+        if (size == 0) {
+            return new ArrayList<>();
+        }
+    
+        // ★★★ 수정: 뒤에서(최신) count개 추출 후 역순 정렬 (최신이 먼저) ★★★
+        int fromIndex = Math.max(0, size - count);
+        List<UpbitCandleDTO> result = new ArrayList<>(filtered.subList(fromIndex, size));
+        Collections.reverse(result);  // 최신 데이터가 앞에 오도록 역순
+    
+        return result;
     }
 
     /**
@@ -260,6 +344,9 @@ public class BacktestService {
         
         state.setBuyCount(state.getBuyCount() + 1);
         log.debug("매수: {} - {}원 x {} ({})", symbol, price, quantity, signal);
+
+        // ★★★ 신규 추가: 일일 매수 금액 누적 ★★★
+       state.setDailyBuyAmount(state.getDailyBuyAmount().add(buyAmount));
     }
 
     /**
@@ -332,20 +419,62 @@ public class BacktestService {
     }
 
     /**
-     * ★★★ 신규 추가: 매수 가능 여부 확인 ★★★
+     * ★★★ 수정: 매수 가능 여부 확인 (리스크 관리 추가) ★★★
      */
     private boolean canBuy(String coinSymbol, BacktestRequestDTO request, SimulationState state) {
-        // 현금 잔고 확인
+
+        // 0. 긴급 정지 발동 여부 확인
+        if (state.isDailyStopTriggered()) {
+            return false;
+        }
+
+        // 1. 현금 잔고 확인
         if (state.getCashBalance().compareTo(new BigDecimal("10000")) < 0) {
             return false;
         }
-        
-        // 해당 코인 보유 건수 확인
+
+        // 2. 해당 코인 보유 건수 확인
         long holdingCount = state.getPositions().stream()
                 .filter(p -> p.getCoinSymbol().equals(coinSymbol))
                 .count();
+        if (holdingCount >= request.getMaxHoldingsPerCoin()) {
+            return false;
+        }
+
+        // ★★★ 예상 매수 금액 계산 (executeBuy와 동일한 로직) ★★★
+        BigDecimal buyAmount = request.getInitialBalance()
+                .multiply(new BigDecimal("0.1"))
+                .min(state.getCashBalance());
+
+        // 3. ★★★ 신규: 일일 거래 한도 체크 ★★★
+        if (request.getDailyTradeLimitPct() != null && request.getDailyTradeLimitPct() < 100) {
+            BigDecimal dailyLimit = request.getInitialBalance()
+                    .multiply(new BigDecimal(request.getDailyTradeLimitPct()))
+                    .divide(new BigDecimal("100"), 0, RoundingMode.DOWN);
         
-        return holdingCount < request.getMaxHoldingsPerCoin();
+            if (state.getDailyBuyAmount().add(buyAmount).compareTo(dailyLimit) > 0) {
+                return false;
+            }
+        }
+
+        // 4. ★★★ 신규: 단일 종목 비중 제한 체크 ★★★
+        if (request.getMaxPositionPct() != null && request.getMaxPositionPct() < 100) {
+            BigDecimal maxPositionAmount = request.getInitialBalance()
+                    .multiply(new BigDecimal(request.getMaxPositionPct()))
+                    .divide(new BigDecimal("100"), 0, RoundingMode.DOWN);
+        
+            // 해당 코인의 현재 보유 금액 계산
+            BigDecimal currentCoinAmount = state.getPositions().stream()
+                    .filter(p -> p.getCoinSymbol().equals(coinSymbol))
+                    .map(p -> p.getQuantity().multiply(p.getAvgPrice()))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+            if (currentCoinAmount.add(buyAmount).compareTo(maxPositionAmount) > 0) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -670,6 +799,12 @@ public class BacktestService {
         private List<Position> positions = new ArrayList<>();
         private List<DailyBalance> dailyBalances = new ArrayList<>();
         private List<BacktestTrade> trades = new ArrayList<>();
+
+        // ★★★ 신규 추가: 리스크 관리용 필드 ★★★
+        private BigDecimal dailyBuyAmount = BigDecimal.ZERO;  // 당일 매수 금액
+        private LocalDate currentTradeDate = null;            	  // 현재 거래일
+        private BigDecimal dailyStartBalance = BigDecimal.ZERO; // 당일 시작 잔고
+        private boolean dailyStopTriggered = false;           	  // 긴급 정지 발동 여부
         
         public SimulationState(BigDecimal initialBalance) {
             this.cashBalance = initialBalance;

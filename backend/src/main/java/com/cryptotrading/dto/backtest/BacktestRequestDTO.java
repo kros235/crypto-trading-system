@@ -94,4 +94,24 @@ public class BacktestRequestDTO {
     @Max(value = 500, message = "거래량 기준은 500% 이하")
     @Builder.Default
     private Integer volumeThreshold = 150;
+
+    // ★★★ 신규 추가: 리스크 관리 설정 ★★★
+    
+    // 일일 최대 거래금액 (초기 자본 대비 %)
+    @Min(value = 10, message = "일일 거래 한도는 10% 이상")
+    @Max(value = 100, message = "일일 거래 한도는 100% 이하")
+    @Builder.Default
+    private Integer dailyTradeLimitPct = 100;  // 기본값: 제한 없음 (100%)
+
+    // 단일 종목 최대 비중 (총 자본 대비 %)
+    @Min(value = 10, message = "종목 비중은 10% 이상")
+    @Max(value = 100, message = "종목 비중은 100% 이하")
+    @Builder.Default
+    private Integer maxPositionPct = 100;  // 기본값: 제한 없음 (100%)
+
+    // 긴급 정지 조건 - 일일 손실률 (%)
+    @Min(value = -50, message = "긴급 정지는 -50% 이상")
+    @Max(value = 0, message = "긴급 정지는 0% 이하")
+    @Builder.Default
+    private Integer dailyStopLossPct = -100;  // 기본값: 사용 안함 (-100%)
 }

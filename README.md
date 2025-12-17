@@ -904,15 +904,70 @@ ADD COLUMN volume_threshold INT DEFAULT 150;
 
 ---
 
+### ✅ Day 16 (2025-12-17) - 백테스팅 리스크 관리 기능 추가
+**완료 항목:**
+- 백테스팅 리스크 관리 기능 (Backend)
+  - BacktestRequestDTO 확장 (3개 필드 추가)
+  - BacktestService 리스크 관리 로직 구현
+  - SimulationState에 일일 상태 추적 필드 추가
+- 코인 목록 개선 (Backend)
+  - getAvailableCoins 메서드 전면 개편
+  - 업비트 전체 KRW 마켓 코인 조회 (150개+)
+  - 24시간 거래대금 기준 시가총액 순 정렬
+- 백테스팅 UI 확장 (Frontend)
+  - 리스크 관리 설정 섹션 추가
+  - 코인 선택 v-autocomplete로 변경
+  - 시가총액 순위 칩 표시
+
+**추가된 리스크 관리 설정:**
+| 필드 | 설명 | 기본값 | 범위 |
+|------|------|--------|------|
+| dailyTradeLimitPct | 일일 최대 거래금액 (%) | 100 (제한없음) | 10~100 |
+| maxPositionPct | 단일 종목 최대 비중 (%) | 100 (제한없음) | 10~100 |
+| dailyStopLossPct | 긴급 정지 조건 (%) | -100 (사용안함) | -50~0 |
+
+**리스크 관리 로직:**
+| 기능 | 설명 |
+|------|------|
+| 일일 거래 한도 | 초기 자본 대비 하루 최대 매수 금액 제한 |
+| 단일 종목 비중 | 한 코인에 최대 투자 가능 금액 제한 |
+| 긴급 정지 | 당일 손실률 도달 시 거래 중단 |
+
+**수정된 파일 (Backend):**
+- `dto/backtest/BacktestRequestDTO.java` - 3개 필드 추가
+- `service/BacktestService.java` - 리스크 관리 로직, SimulationState 확장
+- `controller/BacktestController.java` - UpbitApiService 연동, 코인 목록 개선
+
+**수정된 파일 (Frontend):**
+- `types/backtest.ts` - BacktestRequest, AvailableCoin 타입 확장
+- `views/BacktestView.vue` - 리스크 관리 UI 섹션 추가
+
+**해결한 주요 이슈:**
+1. **UpbitApiService import 누락**
+   - BacktestController에 import 추가
+2. **canBuy 메서드 파라미터 불일치**
+   - 6개 파라미터 → 3개로 간소화 (내부 계산)
+3. **Vue 객체 쉼표 누락**
+   - volumeThreshold 뒤 쉼표 추가
+
+**테스트 완료:**
+- ✅ 백테스트 실행 (리스크 관리 적용) - 브라우저
+- ✅ 리스크 관리 UI 표시 - 브라우저
+- ✅ 일일 거래 한도 설정 - 브라우저
+- ✅ 단일 종목 비중 설정 - 브라우저
+- ✅ 긴급 정지 설정 - 브라우저
+- ✅ 코인 목록 시가총액 순 정렬 - 브라우저
+---
+
 ## 📊 현재 진행 상황
 - **전체 진척도**: 약 88%
 - **Phase 1 (핵심 기능)**: 100% 완료 ✅
-- **Phase 2 (고도화)**: 95% 완료 ✅
+- **Phase 2 (고도화)**: 100% 완료 ✅
 - **Phase 3 (안정화)**: 50% 진행중
 
 ---
 
-## 🎯 다음 단계 (Day 16)
+## 🎯 다음 단계 (Day 17)
 
 ### 예정 작업:
 1. **성능 최적화**

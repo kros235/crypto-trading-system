@@ -21,6 +21,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import java.util.ArrayList;
+import java.util.Collections;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -221,6 +224,25 @@ public class UpbitApiService {
                 .bodyToMono(new ParameterizedTypeReference<List<UpbitCandleDTO>>() {})
                 .doOnSuccess(candles -> log.info("일봉 {}개 조회 완료: {}", candles.size(), market))
                 .doOnError(error -> log.error("일봉 조회 실패: {}", error.getMessage()))
+                .block();
+    }
+
+    /**
+     * ★★★ 신규: 일봉 캔들 조회 (특정 시간 기준) - 페이징용 ★★★
+     */
+    public List<UpbitCandleDTO> getDayCandlesWithTo(String market, int count, String to) {
+        log.debug("일봉 캔들 조회 (to 기준): {} - {}개, to={}", market, count, to);
+    
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/candles/days")
+                        .queryParam("market", market)
+                        .queryParam("count", Math.min(count, 200))
+                        .queryParam("to", to)
+                        .build())
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<List<UpbitCandleDTO>>() {})
+                .doOnError(error -> log.error("일봉 캔들 조회 실패: {} - {}", market, error.getMessage()))
                 .block();
     }
     

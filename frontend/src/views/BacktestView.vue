@@ -25,17 +25,39 @@
               <v-card-text>
                 <v-form ref="form" @submit.prevent="runBacktest">
                   <!-- 코인 선택 -->
-                  <v-select
+                  <v-autocomplete
                     v-model="request.coinSymbols"
                     :items="availableCoins"
-                    item-title="name"
                     item-value="symbol"
                     label="거래 코인"
                     multiple
                     chips
                     closable-chips
                     :rules="[v => v.length > 0 || '최소 1개 코인을 선택하세요']"
-                  />
+                    hint="시가총액 순으로 정렬됩니다"
+                    persistent-hint
+                  >
+                    <template v-slot:item="{ props, item }">
+                      <v-list-item v-bind="props">
+                        <template v-slot:prepend>
+                          <v-chip size="x-small" color="primary" variant="tonal" class="mr-2">
+                            {{ item.raw.rank || '-' }}
+                          </v-chip>
+                        </template>
+                        <template v-slot:title>
+                          {{ item.raw.name }}
+                        </template>
+                        <template v-slot:subtitle>
+                          {{ item.raw.symbol }}
+                        </template>
+                      </v-list-item>
+                    </template>
+                    <template v-slot:chip="{ props, item }">
+                      <v-chip v-bind="props" closable>
+                        {{ item.raw.name }}
+                      </v-chip>
+                    </template>
+                  </v-autocomplete>
 
                   <!-- 기간 선택 -->
                   <v-row>
@@ -217,7 +239,74 @@
                             <span class="text-body-2">{{ request.volumeThreshold }}%</span>
                           </template>
                         </v-slider>
+                        <v-divider class="my-4" />
                         
+                        <!-- ★★★ 신규 추가: 리스크 관리 설정 ★★★ -->
+                        <div class="text-subtitle-2 mb-3">
+                          <v-icon size="small" class="mr-1">mdi-shield-check</v-icon>
+                          리스크 관리
+                        </div>
+                        
+                        <!-- 일일 거래 한도 -->
+                        <div class="text-caption text-grey mb-2">일일 최대 거래금액</div>
+                        <v-slider
+                          v-model="request.dailyTradeLimitPct"
+                          :min="10"
+                          :max="100"
+                          :step="10"
+                          thumb-label
+                          hide-details
+                        >
+                          <template v-slot:append>
+                            <span class="text-body-2" style="min-width: 80px">
+                              {{ request.dailyTradeLimitPct === 100 ? '제한없음' : `${request.dailyTradeLimitPct}%` }}
+                            </span>
+                          </template>
+                        </v-slider>
+                        <div class="text-caption text-grey-darken-1 mb-3">
+                          초기 자본 대비 하루 최대 매수 금액 ({{ formatCurrency(request.initialBalance * request.dailyTradeLimitPct / 100) }})
+                        </div>
+                        
+                        <!-- 단일 종목 비중 제한 -->
+                        <div class="text-caption text-grey mb-2 mt-3">단일 종목 최대 비중</div>
+                        <v-slider
+                          v-model="request.maxPositionPct"
+                          :min="10"
+                          :max="100"
+                          :step="5"
+                          thumb-label
+                          hide-details
+                        >
+                          <template v-slot:append>
+                            <span class="text-body-2" style="min-width: 80px">
+                              {{ request.maxPositionPct === 100 ? '제한없음' : `${request.maxPositionPct}%` }}
+                            </span>
+                          </template>
+                        </v-slider>
+                        <div class="text-caption text-grey-darken-1 mb-3">
+                          한 코인에 최대 투자 가능 금액 ({{ formatCurrency(request.initialBalance * request.maxPositionPct / 100) }})
+                        </div>
+                        
+                        <!-- 긴급 정지 조건 -->
+                        <div class="text-caption text-grey mb-2 mt-3">긴급 정지 (일일 손실률)</div>
+                        <v-slider
+                          v-model="request.dailyStopLossPct"
+                          :min="-50"
+                          :max="0"
+                          :step="5"
+                          thumb-label
+                          hide-details
+                          color="error"
+                        >
+                          <template v-slot:append>
+                            <span class="text-body-2" style="min-width: 80px">
+                              {{ request.dailyStopLossPct <= -50 ? '사용안함' : `${request.dailyStopLossPct}%` }}
+                            </span>
+                          </template>
+                        </v-slider>
+                        <div class="text-caption text-grey-darken-1 mb-1">
+                          당일 손실이 {{ request.dailyStopLossPct }}% 도달 시 거래 중단
+                        </div>
                       </v-expansion-panel-text>
                     </v-expansion-panel>
                   </v-expansion-panels>
@@ -654,7 +743,11 @@ const request = ref({
   bbPeriod: 20,
   bbMultiplier: 2,
   // ★★★ 신규 추가: 거래량 설정 ★★★
-  volumeThreshold: 150
+  volumeThreshold: 150,
+  // ★★★ 신규 추가: 리스크 관리 설정 ★★★
+  dailyTradeLimitPct: 100,    // 기본값: 제한 없음
+  maxPositionPct: 100,        // 기본값: 제한 없음
+  dailyStopLossPct: -100      // 기본값: 사용 안함
 })
 
 // 스낵바

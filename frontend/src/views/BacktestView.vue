@@ -724,30 +724,30 @@ const result = ref<BacktestResult | null>(null)
 
 // 요청 데이터
 const request = ref({
-  coinSymbols: ['KRW-BTC', 'KRW-ETH'],
-  startDate: getDateString(-30),
+  coinSymbols: ['KRW-BTC', 'KRW-ETH', 'KRW-XRP', 'KRW-SOL'],
+  startDate: getDateString(-365),
   endDate: getDateString(-1),
   initialBalance: 1000000,
   basePeriod: 20,
-  buyThresholdPct: -3,
-  sellTargetPct: 3,
-  stopLossPct: -5,
-  maxHoldingsPerCoin: 3,
-  useTrailingStop: false,
-  trailingStopPct: 5,
+  buyThresholdPct: -6,
+  sellTargetPct: 4,
+  stopLossPct: -8,
+  maxHoldingsPerCoin: 2,
+  useTrailingStop: true,
+  trailingStopPct: 4,
   // ★★★ 신규 추가: RSI 설정 ★★★
   rsiPeriod: 14,
-  rsiBuyThreshold: 30,
-  rsiSellThreshold: 70,
+  rsiBuyThreshold: 32,
+  rsiSellThreshold: 68,
   // ★★★ 신규 추가: 볼린저 밴드 설정 ★★★
   bbPeriod: 20,
   bbMultiplier: 2,
   // ★★★ 신규 추가: 거래량 설정 ★★★
-  volumeThreshold: 150,
+  volumeThreshold: 140,
   // ★★★ 신규 추가: 리스크 관리 설정 ★★★
-  dailyTradeLimitPct: 100,    // 기본값: 제한 없음
-  maxPositionPct: 100,        // 기본값: 제한 없음
-  dailyStopLossPct: -100      // 기본값: 사용 안함
+  dailyTradeLimitPct: 20,    // 기본값: 제한 없음
+  maxPositionPct: 25,        // 기본값: 제한 없음
+  dailyStopLossPct: -5      // 기본값: 사용 안함
 })
 
 // 스낵바

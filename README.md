@@ -1059,19 +1059,67 @@ ADD COLUMN volume_threshold INT DEFAULT 150;
 ## 🎯 다음 단계 (Day 18)
 
 ### 예정 작업:
-1. **운영 문서 작성**
-   - API 문서화 (Swagger/OpenAPI)
-   - 배포 가이드
-   - 운영 매뉴얼
 
-2. **최종 테스트**
-   - 전체 기능 통합 테스트
-   - 부하 테스트
-   - 보안 점검 최종 확인
+#### 1. Discord 회원별 개인 알림 기능
+**현재 상태:** 모든 사용자 알림이 단일 공용 채널로 발송됨
 
-3. **선택적 기능 (Optional)**
-   - WebSocket 실시간 모니터링
-   - 텔레그램 봇 알림
+**구현 목표:**
+- 사용자별 Discord 웹훅 URL 저장 기능
+- 프로필 페이지에 Discord 설정 UI 추가
+- 사용자별 개인 채널로 알림 라우팅
+- (선택) Discord Bot을 통한 DM 발송
+
+**Backend 작업:**
+- `users` 테이블에 `discord_webhook_url` 컬럼 추가
+- `User` Entity 및 DTO 확장
+- `NotificationService` 사용자별 웹훅 조회 로직 추가
+- 프로필 API에 Discord 설정 저장/조회 추가
+
+**Frontend 작업:**
+- `ProfileView.vue`에 Discord 웹훅 URL 입력 UI 추가
+- Discord 연동 테스트 버튼 추가
+- 알림 설정 상태 표시
+
+**예상 파일 변경:**
+- `docker/mysql/init.sql` - 스키마 변경
+- `entity/User.java` - 필드 추가
+- `dto/user/UpdateProfileRequest.java` - 필드 추가
+- `service/NotificationService.java` - 사용자별 웹훅 로직
+- `views/ProfileView.vue` - Discord 설정 UI
+
+---
+
+#### 2. AI 뉴스 분석 기능 (선택적)
+**현재 상태:** UI만 구현, 실제 AI 분석 로직 미구현
+
+**구현 목표:**
+- ChatGPT/Claude API 연동
+- 뉴스 수집 서비스 (선택: 크롤링 또는 뉴스 API)
+- 호재/악재 분석 결과를 매매 기준가에 ±2% 반영
+
+**Backend 작업:**
+- `AiNewsAnalysisService` 생성
+- OpenAI/Claude API 클라이언트 구현
+- 분석 결과를 `SignalDetectorService`에 반영
+
+**참고사항:**
+- AI API 비용 발생 (사용량 기반 과금)
+- 뉴스 소스 확보 필요 (무료 API 또는 크롤링)
+- 우선순위: Discord 개인 알림 기능 완료 후 진행
+
+---
+
+#### 3. 운영 문서 작성 (시간 여유 시)
+- API 문서화 (Swagger/OpenAPI)
+- 배포 가이드
+- 운영 매뉴얼
+
+---
+
+### 우선순위:
+1. 🔴 **높음**: Discord 회원별 개인 알림 기능
+2. 🟡 **중간**: AI 뉴스 분석 기능 (Optional)
+3. 🟢 **낮음**: 운영 문서 작성
 
 ---
 

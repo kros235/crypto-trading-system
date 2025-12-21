@@ -260,7 +260,7 @@ export const backtestApi = {
     maxHoldingsPerCoin?: number;
     useTrailingStop?: boolean;
     trailingStopPct?: number;
-  }) => api.post('/backtest/run', data),
+  }) => api.post('/backtest/run', data, { timeout: 300000 }),  // 5분
   
   // 빠른 백테스트
   quick: (coins: string[], days: number = 30, initialBalance: number = 1000000) =>

@@ -108,7 +108,7 @@ public class BacktestService {
                         }
                     
                         // API 호출 제한 방지
-                        Thread.sleep(100);
+                        Thread.sleep(200);
                     
                         // 더 이상 데이터가 없으면 종료
                         if (candles.size() < fetchCount) {
@@ -124,7 +124,7 @@ public class BacktestService {
                 log.info("캔들 데이터 조회: {} - {}개", symbol, allCandles.size());
             
                 // API 호출 제한 방지
-                Thread.sleep(100);
+                Thread.sleep(200);
             } catch (Exception e) {
                 log.error("캔들 데이터 조회 실패: {} - {}", symbol, e.getMessage());
             }

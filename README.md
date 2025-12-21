@@ -981,6 +981,12 @@ ADD COLUMN volume_threshold INT DEFAULT 150;
 - DB 인덱스 최적화 확인
   - transactions 테이블: 4개 인덱스 확인
   - trading_settings 테이블: 1개 인덱스 확인
+- 백테스팅 기간 확장 (1년 → 3년)
+  - BacktestController: 최대 기간 1년 → 3년으로 확장
+  - BacktestService: API 호출 딜레이 100ms → 200ms (Rate Limit 방지)
+  - BacktestView: 3년 초과 시 alert, 1년 초과 시 confirm 창 표시
+  - API 타임아웃: 백테스트 API 10초 → 5분으로 확장
+  - 업비트 API 페이징 처리로 장기간 데이터 조회 지원
 
 **생성된 파일 (Backend):**
 - `service/CacheService.java` - Redis 캐시 서비스
@@ -991,6 +997,10 @@ ADD COLUMN volume_threshold INT DEFAULT 150;
 - `config/SecurityConfig.java` - RateLimitFilter 등록
 - `exception/ErrorCode.java` - C006 (Rate Limit 초과) 추가
 - `frontend/nginx.conf` - 보안 헤더 추가
+- `controller/BacktestController.java` - 기간 제한 3년으로 확장
+- `service/BacktestService.java` - API 딜레이 200ms로 증가
+- `views/BacktestView.vue` - 기간 체크 로직 및 알림 추가
+- `api/index.ts` - 백테스트 API 타임아웃 5분 설정
 
 **테스트 완료:**
 - ✅ 활성 코인 캐싱 - Redis CLI
@@ -999,6 +1009,9 @@ ADD COLUMN volume_threshold INT DEFAULT 150;
 - ✅ Rate Limit 초과 (429) - PowerShell 스크립트
 - ✅ 보안 헤더 적용 - 브라우저
 - ✅ DB 인덱스 존재 확인 - MySQL CLI
+- ✅ 백테스팅 3년 초과 시 alert 표시 - 브라우저
+- ✅ 백테스팅 1~3년 기간 confirm 창 표시 - 브라우저
+- ✅ 백테스팅 2년 기간 정상 실행 - 브라우저
 
 ---
 

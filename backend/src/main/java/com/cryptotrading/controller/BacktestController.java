@@ -52,8 +52,8 @@ public class BacktestController {
         }
         
         // 최대 1년으로 제한
-        if (request.getStartDate().plusYears(1).isBefore(request.getEndDate())) {
-            throw new IllegalArgumentException("백테스트 기간은 최대 1년입니다.");
+        if (request.getStartDate().plusYears(3).isBefore(request.getEndDate())) {
+            throw new IllegalArgumentException("백테스트 기간은 최대 3년입니다.");
         }
         
         BacktestResultDTO result = backtestService.runBacktest(request);

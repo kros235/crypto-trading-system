@@ -891,6 +891,34 @@ const fetchAvailableCoins = async () => {
 
 // 백테스트 실행
 const runBacktest = async () => {
+
+  // 코인 선택 체크
+  if (!request.value.coinSymbols || request.value.coinSymbols.length === 0) {
+    showSnackbar('코인을 선택해주세요.', 'warning')
+    return
+  }
+  
+  // ★★★ 추가: 기간 3년 초과 체크 ★★★
+  const startDate = new Date(request.value.startDate)
+  const endDate = new Date(request.value.endDate)
+  const diffYears = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 365)
+  
+  if (diffYears > 3) {
+    alert('백테스트 기간은 최대 3년까지 가능합니다.\n\n선택한 기간: ' + Math.floor(diffYears * 10) / 10 + '년')
+    return
+  }
+  
+  // ★★★ 추가: 장기간 테스트 시 안내 ★★★
+  if (diffYears > 1) {
+    const confirmed = confirm(
+      `장기간(${Math.floor(diffYears * 10) / 10}년) 백테스트를 실행합니다.\n` +
+      `데이터 조회에 시간이 다소 걸릴 수 있습니다.\n\n계속하시겠습니까?`
+    )
+    if (!confirmed) {
+      return
+    }
+  }
+
   loading.value = true
   result.value = null
 

@@ -16,7 +16,7 @@
         <!-- 봇 상태 카드 -->
         <v-row class="mb-4">
           <v-col cols="12" md="3">
-            <v-card class="pa-4" :color="botRunning ? 'success' : 'grey'" dark>
+            <v-card class="pa-4 bot-stats-card" :color="botRunning ? 'success' : 'grey'" dark>
               <div class="d-flex align-center">
                 <v-icon size="48" class="mr-4">
                   {{ botRunning ? 'mdi-robot' : 'mdi-robot-off' }}
@@ -30,7 +30,7 @@
           </v-col>
           
           <v-col cols="12" md="3">
-            <v-card class="pa-4" color="primary" dark>
+            <v-card class="pa-4 bot-stats-card" color="primary" dark>
               <div class="d-flex align-center">
                 <v-icon size="48" class="mr-4">mdi-clock-outline</v-icon>
                 <div>
@@ -42,7 +42,7 @@
           </v-col>
           
           <v-col cols="12" md="3">
-            <v-card class="pa-4" color="info" dark>
+            <v-card class="pa-4 bot-stats-card" color="info" dark>
               <div class="d-flex align-center">
                 <v-icon size="48" class="mr-4">mdi-cart-arrow-down</v-icon>
                 <div>
@@ -54,7 +54,7 @@
           </v-col>
           
           <v-col cols="12" md="3">
-            <v-card class="pa-4" color="warning" dark>
+            <v-card class="pa-4 bot-stats-card" color="warning" dark>
               <div class="d-flex align-center">
                 <v-icon size="48" class="mr-4">mdi-cart-arrow-up</v-icon>
                 <div>
@@ -467,13 +467,30 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.text-success {
-  color: #4CAF50 !important;
-  font-weight: bold;
-}
 
-.text-error {
-  color: #F44336 !important;
-  font-weight: bold;
-}
+  .text-success {
+    color: #4CAF50 !important;
+    font-weight: bold;
+  }
+
+  .text-error {
+    color: #F44336 !important;
+    font-weight: bold;
+  }
+
+  /* ✅ 추가: 봇 상태 카드 높이 통일 */
+  .bot-stats-card {
+    height: 100%;
+    min-height: 120px;
+  }
+
+  .bot-stats-card .d-flex {
+    height: 100%;
+    align-items: center;
+  }
+
+  .bot-stats-card .text-h4,
+  .bot-stats-card .text-h5 {
+    white-space: nowrap;
+  }
 </style>

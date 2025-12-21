@@ -447,6 +447,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { coinApi, tradingApi } from '@/api'
 import type { CoinInfo } from '@/types'
 import TheHeader from '@/components/TheHeader.vue'
@@ -454,6 +455,9 @@ import TheSidebar from '@/components/TheSidebar.vue'
 
 // 사이드바 Ref
 const sidebarRef = ref()
+
+// 라우트 객체
+const route = useRoute()
 
 // 폼 Ref
 const formRef = ref()
@@ -727,6 +731,14 @@ const deleteSettings = async () => {
 onMounted(async () => {
   await loadActiveCoins()
   await loadSettings()
+  
+  // ✅ 추가: URL query 파라미터로 전달된 코인 자동 추가
+  const addCoin = route.query.addCoin as string
+  if (addCoin && !settings.value.coinSymbols.includes(addCoin)) {
+    settings.value.coinSymbols.push(addCoin)
+    message.value = `${addCoin} 코인이 거래 종목에 추가되었습니다. 저장 버튼을 눌러 설정을 저장하세요.`
+    messageType.value = 'info'
+  }
 })
 </script>
 

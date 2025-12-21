@@ -22,7 +22,7 @@
     <v-row class="mb-4">
       <!-- 사용자 통계 -->
       <v-col cols="12" md="3">
-        <v-card class="pa-4" elevation="2">
+        <v-card class="pa-4 stats-card" elevation="2">
           <div class="d-flex align-center">
             <v-avatar color="primary" size="48" class="mr-4">
               <v-icon color="white">mdi-account-group</v-icon>
@@ -38,7 +38,7 @@
 
       <!-- 오늘 거래 -->
       <v-col cols="12" md="3">
-        <v-card class="pa-4" elevation="2">
+        <v-card class="pa-4 stats-card" elevation="2">
           <div class="d-flex align-center">
             <v-avatar color="success" size="48" class="mr-4">
               <v-icon color="white">mdi-swap-horizontal</v-icon>
@@ -59,7 +59,7 @@
 
       <!-- 총 거래액 -->
       <v-col cols="12" md="3">
-        <v-card class="pa-4" elevation="2">
+        <v-card class="pa-4 stats-card" elevation="2">
           <div class="d-flex align-center">
             <v-avatar color="warning" size="48" class="mr-4">
               <v-icon color="white">mdi-currency-krw</v-icon>
@@ -76,7 +76,7 @@
 
       <!-- 시스템 상태 -->
       <v-col cols="12" md="3">
-        <v-card class="pa-4" elevation="2">
+        <v-card class="pa-4 stats-card" elevation="2">
           <div class="d-flex align-center">
             <v-avatar :color="stats.botRunning ? 'success' : 'grey'" size="48" class="mr-4">
               <v-icon color="white">mdi-robot</v-icon>
@@ -313,3 +313,15 @@ onMounted(() => {
   refreshData()
 })
 </script>
+
+<style scoped>
+/* ✅ 추가: 통계 카드 높이 통일 */
+.stats-card {
+  height: 100%;
+  min-height: 100px;
+}
+
+.stats-card .d-flex {
+  height: 100%;
+}
+</style>

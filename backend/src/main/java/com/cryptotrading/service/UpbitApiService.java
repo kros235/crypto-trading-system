@@ -34,6 +34,7 @@ public class UpbitApiService {
 
     private final WebClient webClient = WebClient.builder()
             .baseUrl("https://api.upbit.com/v1")
+            .defaultHeader(HttpHeaders.ACCEPT_CHARSET, "UTF-8")
             .build();
 
     /**

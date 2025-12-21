@@ -987,6 +987,27 @@ ADD COLUMN volume_threshold INT DEFAULT 150;
   - BacktestView: 3년 초과 시 alert, 1년 초과 시 confirm 창 표시
   - API 타임아웃: 백테스트 API 10초 → 5분으로 확장
   - 업비트 API 페이징 처리로 장기간 데이터 조회 지원
+- UI/UX 개선 (Frontend)
+  - 대시보드 레이아웃 전면 개편
+    - 사용자 정보 카드 + 우측 영역 높이 통일
+    - 4개 통계 카드 (총 손익, 총 평가액, 오늘 매수/매도)
+    - 시스템 상태 + 빠른 액세스 2열 배치
+    - 빠른 액세스에 백테스팅, 일일 리포트 버튼 추가
+  - 코인 상세 다이얼로그 구현
+    - 심볼, 시가총액 순위, 상태, 최근 업데이트 표시
+    - 주요 코인 설명 (BTC, ETH, XRP, SOL, DOGE, ADA)
+    - "이 코인 거래 설정에 추가" 버튼
+  - 활성 코인 목록 정렬 개선
+    - 시가총액 순위 기준 오름차순 정렬
+    - NULL 순위는 마지막으로 배치
+  - 관리자 대시보드 카드 높이 통일
+  - 봇 모니터링 카드 높이 통일
+  - 거래 설정 페이지 개선
+    - URL query 파라미터로 코인 자동 추가 기능
+    - 기본 선택 코인 비트코인으로 변경
+- 데이터베이스 인코딩 개선
+  - application.yml에 useUnicode=true 추가
+  - 폴리곤 코인 한글명 깨짐 수정 (DB 직접 수정)
 
 **생성된 파일 (Backend):**
 - `service/CacheService.java` - Redis 캐시 서비스
@@ -1001,6 +1022,11 @@ ADD COLUMN volume_threshold INT DEFAULT 150;
 - `service/BacktestService.java` - API 딜레이 200ms로 증가
 - `views/BacktestView.vue` - 기간 체크 로직 및 알림 추가
 - `api/index.ts` - 백테스트 API 타임아웃 5분 설정
+- `views/DashboardView.vue` - 레이아웃 전면 개편, 코인 상세 다이얼로그
+- `views/AdminDashboardView.vue` - 카드 높이 통일 (stats-card 클래스)
+- `views/BotMonitorView.vue` - 카드 높이 통일 (bot-stats-card 클래스)
+- `views/TradingSettingsView.vue` - query 파라미터 코인 추가 기능
+- `application.yml` - useUnicode=true 추가
 
 **테스트 완료:**
 - ✅ 활성 코인 캐싱 - Redis CLI
@@ -1012,6 +1038,13 @@ ADD COLUMN volume_threshold INT DEFAULT 150;
 - ✅ 백테스팅 3년 초과 시 alert 표시 - 브라우저
 - ✅ 백테스팅 1~3년 기간 confirm 창 표시 - 브라우저
 - ✅ 백테스팅 2년 기간 정상 실행 - 브라우저
+- ✅ 대시보드 레이아웃 개선 - 브라우저
+- ✅ 코인 상세 다이얼로그 - 브라우저
+- ✅ 코인 목록 순위 정렬 - 브라우저
+- ✅ 관리자 대시보드 카드 높이 통일 - 브라우저
+- ✅ 봇 모니터링 카드 높이 통일 - 브라우저
+- ✅ 거래 설정 코인 자동 추가 - 브라우저
+- ✅ 폴리곤 한글명 정상 표시 - 브라우저
 
 ---
 

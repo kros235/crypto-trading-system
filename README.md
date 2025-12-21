@@ -957,32 +957,75 @@ ADD COLUMN volume_threshold INT DEFAULT 150;
 - ✅ 단일 종목 비중 설정 - 브라우저
 - ✅ 긴급 정지 설정 - 브라우저
 - ✅ 코인 목록 시가총액 순 정렬 - 브라우저
+
+---
+
+### ✅ Day 17 (2025-12-21) - 성능 최적화 및 보안 강화
+**완료 항목:**
+- Redis 캐싱 전략 구현 (Backend)
+  - CacheService: 범용 캐시 서비스 구현
+  - 현재가 캐싱 (TTL: 30초)
+  - 활성 코인 목록 캐싱 (TTL: 1시간)
+  - 캐시 히트/미스 로깅
+- Rate Limiting 구현 (Backend)
+  - RateLimitFilter: IP 기반 요청 제한 필터
+  - 분당 60회 요청 제한
+  - Redis 기반 카운터 관리
+  - 429 Too Many Requests 응답 처리
+  - X-RateLimit-Limit, X-RateLimit-Remaining 헤더 추가
+- 보안 헤더 강화 (Frontend/Nginx)
+  - X-Frame-Options: SAMEORIGIN (클릭재킹 방지)
+  - X-Content-Type-Options: nosniff (MIME 스니핑 방지)
+  - X-XSS-Protection: 1; mode=block (XSS 공격 방지)
+  - Referrer-Policy: strict-origin-when-cross-origin (정보 누출 방지)
+- DB 인덱스 최적화 확인
+  - transactions 테이블: 4개 인덱스 확인
+  - trading_settings 테이블: 1개 인덱스 확인
+
+**생성된 파일 (Backend):**
+- `service/CacheService.java` - Redis 캐시 서비스
+- `filter/RateLimitFilter.java` - Rate Limiting 필터
+
+**수정된 파일:**
+- `service/CoinInfoService.java` - 캐싱 적용
+- `config/SecurityConfig.java` - RateLimitFilter 등록
+- `exception/ErrorCode.java` - C006 (Rate Limit 초과) 추가
+- `frontend/nginx.conf` - 보안 헤더 추가
+
+**테스트 완료:**
+- ✅ 활성 코인 캐싱 - Redis CLI
+- ✅ 현재가 캐싱 (캐시 히트) - 로그 확인
+- ✅ Rate Limit 헤더 - Postman
+- ✅ Rate Limit 초과 (429) - PowerShell 스크립트
+- ✅ 보안 헤더 적용 - 브라우저
+- ✅ DB 인덱스 존재 확인 - MySQL CLI
+
 ---
 
 ## 📊 현재 진행 상황
-- **전체 진척도**: 약 88%
+- **전체 진척도**: 약 92%
 - **Phase 1 (핵심 기능)**: 100% 완료 ✅
-- **Phase 2 (고도화)**: 100% 완료 ✅
-- **Phase 3 (안정화)**: 50% 진행중
+- **Phase 2 (고도화)**: 95% 완료 ✅
+- **Phase 3 (안정화)**: 75% 진행중
 
 ---
 
-## 🎯 다음 단계 (Day 17)
+## 🎯 다음 단계 (Day 18)
 
 ### 예정 작업:
-1. **성능 최적화**
-   - Redis 캐싱 전략 개선
-   - API 응답 속도 향상
-   - 데이터베이스 쿼리 최적화
-
-2. **보안 점검**
-   - 보안 취약점 점검
-   - API 접근 제어 강화
-
-3. **운영 문서 작성**
+1. **운영 문서 작성**
    - API 문서화 (Swagger/OpenAPI)
    - 배포 가이드
-```
+   - 운영 매뉴얼
+
+2. **최종 테스트**
+   - 전체 기능 통합 테스트
+   - 부하 테스트
+   - 보안 점검 최종 확인
+
+3. **선택적 기능 (Optional)**
+   - WebSocket 실시간 모니터링
+   - 텔레그램 봇 알림
 
 ---
 
@@ -1046,6 +1089,7 @@ crypto-trading-system/
 │   │   │   ├── BacktestController.java    
 │   │   │   └── AdminController.java   
 │   │   ├── service/           # 비즈니스 로직
+│   │   │   ├── CacheService.java             # ⭐ 신규: Redis 캐시
 │   │   │   ├── TechnicalIndicatorService.java
 │   │   │   ├── SignalDetectorService.java
 │   │   │   ├── RiskManagementService.java
@@ -1058,9 +1102,12 @@ crypto-trading-system/
 │   │   ├── config/            # 설정 클래스
 │   │   │   ├── SecurityConfig.java
 │   │   │   ├── NotificationConfig.java
-│   │   │   └── security/      # ⭐ 추가: Security 핸들러
+│   │   │   └── security/      # Security 핸들러
 │   │   │       ├── CustomAuthenticationEntryPoint.java
 │   │   │       └── CustomAccessDeniedHandler.java
+│   │   ├── filter/            # ⭐ 신규: 필터
+│   │   │   ├── JwtAuthenticationFilter.java
+│   │   │   └── RateLimitFilter.java          # ⭐ 신규: Rate Limiting
 │   │   ├── exception/         # ⭐ 확장: 예외 처리
 │   │   │   ├── GlobalExceptionHandler.java
 │   │   │   ├── ErrorCode.java              # ⭐ 추가

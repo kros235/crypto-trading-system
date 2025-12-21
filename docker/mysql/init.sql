@@ -151,3 +151,21 @@ ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP;
 CREATE USER IF NOT EXISTS 'crypto_user'@'%' IDENTIFIED BY 'cryptopass123!';
 GRANT ALL PRIVILEGES ON crypto_trading.* TO 'crypto_user'@'%';
 FLUSH PRIVILEGES;
+
+-- =====================================================
+-- ⭐⭐⭐ 성능 최적화 인덱스 (Day 17) ⭐⭐⭐
+-- =====================================================
+
+-- transactions 테이블 복합 인덱스
+CREATE INDEX IF NOT EXISTS idx_transactions_user_status 
+    ON transactions(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_transactions_user_created 
+    ON transactions(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_transactions_user_sold 
+    ON transactions(user_id, sold_at);
+CREATE INDEX IF NOT EXISTS idx_transactions_coin_status 
+    ON transactions(coin_symbol, status);
+
+-- trading_settings 테이블 인덱스
+CREATE INDEX IF NOT EXISTS idx_trading_settings_user 
+    ON trading_settings(user_id);

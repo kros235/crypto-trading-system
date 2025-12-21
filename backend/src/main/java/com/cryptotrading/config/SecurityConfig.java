@@ -3,6 +3,7 @@ package com.cryptotrading.config;
 import com.cryptotrading.config.security.CustomAccessDeniedHandler;  
 import com.cryptotrading.config.security.CustomAuthenticationEntryPoint; 
 import com.cryptotrading.filter.JwtAuthenticationFilter;
+import com.cryptotrading.filter.RateLimitFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,6 +26,7 @@ import java.util.Arrays;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitFilter rateLimitFilter;
     private final CustomAuthenticationEntryPoint authenticationEntryPoint; 
     private final CustomAccessDeniedHandler accessDeniedHandler; 
 
@@ -75,6 +77,7 @@ public class SecurityConfig {
                 // 나머지는 인증 필요
                 .anyRequest().authenticated()
             )
+            .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

@@ -29,6 +29,7 @@ public class UserService {
         return UserInfoDTO.builder()
                 .userId(user.getUserId())
                 .email(user.getEmail())
+                .discordUserId(user.getDiscordUserId())
                 .phone(user.getPhone())
                 .role(user.getRole().name())
                 .joinDate(user.getJoinDate())
@@ -56,6 +57,13 @@ public class UserService {
         // 전화번호 업데이트
         if (updates.containsKey("phone")) {
             user.setPhone(updates.get("phone"));
+        }
+
+        // Discord User ID 업데이트
+        if (updates.containsKey("discordUserId")) {
+            String discordId = updates.get("discordUserId");
+            // 빈 문자열이면 null로 저장
+            user.setDiscordUserId(discordId != null && !discordId.isBlank() ? discordId : null);
         }
 
         // 비밀번호 업데이트

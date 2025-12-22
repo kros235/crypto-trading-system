@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.cryptotrading.service.DiscordBotService;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -38,6 +39,7 @@ public class TradingBotService {
     private final TradingSettingRepository tradingSettingRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final DiscordBotService discordBotService;
     
     private static final BigDecimal FEE_RATE = new BigDecimal("0.0005");  // 0.05%
     private static final int SCALE = 8;
@@ -183,6 +185,18 @@ public class TradingBotService {
                 transaction.getQuantity(), buyAmount
             );
 
+            // ★★★ 추가: Discord DM 발송 ★★★
+            User userEntity = userRepository.findById(userId).orElse(null);
+            if (userEntity != null && userEntity.getDiscordUserId() != null) {
+                discordBotService.sendBuyNotification(
+                    userEntity.getDiscordUserId(),
+                    market,
+                    transaction.getQuantity().toPlainString(),
+                    String.format("%,.0f", signal.getCurrentPrice()),
+                    String.format("%,.0f", buyAmount)
+                );
+            }
+
             result.addBuy(market, buyAmount);
             log.info("매수 완료: {} - {}원 (주문ID: {})", market, buyAmount, order.getUuid());
             
@@ -247,6 +261,32 @@ public class TradingBotService {
                     sellPrice, holding.getQuantity(), sellAmount,   
                     profitLoss, profitRate
                 );
+            }
+
+            // ★★★ 추가: Discord DM 발송 ★★★
+            User userEntity = userRepository.findById(holding.getUserId()).orElse(null);
+            if (userEntity != null && userEntity.getDiscordUserId() != null) {
+                String profitSign = profitLoss.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
+                
+                if (signal.getSignalType() == SignalType.STOP_LOSS) {
+                    discordBotService.sendStopLossNotification(
+                        userEntity.getDiscordUserId(),
+                        holding.getCoinSymbol(),
+                        holding.getQuantity().toPlainString(),
+                        String.format("%,.0f", sellPrice),
+                        String.format("%,.0f", profitLoss),
+                        profitRate.setScale(2, RoundingMode.HALF_UP).toPlainString()
+                    );
+                } else {
+                    discordBotService.sendSellNotification(
+                        userEntity.getDiscordUserId(),
+                        holding.getCoinSymbol(),
+                        holding.getQuantity().toPlainString(),
+                        String.format("%,.0f", sellPrice),
+                        profitSign + String.format("%,.0f", profitLoss),
+                        profitSign + profitRate.setScale(2, RoundingMode.HALF_UP).toPlainString()
+                    );
+                }
             }
 
             result.addSell(holding.getCoinSymbol(), sellAmount, profitLoss);

@@ -30,6 +30,9 @@ public class User extends BaseEntity {
     @Column(name = "email", nullable = false, unique = true, length = 100)
     private String email;
 
+    @Column(name = "discord_user_id", length = 30)
+    private String discordUserId;
+
     @Column(name = "join_date")
     private LocalDateTime joinDate;
 

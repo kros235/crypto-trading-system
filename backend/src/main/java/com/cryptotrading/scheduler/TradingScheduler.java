@@ -5,6 +5,7 @@ import com.cryptotrading.service.TradingBotService.BotExecutionResult;
 import com.cryptotrading.service.DailyReportService;
 import com.cryptotrading.service.NotificationService;
 import com.cryptotrading.service.EmailService;
+import com.cryptotrading.service.DiscordBotService;
 import com.cryptotrading.entity.User;
 import com.cryptotrading.repository.UserRepository;
 import com.cryptotrading.dto.notification.DailyReportDTO;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.math.RoundingMode;
 
 @Component
 @RequiredArgsConstructor
@@ -28,6 +30,7 @@ public class TradingScheduler {
     private final NotificationService notificationService;
     private final EmailService emailService;
     private final UserRepository userRepository;
+    private final DiscordBotService discordBotService;
     
     // 업비트 점검 시간 (매일 09:00 ~ 09:10 KST)
     private static final LocalTime MAINTENANCE_START = LocalTime.of(9, 0);
@@ -126,6 +129,22 @@ public class TradingScheduler {
                      // 이메일 알림 (신규 추가) ★★★ 추가 부분 ★★★
                      if (user.getEmail() != null && !user.getEmail().isEmpty()) {
                          emailService.sendDailyReport(user.getEmail(), report);
+                     }
+
+	       // ★★★ 추가: Discord DM 발송 ★★★
+                     if (user.getDiscordUserId() != null && !user.getDiscordUserId().isEmpty()) {
+                         String profitSign = report.getTotalProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "";
+                         discordBotService.sendDailyReportDM(
+                             user.getDiscordUserId(),
+                             report.getReportDate().toString(),
+                             profitSign + String.format("%,.0f", report.getRealizedProfit()),
+                             (report.getUnrealizedProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "") 
+                                 + String.format("%,.0f", report.getUnrealizedProfit()),
+                             profitSign + String.format("%,.0f", report.getTotalProfit()),
+                             profitSign + report.getProfitRate().setScale(2, RoundingMode.HALF_UP).toPlainString(),
+                             report.getHoldingCount(),
+                             String.format("%,.0f", report.getTotalHoldingValue())
+                         );
                      }
                 
                      log.info("사용자 {} 일일 리포트 발송 완료", user.getUserId());

@@ -2,6 +2,7 @@
 export interface User {
   userId: string
   email: string
+  discordUserId?: string
   phone?: string
   role: string
   joinDate: string
@@ -64,6 +65,7 @@ export interface UpdateProfileRequest {
   email?: string
   phone?: string
   password?: string
+  discordUserId?: string
 }
 
 // API 키 저장 요청 타입

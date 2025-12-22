@@ -15,6 +15,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
+import com.cryptotrading.service.DiscordBotService;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,6 +31,7 @@ public class NotificationController {
     private final NotificationConfig notificationConfig;
     private final EmailService emailService;
     private final UserRepository userRepository;
+    private final DiscordBotService discordBotService;
     /**
      * 알림 상태 조회
      */
@@ -160,6 +163,204 @@ public class NotificationController {
         response.put("message", "일일 리포트 이메일이 발송되었습니다.");
         response.put("email", user.getEmail());
         
+        return ResponseEntity.ok(response);
+    }
+
+    // ★★★ 추가: Discord DM 테스트 API ★★★
+    /**
+     * Discord DM 테스트 발송
+     */
+    @PostMapping("/discord/test-dm")
+    public ResponseEntity<Map<String, Object>> sendTestDiscordDM(
+            @AuthenticationPrincipal String userId) {
+        
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        // Discord User ID 확인
+        if (user.getDiscordUserId() == null || user.getDiscordUserId().isBlank()) {
+            response.put("success", false);
+            response.put("message", "Discord User ID가 설정되지 않았습니다. 프로필에서 먼저 설정해주세요.");
+            return ResponseEntity.badRequest().body(response);
+        }
+        
+        // Bot 활성화 확인
+        if (!discordBotService.isEnabled()) {
+            response.put("success", false);
+            response.put("message", "Discord Bot이 비활성화 상태입니다. 관리자에게 문의하세요.");
+            return ResponseEntity.badRequest().body(response);
+        }
+        
+        // DM 발송 시도
+        boolean success = discordBotService.sendTestDM(user.getDiscordUserId());
+        
+        response.put("success", success);
+        response.put("message", success 
+                ? "테스트 DM이 발송되었습니다. Discord를 확인해주세요." 
+                : "DM 발송에 실패했습니다. Discord User ID를 확인해주세요.");
+        
+        return success ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
+    /**
+     * Discord Bot 상태 조회
+     */
+    @GetMapping("/discord/bot-status")
+    public ResponseEntity<Map<String, Object>> getDiscordBotStatus() {
+        Map<String, Object> status = new HashMap<>();
+        status.put("botEnabled", discordBotService.isEnabled());
+        status.put("webhookEnabled", notificationConfig.isEnabled());
+        return ResponseEntity.ok(status);
+    }
+
+    // ★★★ 추가: 일일 리포트 DM 테스트 API ★★★
+    /**
+     * 일일 리포트 DM 테스트 발송
+     */
+    @PostMapping("/discord/test-daily-report")
+    public ResponseEntity<Map<String, Object>> testDailyReportDM(
+            @AuthenticationPrincipal String userId) {
+        
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        if (user.getDiscordUserId() == null || user.getDiscordUserId().isBlank()) {
+            response.put("success", false);
+            response.put("message", "Discord User ID가 설정되지 않았습니다.");
+            return ResponseEntity.badRequest().body(response);
+        }
+        
+        try {
+            // 일일 리포트 생성
+            DailyReportDTO report = dailyReportService.generateDailyReport(userId);
+            
+            // DM 발송
+            String profitSign = report.getTotalProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "";
+            discordBotService.sendDailyReportDM(
+                user.getDiscordUserId(),
+                report.getReportDate().toString(),
+                profitSign + String.format("%,.0f", report.getRealizedProfit()),
+                (report.getUnrealizedProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "") 
+                    + String.format("%,.0f", report.getUnrealizedProfit()),
+                profitSign + String.format("%,.0f", report.getTotalProfit()),
+                profitSign + report.getProfitRate().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString(),
+                report.getHoldingCount(),
+                String.format("%,.0f", report.getTotalHoldingValue())
+            );
+            
+            response.put("success", true);
+            response.put("message", "일일 리포트 DM이 발송되었습니다.");
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "발송 실패: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    // ★★★ 추가: 매수 알림 DM 테스트 API ★★★
+    /**
+     * 매수 알림 DM 테스트 발송
+     */
+    @PostMapping("/discord/test-buy")
+    public ResponseEntity<Map<String, Object>> testBuyNotificationDM(
+            @AuthenticationPrincipal String userId) {
+        
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        if (user.getDiscordUserId() == null || user.getDiscordUserId().isBlank()) {
+            response.put("success", false);
+            response.put("message", "Discord User ID가 설정되지 않았습니다.");
+            return ResponseEntity.badRequest().body(response);
+        }
+        
+        // 테스트용 매수 알림 발송
+        discordBotService.sendBuyNotification(
+            user.getDiscordUserId(),
+            "KRW-BTC",
+            "0.00012345",
+            "150,000,000",
+            "50,000"
+        );
+        
+        response.put("success", true);
+        response.put("message", "매수 알림 테스트 DM이 발송되었습니다.");
+        return ResponseEntity.ok(response);
+    }
+
+    // ★★★ 추가: 매도 알림 DM 테스트 API ★★★
+    /**
+     * 매도 알림 DM 테스트 발송
+     */
+    @PostMapping("/discord/test-sell")
+    public ResponseEntity<Map<String, Object>> testSellNotificationDM(
+            @AuthenticationPrincipal String userId) {
+        
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        if (user.getDiscordUserId() == null || user.getDiscordUserId().isBlank()) {
+            response.put("success", false);
+            response.put("message", "Discord User ID가 설정되지 않았습니다.");
+            return ResponseEntity.badRequest().body(response);
+        }
+        
+        // 테스트용 매도 알림 발송 (수익)
+        discordBotService.sendSellNotification(
+            user.getDiscordUserId(),
+            "KRW-BTC",
+            "0.00012345",
+            "155,000,000",
+            "+2,500",
+            "+5.00"
+        );
+        
+        response.put("success", true);
+        response.put("message", "매도 알림 테스트 DM이 발송되었습니다.");
+        return ResponseEntity.ok(response);
+    }
+
+    // ★★★ 추가: 손절매 알림 DM 테스트 API ★★★
+    /**
+     * 손절매 알림 DM 테스트 발송
+     */
+    @PostMapping("/discord/test-stoploss")
+    public ResponseEntity<Map<String, Object>> testStopLossNotificationDM(
+            @AuthenticationPrincipal String userId) {
+        
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        if (user.getDiscordUserId() == null || user.getDiscordUserId().isBlank()) {
+            response.put("success", false);
+            response.put("message", "Discord User ID가 설정되지 않았습니다.");
+            return ResponseEntity.badRequest().body(response);
+        }
+        
+        // 테스트용 손절매 알림 발송
+        discordBotService.sendStopLossNotification(
+            user.getDiscordUserId(),
+            "KRW-ETH",
+            "0.05",
+            "4,800,000",
+            "-25,000",
+            "-10.00"
+        );
+        
+        response.put("success", true);
+        response.put("message", "손절매 알림 테스트 DM이 발송되었습니다.");
         return ResponseEntity.ok(response);
     }
 }

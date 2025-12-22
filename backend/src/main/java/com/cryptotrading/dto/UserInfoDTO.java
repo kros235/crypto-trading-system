@@ -15,6 +15,7 @@ public class UserInfoDTO {
     
     private String userId;
     private String email;
+    private String discordUserId;
     private String phone;
     private String role;
     private LocalDateTime joinDate;

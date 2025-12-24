@@ -3,6 +3,8 @@ package com.cryptotrading.controller;
 import com.cryptotrading.dto.admin.AdminUserDTO;
 import com.cryptotrading.dto.admin.SystemStatsDTO;
 import com.cryptotrading.service.AdminService;
+import com.cryptotrading.service.CacheService;
+import com.cryptotrading.service.LoginAttemptService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -12,6 +14,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import io.swagger.v3.oas.annotations.Operation;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,6 +28,8 @@ import java.util.Map;
 public class AdminController {
     
     private final AdminService adminService;
+    private final CacheService cacheService;
+    private final LoginAttemptService loginAttemptService;
     
     /**
      * 시스템 통계 조회
@@ -89,5 +95,34 @@ public class AdminController {
         response.put("success", true);
         response.put("message", "사용자 " + userId + "의 세션이 무효화되었습니다.");
         return ResponseEntity.ok(response);
+    } 
+
+    /**
+     * 캐시 통계 조회
+     */
+    @GetMapping("/cache/stats")
+    @Operation(summary = "캐시 통계", description = "Redis 캐시 현황을 조회합니다")
+    public ResponseEntity<Map<String, Object>> getCacheStats() {
+        return ResponseEntity.ok(cacheService.getCacheStats());
     }
+
+    /**
+     * 캐시 전체 삭제
+     */
+    @DeleteMapping("/cache/clear")
+    @Operation(summary = "캐시 초기화", description = "전체 캐시를 삭제합니다")
+    public ResponseEntity<Map<String, String>> clearCache() {
+        cacheService.evictByPattern("*");
+        return ResponseEntity.ok(Map.of("message", "캐시가 초기화되었습니다"));
+    }
+
+    /**
+     * 사용자 계정 잠금 해제
+     */
+    @PostMapping("/users/{userId}/unlock")
+    @Operation(summary = "계정 잠금 해제", description = "로그인 실패로 잠긴 계정을 해제합니다")
+    public ResponseEntity<Map<String, String>> unlockUser(@PathVariable String userId) {
+        loginAttemptService.unblockUser(userId);
+        return ResponseEntity.ok(Map.of("message", userId + " 계정 잠금이 해제되었습니다"));
+    } 
 }

@@ -4,6 +4,7 @@ import com.cryptotrading.config.security.CustomAccessDeniedHandler;
 import com.cryptotrading.config.security.CustomAuthenticationEntryPoint; 
 import com.cryptotrading.filter.JwtAuthenticationFilter;
 import com.cryptotrading.filter.RateLimitFilter;
+import com.cryptotrading.filter.RequestLoggingFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,6 +18,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
 
 import java.util.Arrays;
 
@@ -29,6 +31,7 @@ public class SecurityConfig {
     private final RateLimitFilter rateLimitFilter;
     private final CustomAuthenticationEntryPoint authenticationEntryPoint; 
     private final CustomAccessDeniedHandler accessDeniedHandler; 
+    private final RequestLoggingFilter requestLoggingFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -51,13 +54,19 @@ public class SecurityConfig {
 	  .requestMatchers("/api/coins/active").permitAll()
 	  .requestMatchers("/api/coins/*/price").permitAll()
 	  .requestMatchers("/api/coins/prices").permitAll()
+	  // Swagger UI 경로 허용
+	  .requestMatchers("/swagger-ui/**").permitAll()
+	  .requestMatchers("/swagger-ui.html").permitAll()
+	  .requestMatchers("/v3/api-docs/**").permitAll()
+	  .requestMatchers("/swagger-resources/**").permitAll()
+	  .requestMatchers("/webjars/**").permitAll()
 	  // 코인 정보 업데이트는 관리자만
 	  .requestMatchers("/api/coins/update").hasRole("ADMIN")
 
-	  // ✨ 추가: 사용자 프로필 API - 인증된 사용자만
+	  // 사용자 프로필 API - 인증된 사용자만
 	  .requestMatchers("/api/user/**").authenticated()
     
-	  // ✨ 추가: 거래 설정 API - 인증된 사용자만
+	  // 거래 설정 API - 인증된 사용자만
 	  .requestMatchers("/api/trading-settings/**").authenticated()
 
 	  .requestMatchers("/api/transactions/**").authenticated()
@@ -78,8 +87,8 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(requestLoggingFilter, SecurityContextHolderFilter.class);  
         return http.build();
     }
 

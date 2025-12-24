@@ -67,7 +67,11 @@ public enum ErrorCode {
     // ===== Backtest (9000번대) =====
     BACKTEST_INVALID_PERIOD(HttpStatus.BAD_REQUEST, "B001", "백테스트 기간이 유효하지 않습니다."),
     BACKTEST_NO_DATA(HttpStatus.NOT_FOUND, "B002", "백테스트 데이터가 부족합니다."),
-    BACKTEST_EXECUTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "B003", "백테스트 실행에 실패했습니다.");
+    BACKTEST_EXECUTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "B003", "백테스트 실행에 실패했습니다."),
+
+    // === 인증 관련 에러 코드 추가 ===
+    ACCOUNT_LOCKED(HttpStatus.LOCKED, "AUTH_007", "계정이 잠금되었습니다. 30분 후 다시 시도해주세요."),
+    ACCOUNT_DISABLED(HttpStatus.FORBIDDEN, "AUTH_008", "비활성화된 계정입니다.");  
 
     private final HttpStatus httpStatus;
     private final String code;

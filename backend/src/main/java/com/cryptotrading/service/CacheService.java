@@ -10,6 +10,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.Optional;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -129,17 +132,6 @@ public class CacheService {
     }
 
     /**
-     * 패턴으로 캐시 삭제
-     */
-    public void evictByPattern(String pattern) {
-        var keys = redisTemplate.keys(pattern);
-        if (keys != null && !keys.isEmpty()) {
-            redisTemplate.delete(keys);
-            log.debug("캐시 삭제 (패턴: {}): {}개", pattern, keys.size());
-        }
-    }
-
-    /**
      * 모든 현재가 캐시 삭제
      */
     public void evictAllTickers() {
@@ -151,5 +143,60 @@ public class CacheService {
      */
     public void evictAllIndicators() {
         evictByPattern(INDICATOR_PREFIX + "*");
+    }
+
+    /**
+     * 캐시 키 패턴으로 키 개수 조회
+     */
+    public long countCacheKeys(String pattern) {
+        try {
+            Set<String> keys = redisTemplate.keys(pattern);
+            return keys != null ? keys.size() : 0;
+        } catch (Exception e) {
+            log.error("캐시 키 개수 조회 실패: {}", e.getMessage());
+            return 0;
+        }
+    }
+    
+    /**
+     * 모든 캐시 키 조회 (관리자용)
+     */
+    public Set<String> getAllCacheKeys() {
+        try {
+            return redisTemplate.keys("*");
+        } catch (Exception e) {
+            log.error("캐시 키 목록 조회 실패: {}", e.getMessage());
+            return Set.of();
+        }
+    }
+    
+    /**
+     * 패턴별 캐시 삭제
+     */
+    public void evictByPattern(String pattern) {
+        try {
+            Set<String> keys = redisTemplate.keys(pattern);
+            if (keys != null && !keys.isEmpty()) {
+                redisTemplate.delete(keys);
+                log.info("캐시 삭제 완료: {} 패턴, {}개 키", pattern, keys.size());
+            }
+        } catch (Exception e) {
+            log.error("캐시 패턴 삭제 실패: {}", e.getMessage());
+        }
+    }
+    
+    /**
+     * 캐시 통계 정보
+     */
+    public Map<String, Object> getCacheStats() {
+        Map<String, Object> stats = new HashMap<>();
+        try {
+            stats.put("tickerCacheCount", countCacheKeys("ticker:*"));
+            stats.put("coinsCacheCount", countCacheKeys("coins:*"));
+            stats.put("totalCacheKeys", countCacheKeys("*"));
+        } catch (Exception e) {
+            log.error("캐시 통계 조회 실패: {}", e.getMessage());
+        }
+        return stats;
     }
 }

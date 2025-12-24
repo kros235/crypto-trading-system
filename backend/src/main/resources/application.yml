@@ -123,3 +123,14 @@ app:
     enabled: ${EMAIL_ENABLED:false}
     from: ${SMTP_USERNAME:noreply@cryptobot.com}
     from-name: 코인 자동매매 시스템
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+    disable-swagger-default-url: true
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json

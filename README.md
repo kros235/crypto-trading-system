@@ -1219,49 +1219,143 @@ ADD COLUMN daily_stop_loss_pct INT DEFAULT -5;
 
 ---
 
-## 📊 현재 진행 상황
-- **전체 진척도**: 약 95%
-- **Phase 1 (핵심 기능)**: 100% 완료 ✅
-- **Phase 2 (고도화)**: 100% 완료 ✅
-- **Phase 3 (안정화)**: 80% 진행중
+### ✅ Day 20 (2025-12-25) - 성능 최적화, 보안 강화, API 문서화
+**완료 항목:**
+- API 응답 시간 로깅 (Backend)
+  - RequestLoggingFilter 구현
+  - 모든 API 요청의 응답 시간 측정
+  - 1초 이상 요청에 [SLOW] 경고 로그 표시
+  - 정적 리소스 제외 처리
+- 캐시 관리 확장 (Backend)
+  - CacheService에 통계 메서드 추가
+  - countCacheKeys(): 패턴별 키 개수 조회
+  - getAllCacheKeys(): 전체 키 목록
+  - evictByPattern(): 패턴별 삭제
+  - getCacheStats(): 캐시 통계 (ticker, coins, total)
+- 로그인 시도 제한 (Backend)
+  - LoginAttemptService 구현
+  - Redis 기반 시도 횟수 관리
+  - 5회 실패 시 30분 계정 잠금
+  - 15분 시도 횟수 만료
+  - 관리자 잠금 해제 기능
+- Swagger API 문서화 (Backend)
+  - springdoc-openapi 2.3.0 연동
+  - SwaggerConfig 설정 (JWT Bearer 인증)
+  - AuthController에 Swagger 어노테이션 추가
+  - API 그룹별 태그 정의
+- 비밀번호 변경 API 추가 (Backend)
+  - UserController에 PUT /api/user/password 엔드포인트 추가
+  - UserService에 changePassword() 메서드 추가
+  - 현재 비밀번호 확인 후 변경
+- 관리자 API 확장 (Backend)
+  - GET /api/admin/cache/stats: 캐시 통계
+  - DELETE /api/admin/cache/clear: 캐시 초기화
+  - POST /api/admin/users/{userId}/unlock: 계정 잠금 해제
+- Nginx Swagger 프록시 설정 (Frontend)
+  - /swagger-ui/, /v3/api-docs 등 프록시 추가
+  - 정적 파일 규칙에서 swagger 경로 제외
+- 기타 수정
+  - PasswordResetToken 외래키 제약조건 비활성화
+  - ErrorCode에 ACCOUNT_LOCKED, ACCOUNT_DISABLED 추가
+
+**API 엔드포인트:**
+| Method | Endpoint | 인증 | 설명 |
+|--------|----------|------|------|
+| PUT | /api/user/password | ✅ | 비밀번호 변경 |
+| GET | /api/admin/cache/stats | 🔐 | 캐시 통계 (관리자) |
+| DELETE | /api/admin/cache/clear | 🔐 | 캐시 초기화 (관리자) |
+| POST | /api/admin/users/{userId}/unlock | 🔐 | 계정 잠금 해제 (관리자) |
+
+**Swagger UI 접속:**
+- http://localhost/swagger-ui/index.html (Nginx 경유)
+- http://localhost:8080/swagger-ui/index.html (직접 접속)
+
+**생성된 파일 (Backend):**
+- `filter/RequestLoggingFilter.java` - API 응답 시간 로깅 필터
+- `service/LoginAttemptService.java` - 로그인 시도 제한 서비스
+- `config/SwaggerConfig.java` - Swagger/OpenAPI 설정
+
+**수정된 파일 (Backend):**
+- `service/CacheService.java` - 캐시 통계 메서드 추가
+- `service/AuthService.java` - 로그인 시도 제한 연동
+- `service/UserService.java` - changePassword() 메서드 추가
+- `controller/UserController.java` - 비밀번호 변경 API 추가
+- `controller/AdminController.java` - 캐시/잠금해제 API 추가
+- `controller/AuthController.java` - Swagger 어노테이션 추가
+- `exception/ErrorCode.java` - ACCOUNT_LOCKED, ACCOUNT_DISABLED 추가
+- `config/SecurityConfig.java` - Swagger 경로 허용, 필터 등록
+- `entity/PasswordResetToken.java` - 외래키 NO_CONSTRAINT 설정
+- `application.yml` - springdoc 설정 추가
+- `pom.xml` - springdoc-openapi 의존성 추가
+
+**수정된 파일 (Frontend):**
+- `nginx.conf` - Swagger 프록시 설정, 정적 파일 규칙 수정
+
+**해결한 주요 이슈:**
+1. **JwtAuthenticationFilter 순서 오류**
+   - addFilterBefore에서 커스텀 필터 참조 불가
+   - addFilterAfter(SecurityContextHolderFilter) 사용으로 해결
+2. **password_reset_tokens 외래키 오류**
+   - user_id 컬럼 타입 불일치
+   - @ForeignKey(ConstraintMode.NO_CONSTRAINT) 설정으로 해결
+3. **Swagger UI 흰 페이지**
+   - Nginx 정적 파일 규칙이 swagger 경로 가로챔
+   - location 순서 조정 및 정규식 수정으로 해결
+4. **ApiResponse 이름 충돌**
+   - 프로젝트 DTO vs Swagger 어노테이션
+   - 풀 패키지명으로 구분하여 해결
+
+**테스트 완료:**
+- ✅ Health Check - PowerShell
+- ✅ Swagger UI 접속 - 브라우저
+- ✅ 회원가입 - Postman
+- ✅ 로그인 & 토큰 발급 - Postman
+- ✅ 로그인 5회 실패 → 계정 잠금 - Postman
+- ✅ 계정 잠금 해제 (관리자 API) - Postman
+- ✅ API 응답 시간 로깅 [SLOW] - Docker 로그
+- ✅ 캐시 통계 조회 - Postman
+- ✅ 캐시 초기화 - Postman
+- ✅ 비밀번호 변경 - Postman
+- ✅ 프로필 조회/수정 - Postman
+- ✅ 백테스트 API 정상 동작 - Git Bash
+- ✅ 웹 UI 전체 확인 - 브라우저
 
 ---
 
-## 🎯 다음 단계 (Day 20)
+## 📊 현재 진행 상황
+- **전체 진척도**: 약 96%
+- **Phase 1 (핵심 기능)**: 100% 완료 ✅
+- **Phase 2 (고도화)**: 100% 완료 ✅
+- **Phase 3 (안정화)**: 90% 진행중
+
+---
+
+## 🎯 다음 단계 (Day 21)
 
 ### 예정 작업:
 
-#### 1. 성능 최적화
-**현재 상태:** 기본 캐싱 적용됨
+#### 1. 운영 문서 작성
+**현재 상태:** 기본 README.md 작성됨
 
-**구현 목표:**
-- 슬로우 쿼리 분석 및 인덱스 최적화
-- Redis 캐싱 범위 확대
-- API 응답 시간 측정 및 개선
-
----
-
-#### 2. 보안 점검
-**현재 상태:** 기본 보안 적용됨
-
-**구현 목표:**
-- OWASP Top 10 체크리스트 검토
-- API Rate Limiting 강화
-- 로그인 시도 제한 구현
-- XSS/CSRF 방어 점검
-
----
-
-#### 3. 운영 문서 작성
 **구현 목표:**
 - 시스템 아키텍처 다이어그램
 - 배포 절차서 (Docker 기반)
 - 장애 대응 매뉴얼
-- API 문서화 (Swagger/OpenAPI)
+- 운영 가이드 (모니터링, 백업)
 
 ---
 
-#### 4. AI 뉴스 분석 기능 (Optional)
+#### 2. 최종 보안 점검
+**현재 상태:** 기본 보안 적용됨
+
+**구현 목표:**
+- OWASP Top 10 체크리스트 최종 검토
+- 보안 설정 문서화
+- 취약점 점검 결과 정리
+
+---
+
+#### 3. AI 뉴스 분석 기능 (Optional)
 **현재 상태:** UI만 구현, 실제 AI 분석 로직 미구현
 
 **구현 목표:**
@@ -1357,16 +1451,19 @@ crypto-trading-system/
 │   │   │   ├── BacktestService.java    
 │   │   │   ├── EmailService.java     
 │   │   │   ├── AdminService.java
-│   │   │   └── DiscordBotService.java        
+│   │   │   ├── DiscordBotService.java        
+│   │   │   └── LoginAttemptService.java      # ⭐ Day 20: 로그인 시도 제한
 │   │   ├── config/            # 설정 클래스
 │   │   │   ├── SecurityConfig.java
 │   │   │   ├── NotificationConfig.java
+│   │   │   ├── SwaggerConfig.java            # ⭐ Day 20: Swagger/OpenAPI
 │   │   │   └── security/      # Security 핸들러
 │   │   │       ├── CustomAuthenticationEntryPoint.java
 │   │   │       └── CustomAccessDeniedHandler.java
-│   │   ├── filter/            # ⭐ 신규: 필터
+│   │   ├── filter/            # 필터
 │   │   │   ├── JwtAuthenticationFilter.java
-│   │   │   └── RateLimitFilter.java          # ⭐ 신규: Rate Limiting
+│   │   │   ├── RateLimitFilter.java
+│   │   │   └── RequestLoggingFilter.java     # 응답 시간 로깅
 │   │   ├── exception/         # ⭐ 확장: 예외 처리
 │   │   │   ├── GlobalExceptionHandler.java
 │   │   │   ├── ErrorCode.java              # ⭐ 추가

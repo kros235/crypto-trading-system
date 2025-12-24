@@ -1,6 +1,8 @@
 package com.cryptotrading.entity;
 
 import jakarta.persistence.*;
+import jakarta.persistence.ForeignKey;
+import jakarta.persistence.ConstraintMode;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -32,7 +34,8 @@ public class PasswordResetToken {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "user_id", 
-                insertable = false, updatable = false)
+                insertable = false, updatable = false,
+                foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     private User user;
 
     public boolean isExpired() {

@@ -23,6 +23,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final LoginAttemptService loginAttemptService;
 
     @Transactional
     public AuthResponse signup(SignupRequest request) {
@@ -62,19 +63,38 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
+        String userId = request.getUserId();  // ⭐ [추가] 이 줄이 빠져 있었음
+
+        // 차단 여부 확인
+        if (loginAttemptService.isBlocked(userId)) {
+            log.warn("차단된 계정 로그인 시도: {}", userId);
+            throw new RuntimeException("계정이 잠금되었습니다. 30분 후 다시 시도해주세요.");
+        }
+
         // 사용자 조회
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    // 로그인 실패 기록
+                    loginAttemptService.loginFailed(userId);
+                    return new RuntimeException("사용자를 찾을 수 없습니다");
+                });
 
         // 계정 활성화 체크
         if (!user.getIsActive()) {
             throw new RuntimeException("비활성화된 계정입니다");
         }
 
-        // 비밀번호 검증
+        // 비밀번호 검증  // ⭐ [수정] `/`를 `//`로 수정
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new RuntimeException("비밀번호가 일치하지 않습니다");
+            // 로그인 실패 기록
+            loginAttemptService.loginFailed(userId);
+            int remaining = loginAttemptService.getRemainingAttempts(userId);
+            log.warn("비밀번호 불일치: {} (남은 시도: {}회)", userId, remaining);
+            throw new RuntimeException("비밀번호가 일치하지 않습니다. 남은 시도: " + remaining + "회");
         }
+
+        // 로그인 성공 시 시도 횟수 초기화
+        loginAttemptService.loginSucceeded(userId);
 
         // 마지막 로그인 시간 업데이트
         user.setLastLogin(LocalDateTime.now());

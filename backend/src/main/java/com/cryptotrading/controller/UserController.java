@@ -85,4 +85,49 @@ public class UserController {
             return ResponseEntity.badRequest().body(error);
         }
     }
+
+    // 비밀번호 변경 API
+    @PutMapping("/password")
+    public ResponseEntity<?> changePassword(
+            @RequestBody Map<String, String> request,
+            Authentication authentication
+    ) {
+        try {
+            String userId = authentication.getName();
+            String currentPassword = request.get("currentPassword");
+            String newPassword = request.get("newPassword");
+            String confirmPassword = request.get("confirmPassword");
+            
+            // 유효성 검사
+            if (currentPassword == null || newPassword == null || confirmPassword == null) {
+                Map<String, String> error = new HashMap<>();
+                error.put("error", "모든 필드를 입력해주세요");
+                return ResponseEntity.badRequest().body(error);
+            }
+            
+            if (!newPassword.equals(confirmPassword)) {
+                Map<String, String> error = new HashMap<>();
+                error.put("error", "새 비밀번호가 일치하지 않습니다");
+                return ResponseEntity.badRequest().body(error);
+            }
+            
+            if (newPassword.length() < 8) {
+                Map<String, String> error = new HashMap<>();
+                error.put("error", "비밀번호는 8자 이상이어야 합니다");
+                return ResponseEntity.badRequest().body(error);
+            }
+            
+            userService.changePassword(userId, currentPassword, newPassword);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "비밀번호가 변경되었습니다");
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            log.error("비밀번호 변경 실패: {}", e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
 }

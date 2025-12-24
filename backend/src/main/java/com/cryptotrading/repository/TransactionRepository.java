@@ -116,4 +116,18 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     int countByUserId(String userId);
 
     int countByUserIdAndStatus(String userId, TransactionStatus status);
+
+    // 신규 추가: 특정 종목의 총 보유 금액 조회 (maxPositionPct 체크용)
+    @Query("SELECT COALESCE(SUM(t.totalAmount), 0) FROM Transaction t " +
+           "WHERE t.userId = :userId AND t.coinSymbol = :coinSymbol AND t.status = 'HOLDING'")
+    BigDecimal sumHoldingAmountByCoin(@Param("userId") String userId, 
+                                       @Param("coinSymbol") String coinSymbol);
+
+    // 당일 실현 손익 조회 (dailyStopLossPct 체크용)
+    @Query("SELECT COALESCE(SUM(t.profitLoss), 0) FROM Transaction t " +
+           "WHERE t.userId = :userId AND t.status = 'SOLD' " +
+           "AND t.soldAt BETWEEN :startOfDay AND :endOfDay")
+    BigDecimal sumTodayProfitLoss(@Param("userId") String userId,
+                                   @Param("startOfDay") LocalDateTime startOfDay,
+                                   @Param("endOfDay") LocalDateTime endOfDay);
 }

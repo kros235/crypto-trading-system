@@ -73,6 +73,14 @@ public class TradingBotService {
                 result.setMessage("거래 설정 없음");
                 return result;
             }
+
+            // 긴급 정지 조건 확인
+            if (riskManagementService.isEmergencyStopActive(userId, setting)) {
+                log.warn("⚠️ 긴급 정지 상태: {} - 일일 손실 한도 도달로 거래 중단", userId);
+                result.setStatus("EMERGENCY_STOP");
+                result.setMessage("긴급 정지 - 일일 손실 한도 도달");
+                return result;
+            }
             
             // 2. API 키 확인
             String[] apiKeys;

@@ -1134,6 +1134,19 @@ DISCORD_BOT_TOKEN=your_discord_bot_token
   - 설정 없을 때 기본값 자동 생성 기능
   - 트레일링 스톱 양수 입력으로 변경 (백테스팅과 통일)
   - 일일 거래 금액 라벨/힌트 명확화
+- 리스크 관리 실제 자동매매 적용 (Backend)
+  - RiskManagementService 전면 개선
+    - checkMaxPosition(): 단일 종목 비중 체크
+    - checkDailyStopLoss(): 긴급 정지 조건 체크
+    - isEmergencyStopActive(): 긴급 정지 상태 확인
+    - calculateEffectiveDailyLimit(): dailyTradeLimitPct 적용
+    - getRemainingPositionAmount(): 종목별 남은 투자 가능 금액
+  - TransactionRepository 쿼리 추가
+    - sumHoldingAmountByCoin(): 종목별 보유 금액 조회
+    - sumTodayProfitLoss(): 당일 실현 손익 조회
+  - TradingBotService 긴급 정지 체크 추가
+    - 자동매매 실행 전 긴급 정지 상태 확인
+    - EMERGENCY_STOP 상태 반환
 
 **추가된 설정 필드:**
 | 필드 | 설명 | 기본값 | 범위 |
@@ -1146,6 +1159,9 @@ DISCORD_BOT_TOKEN=your_discord_bot_token
 - `entity/TradingSetting.java` - 3개 필드 추가
 - `dto/TradingSettingDTO.java` - Validation 추가
 - `service/TradingSettingService.java` - 새 필드 처리 (create/update/convert)
+- `service/RiskManagementService.java` - ★ 전면 개선 (리스크 체크 로직 추가)
+- `service/TradingBotService.java` - 긴급 정지 사전 체크 추가
+- `repository/TransactionRepository.java` - 2개 쿼리 메서드 추가
 
 **수정된 파일 (Frontend):**
 - `views/TradingSettingsView.vue` - 전면 개선
@@ -1166,21 +1182,27 @@ ADD COLUMN max_position_pct INT DEFAULT 25,
 ADD COLUMN daily_stop_loss_pct INT DEFAULT -5;
 ```
 
-**백테스팅 기본값과 동기화:**
-| 항목 | 값 |
-|------|-----|
-| 거래 종목 | BTC, ETH, XRP, SOL |
-| 이동평균선 기간 | 20일 |
-| 매수 기준 (하락률) | -6% |
-| 목표 수익률 | 4% |
-| 손절매 기준 | -8% |
-| 종목당 최대 보유 | 2건 |
-| 트레일링 스톱 | 사용 (4%) |
-| RSI 매수/매도 | 32 / 68 |
-| 거래량 급증 기준 | 140% |
-| 일일 거래 한도 | 20% |
-| 단일 종목 비중 | 25% |
-| 긴급 정지 | -5% |
+**거래 설정 지표 실제 적용 현황:**
+| 지표 | 사용 위치 | 설명 |
+|------|----------|------|
+| coinSymbols | TradingBotService | 매수 대상 코인 |
+| basePeriod | SignalDetectorService | MA 기간 |
+| buyThresholdPct | SignalDetectorService | 매수 하락률 |
+| sellTargetPct | SignalDetectorService | 목표 수익률 |
+| stopLossPct | SignalDetectorService | 손절매 기준 |
+| maxHoldingsPerCoin | RiskManagementService | 종목당 최대 보유 |
+| dailyLimitAmount | RiskManagementService | 일일 기준 금액 |
+| useTrailingStop | SignalDetectorService | 트레일링 스톱 |
+| trailingStopPct | SignalDetectorService | 트레일링 비율 |
+| rsiPeriod | TechnicalIndicatorService | RSI 기간 |
+| rsiBuyThreshold | TechnicalIndicatorService | RSI 매수 임계값 |
+| rsiSellThreshold | TechnicalIndicatorService | RSI 매도 임계값 |
+| bbPeriod | TechnicalIndicatorService | BB 기간 |
+| bbMultiplier | TechnicalIndicatorService | BB 승수 |
+| volumeThreshold | TechnicalIndicatorService | 거래량 기준 |
+| dailyTradeLimitPct | RiskManagementService | 일일 한도 % |
+| maxPositionPct | RiskManagementService | 종목 비중 % |
+| dailyStopLossPct | RiskManagementService | 긴급 정지 % |
 
 **테스트 완료:**
 - ✅ DB 스키마 업데이트 - MySQL
@@ -1191,8 +1213,9 @@ ADD COLUMN daily_stop_loss_pct INT DEFAULT -5;
 - ✅ 삭제 후 기본값 자동 저장 - 브라우저
 - ✅ 설정 없을 때 자동 생성 - 브라우저
 - ✅ 트레일링 스톱 양수 입력/저장 - 브라우저
-
----
+- ✅ RiskManagementService 메서드 적용 확인 - 코드 검증
+- ✅ TradingBotService 긴급 정지 체크 적용 확인 - 코드 검증
+- ✅ 백엔드 컴파일 성공 - Docker
 
 ---
 
@@ -1327,8 +1350,8 @@ crypto-trading-system/
 │   │   │   ├── CacheService.java
 │   │   │   ├── TechnicalIndicatorService.java
 │   │   │   ├── SignalDetectorService.java
-│   │   │   ├── RiskManagementService.java
-│   │   │   ├── TradingBotService.java
+│   │   │   ├── RiskManagementService.java      
+│   │   │   ├── TradingBotService.java          
 │   │   │   ├── NotificationService.java      
 │   │   │   ├── DailyReportService.java      
 │   │   │   ├── BacktestService.java    

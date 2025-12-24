@@ -54,6 +54,9 @@ public class TradingSettingService {
                 .bbPeriod(dto.getBbPeriod() != null ? dto.getBbPeriod() : 20)
                 .bbMultiplier(dto.getBbMultiplier() != null ? dto.getBbMultiplier() : 2)
                 .volumeThreshold(dto.getVolumeThreshold() != null ? dto.getVolumeThreshold() : 150)
+                .dailyTradeLimitPct(dto.getDailyTradeLimitPct() != null ? dto.getDailyTradeLimitPct() : 20)
+                .maxPositionPct(dto.getMaxPositionPct() != null ? dto.getMaxPositionPct() : 25)
+                .dailyStopLossPct(dto.getDailyStopLossPct() != null ? dto.getDailyStopLossPct() : -5)
                 .build();
 
         TradingSetting saved = tradingSettingRepository.save(setting);
@@ -83,7 +86,9 @@ public class TradingSettingService {
         setting.setBbPeriod(dto.getBbPeriod() != null ? dto.getBbPeriod() : 20);
         setting.setBbMultiplier(dto.getBbMultiplier() != null ? dto.getBbMultiplier() : 2);
         setting.setVolumeThreshold(dto.getVolumeThreshold() != null ? dto.getVolumeThreshold() : 150);
-
+        setting.setDailyTradeLimitPct(dto.getDailyTradeLimitPct() != null ? dto.getDailyTradeLimitPct() : 20);
+        setting.setMaxPositionPct(dto.getMaxPositionPct() != null ? dto.getMaxPositionPct() : 25);
+        setting.setDailyStopLossPct(dto.getDailyStopLossPct() != null ? dto.getDailyStopLossPct() : -5);
 
         TradingSetting updated = tradingSettingRepository.save(setting);
         log.info("거래 설정 수정 완료: userId={}", userId);
@@ -119,6 +124,9 @@ public class TradingSettingService {
                 .bbPeriod(setting.getBbPeriod())
                 .bbMultiplier(setting.getBbMultiplier())
                 .volumeThreshold(setting.getVolumeThreshold())
+	  .dailyTradeLimitPct(setting.getDailyTradeLimitPct())
+                .maxPositionPct(setting.getMaxPositionPct())
+                .dailyStopLossPct(setting.getDailyStopLossPct())
                 .build();
     }
 }

@@ -78,6 +78,19 @@ public class TradingSetting extends BaseEntity {
     @Column(name = "volume_threshold")
     private Integer volumeThreshold = 150;
 
+    // 일일 최대 거래금액 (초기 자본 대비 %)
+    @Column(name = "daily_trade_limit_pct")
+    private Integer dailyTradeLimitPct = 20;
+
+    // 단일 종목 최대 비중 (총 자본 대비 %)
+    @Column(name = "max_position_pct")
+    private Integer maxPositionPct = 25;
+
+    // 긴급 정지 조건 - 일일 손실률 (%)
+    @Column(name = "daily_stop_loss_pct")
+    private Integer dailyStopLossPct = -5;
+    // ★★★ 신규 추가 끝 ★★★
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "user_id", 
                 insertable = false, updatable = false)

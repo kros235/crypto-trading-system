@@ -146,12 +146,13 @@
                   <v-col cols="12" md="4">
                     <v-text-field
                       v-model.number="settings.dailyLimitAmount"
-                      label="일일 최대 거래 금액"
+                      label="일일 거래 한도 (기준 금액)"
                       type="number"
                       :rules="[rules.required, rules.positive]"
                       variant="outlined"
                       suffix="원"
-                      hint="하루 최대 거래 가능 금액"
+                      hint="리스크 관리에서 비율 계산의 기준이 됩니다"
+                      persistent-hint
                     />
                   </v-col>
                 </v-row>
@@ -190,31 +191,31 @@
                       hint="매수가 대비 이 값 이하로 하락 시 매도"
                     />
                   </v-col>
-
+                </v-row>
+	  <v-row class="mt-2">
                   <v-col cols="12" md="4">
                     <v-checkbox
                       v-model="settings.useTrailingStop"
                       label="트레일링 스톱 사용"
                       color="primary"
-                      hint="최고가 대비 일정 비율 하락 시 자동 매도"
+                      hide-details
+                    />
+                  </v-col>
+                  <v-col cols="12" md="4" v-if="settings.useTrailingStop">
+                    <v-text-field
+                      v-model.number="settings.trailingStopPct"
+                      label="트레일링 스톱 비율 (%)"
+                      type="number"
+                      :rules="[v => v > 0 && v <= 20 || '1~20 사이 양수 입력']"
+                      variant="outlined"
+                      suffix="%"
+                      hint="예: 4 입력 시 최고가 대비 -4% 하락시 매도"
+                      persistent-hint
+                      min="1"
+                      max="20"
                     />
                   </v-col>
                 </v-row>
-
-                <!-- 트레일링 스톱 비율 입력 (조건부 렌더링) -->
-				<v-row v-if="settings.useTrailingStop">
-				  <v-col cols="12" md="4">
-				    <v-text-field
-				      v-model.number="settings.trailingStopPct"
-				      label="트레일링 스톱 비율 (%)"
-				      type="number"
-				      :rules="[rules.negative]"
-				      variant="outlined"
-				      suffix="%"
-				      hint="최고가 대비 이 값 이하로 하락 시 매도"
-				    />
-				  </v-col>
-				</v-row>
               </div>
 
               <v-divider class="my-6" />
@@ -331,8 +332,78 @@
                 </v-card-text>
               </v-card>
 
+              <v-divider class="my-6" />
 
+              <div class="mb-6">
+                <h3 class="text-h6 mb-3">
+                  <v-icon icon="mdi-shield-check" class="mr-2" />
+                  리스크 관리
+                </h3>
 
+                <!-- 일일 거래 한도 -->
+                <div class="text-caption text-grey mb-2">일일 최대 거래금액 (초기 자본 대비)</div>
+                <v-slider
+                  v-model="settings.dailyTradeLimitPct"
+                  :min="10"
+                  :max="100"
+                  :step="10"
+                  thumb-label
+                  hide-details
+                  class="mb-1"
+                >
+                  <template v-slot:append>
+                    <span class="text-body-2" style="min-width: 80px">
+                      {{ settings.dailyTradeLimitPct === 100 ? '제한없음' : `${settings.dailyTradeLimitPct}%` }}
+                    </span>
+                  </template>
+                </v-slider>
+                <div class="text-caption text-grey-darken-1 mb-4">
+                  일일 한도 금액 기준으로 하루 최대 매수 가능 금액을 제한합니다 ({{ formatCurrency(settings.dailyLimitAmount * settings.dailyTradeLimitPct / 100) }})
+                </div>
+
+                <!-- 단일 종목 비중 제한 -->
+                <div class="text-caption text-grey mb-2 mt-4">단일 종목 최대 비중 (총 자본 대비)</div>
+                <v-slider
+                  v-model="settings.maxPositionPct"
+                  :min="10"
+                  :max="100"
+                  :step="5"
+                  thumb-label
+                  hide-details
+                  class="mb-1"
+                >
+                  <template v-slot:append>
+                    <span class="text-body-2" style="min-width: 80px">
+                      {{ settings.maxPositionPct === 100 ? '제한없음' : `${settings.maxPositionPct}%` }}
+                    </span>
+                  </template>
+                </v-slider>
+                <div class="text-caption text-grey-darken-1 mb-4">
+                  한 코인에 최대 투자 가능 금액을 제한합니다 ({{ formatCurrency(settings.dailyLimitAmount * settings.maxPositionPct / 100) }})
+                </div>
+
+                <!-- 긴급 정지 조건 -->
+                <div class="text-caption text-grey mb-2 mt-4">긴급 정지 (일일 손실률)</div>
+                <v-slider
+                  v-model="settings.dailyStopLossPct"
+                  :min="-50"
+                  :max="0"
+                  :step="5"
+                  thumb-label
+                  hide-details
+                  color="error"
+                  class="mb-1"
+                >
+                  <template v-slot:append>
+                    <span class="text-body-2" style="min-width: 80px">
+                      {{ settings.dailyStopLossPct === 0 ? '사용안함' : `${settings.dailyStopLossPct}%` }}
+                    </span>
+                  </template>
+                </v-slider>
+                <div class="text-caption text-grey-darken-1 mb-2">
+                  당일 손실이 이 값에 도달하면 거래를 자동 중단합니다
+                </div>
+              </div>
 
               <!-- 추가 옵션 -->
               <div class="mb-6">
@@ -404,7 +475,7 @@
     </v-row>
 
     <!-- 삭제 확인 다이얼로그 -->
-    <v-dialog v-model="deleteDialog" max-width="400">
+    <v-dialog v-model="deleteDialog" max-width="500">
       <v-card>
         <v-card-title class="bg-error text-white">
           <v-icon icon="mdi-alert" class="mr-2" />
@@ -418,6 +489,9 @@
           <p class="text-body-2 text-grey">
             삭제하면 자동매매가 중단되며, 설정을 다시 생성해야 합니다.
           </p>
+          <v-alert type="info" density="compact" class="mt-3">
+            삭제 후 기본 설정값으로 자동 저장됩니다.
+          </v-alert>
         </v-card-text>
 
         <v-card-actions>
@@ -440,6 +514,49 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+    
+    <!-- 초기화 확인 다이얼로그 ★★★ -->
+    <v-dialog v-model="resetDialog" max-width="500">
+      <v-card>
+        <v-card-title class="bg-warning">
+          <v-icon icon="mdi-refresh" class="mr-2" />
+          설정 초기화 확인
+        </v-card-title>
+
+        <v-card-text class="pt-4">
+          <p class="text-body-1">
+            현재 입력된 설정을 기본값으로 초기화하시겠습니까?
+          </p>
+          <p class="text-body-2 text-grey mt-2">
+            기본 코인: BTC, ETH, XRP, SOL<br>
+            기본 전략: 백테스팅 최적화 설정
+          </p>
+          <v-alert type="info" density="compact" class="mt-3">
+            초기화 후 저장 버튼을 눌러야 실제로 적용됩니다.
+          </v-alert>
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            color="grey"
+            variant="text"
+            @click="resetDialog = false"
+          >
+            취소
+          </v-btn>
+          <v-btn
+            color="warning"
+            variant="elevated"
+            @click="executeReset"
+          >
+            초기화
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+
       </v-container>
     </v-main>
   </v-app>
@@ -475,6 +592,10 @@ const messageType = ref<'success' | 'error' | 'info'>('success')
 // 삭제 확인 다이얼로그
 const deleteDialog = ref(false)
 
+// 초기화 확인 다이얼로그
+const resetDialog = ref(false)
+
+
 // 활성 코인 목록
 const availableCoins = ref<Array<CoinInfo & { displayName: string }>>([])
 
@@ -485,40 +606,46 @@ const hasExistingSettings = ref(false)
 const settings = ref({
   coinSymbols: [] as string[],
   basePeriod: 20,
-  buyThresholdPct: -5,       // ✅ 음수로 변경
-  sellTargetPct: 3,
-  stopLossPct: -10,
-  maxHoldingsPerCoin: 3,
+  buyThresholdPct: -6,        
+  sellTargetPct: 4,           
+  stopLossPct: -8,            
+  maxHoldingsPerCoin: 2,      
   dailyLimitAmount: 1000000,
-  useTrailingStop: false,
-  trailingStopPct: -5,  // ← 이 줄 추가
+  useTrailingStop: true,      
+  trailingStopPct: 4,        
   useAiAnalysis: false,
   rsiPeriod: 14,
-  rsiBuyThreshold: 30,
-  rsiSellThreshold: 70,
+  rsiBuyThreshold: 32,        
+  rsiSellThreshold: 68,       
   bbPeriod: 20,
   bbMultiplier: 2,
-  volumeThreshold: 150
+  volumeThreshold: 140,       
+  dailyTradeLimitPct: 20,     
+  maxPositionPct: 25,         
+  dailyStopLossPct: -5        
 })
 
 // 기본값 (초기화용)
 const defaultSettings = {
-  coinSymbols: [],
+  coinSymbols: ['KRW-BTC', 'KRW-ETH', 'KRW-XRP', 'KRW-SOL'],
   basePeriod: 20,
-  buyThresholdPct: -5,       // ✅ 음수로 변경
-  sellTargetPct: 3,
-  stopLossPct: -10,
-  maxHoldingsPerCoin: 3,
+  buyThresholdPct: -6,    
+  sellTargetPct: 4,           
+  stopLossPct: -8,            
+  maxHoldingsPerCoin: 2,  
   dailyLimitAmount: 1000000,
-  useTrailingStop: false,
-  trailingStopPct: -5,
+  useTrailingStop: true,      
+  trailingStopPct: 4,
   useAiAnalysis: false,
   rsiPeriod: 14,
-  rsiBuyThreshold: 30,
-  rsiSellThreshold: 70,
+  rsiBuyThreshold: 32, 
+  rsiSellThreshold: 68, 
   bbPeriod: 20,
   bbMultiplier: 2,
-  volumeThreshold: 150
+  volumeThreshold: 140,       
+  dailyTradeLimitPct: 20,
+  maxPositionPct: 25,
+  dailyStopLossPct: -5
 }
 
 // 유효성 검증 규칙
@@ -546,6 +673,15 @@ const rules = {
     if (isNaN(num)) return '숫자를 입력해주세요'
     return num <= 0 || '0 이하의 값을 입력해주세요'
   }
+}
+
+// 금액 포맷
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('ko-KR', {
+    style: 'currency',
+    currency: 'KRW',
+    maximumFractionDigits: 0
+  }).format(value)
 }
 
 // 코인 아이콘 매핑
@@ -587,35 +723,85 @@ const loadSettings = async () => {
     const response = await tradingApi.getSettings()
     const data = response.data
 
-    if (data) {
+    if (data && data.coinSymbols && data.coinSymbols.length > 0) {
+      // ★ 기존 설정이 있는 경우
       settings.value = {
-        coinSymbols: data.coinSymbols || [],
+        coinSymbols: data.coinSymbols,
         basePeriod: data.basePeriod || 20,
-        buyThresholdPct: data.buyThresholdPct || -5,  // ✅ 음수
-        sellTargetPct: data.sellTargetPct || 3,
-        stopLossPct: data.stopLossPct || -10,
-        maxHoldingsPerCoin: data.maxHoldingsPerCoin || 3,
+        buyThresholdPct: data.buyThresholdPct || -6,
+        sellTargetPct: data.sellTargetPct || 4,
+        stopLossPct: data.stopLossPct || -8,
+        maxHoldingsPerCoin: data.maxHoldingsPerCoin || 2,
         dailyLimitAmount: data.dailyLimitAmount || 1000000,
-        useTrailingStop: data.useTrailingStop || false,
-        trailingStopPct: data.trailingStopPct || -5,  // ← 이 줄 추가
+        useTrailingStop: data.useTrailingStop ?? true,
+        trailingStopPct: Math.abs(data.trailingStopPct) || 4,
         useAiAnalysis: data.useAiAnalysis || false,
         rsiPeriod: data.rsiPeriod || 14,
-        rsiBuyThreshold: data.rsiBuyThreshold || 30,
-        rsiSellThreshold: data.rsiSellThreshold || 70,
+        rsiBuyThreshold: data.rsiBuyThreshold || 32,      
+        rsiSellThreshold: data.rsiSellThreshold || 68,    
         bbPeriod: data.bbPeriod || 20,
         bbMultiplier: data.bbMultiplier || 2,
-        volumeThreshold: data.volumeThreshold || 150
+        volumeThreshold: data.volumeThreshold || 140,     
+        dailyTradeLimitPct: data.dailyTradeLimitPct || 20,
+        maxPositionPct: data.maxPositionPct || 25,
+        dailyStopLossPct: data.dailyStopLossPct || -5
       }
 
       hasExistingSettings.value = true
       message.value = '기존 거래 설정을 불러왔습니다'
       messageType.value = 'info'
+    } else {
+      // ★★★ 수정: 설정이 없으면 기본값으로 자동 생성 ★★★
+      await createDefaultSettings()
     }
   } catch (error: any) {
-    // 404는 설정이 없는 경우이므로 무시
-    if (error.response?.status !== 404) {
-      message.value = error.response?.data?.message || '거래 설정을 불러오는데 실패했습니다'
-      messageType.value = 'error'
+    // ★★★ 수정: 모든 에러 케이스에서 기본값 자동 생성 ★★★
+    console.log('설정 로드 실패, 기본값으로 생성:', error.response?.status)
+    await createDefaultSettings()
+  }
+}
+
+const createDefaultSettings = async () => {
+  try {
+    settings.value = { ...defaultSettings }
+    
+    const payload = {
+      coinSymbols: settings.value.coinSymbols,
+      basePeriod: Number(settings.value.basePeriod),
+      buyThresholdPct: Number(settings.value.buyThresholdPct),
+      sellTargetPct: Number(settings.value.sellTargetPct),
+      stopLossPct: Number(settings.value.stopLossPct),
+      maxHoldingsPerCoin: Number(settings.value.maxHoldingsPerCoin),
+      dailyLimitAmount: Number(settings.value.dailyLimitAmount),
+      useTrailingStop: Boolean(settings.value.useTrailingStop),
+      trailingStopPct: -Math.abs(Number(settings.value.trailingStopPct)),
+      useAiAnalysis: Boolean(settings.value.useAiAnalysis),
+      rsiPeriod: Number(settings.value.rsiPeriod),
+      rsiBuyThreshold: Number(settings.value.rsiBuyThreshold),
+      rsiSellThreshold: Number(settings.value.rsiSellThreshold),
+      bbPeriod: Number(settings.value.bbPeriod),
+      bbMultiplier: Number(settings.value.bbMultiplier),
+      volumeThreshold: Number(settings.value.volumeThreshold),
+      dailyTradeLimitPct: Number(settings.value.dailyTradeLimitPct),
+      maxPositionPct: Number(settings.value.maxPositionPct),
+      dailyStopLossPct: Number(settings.value.dailyStopLossPct)
+    }
+    
+    await tradingApi.createSettings(payload)
+    hasExistingSettings.value = true
+    message.value = '기본 거래 설정이 자동으로 생성되었습니다.'
+    messageType.value = 'success'
+  } catch (createError: any) {
+    // 이미 설정이 존재하는 경우 (동시 요청 등)
+    if (createError.response?.status === 400 || createError.response?.status === 409) {
+      hasExistingSettings.value = true
+      message.value = '거래 설정을 불러왔습니다.'
+      messageType.value = 'info'
+    } else {
+      console.error('기본 설정 생성 실패:', createError)
+      hasExistingSettings.value = false
+      message.value = '기본 설정 생성에 실패했습니다. 직접 저장해주세요.'
+      messageType.value = 'warning'
     }
   }
 }
@@ -641,14 +827,17 @@ const saveSettings = async () => {
       maxHoldingsPerCoin: Number(settings.value.maxHoldingsPerCoin),
       dailyLimitAmount: Number(settings.value.dailyLimitAmount),
       useTrailingStop: Boolean(settings.value.useTrailingStop),
-      trailingStopPct: Number(settings.value.trailingStopPct),
+      trailingStopPct: -Math.abs(Number(settings.value.trailingStopPct)),
       useAiAnalysis: Boolean(settings.value.useAiAnalysis),
       rsiPeriod: Number(settings.value.rsiPeriod),
       rsiBuyThreshold: Number(settings.value.rsiBuyThreshold),
       rsiSellThreshold: Number(settings.value.rsiSellThreshold),
       bbPeriod: Number(settings.value.bbPeriod),
       bbMultiplier: Number(settings.value.bbMultiplier),
-      volumeThreshold: Number(settings.value.volumeThreshold)
+      volumeThreshold: Number(settings.value.volumeThreshold),
+      dailyTradeLimitPct: Number(settings.value.dailyTradeLimitPct),
+      maxPositionPct: Number(settings.value.maxPositionPct),
+      dailyStopLossPct: Number(settings.value.dailyStopLossPct)
     }
 
     console.log('Sending payload:', payload) // 디버깅용
@@ -691,11 +880,18 @@ const saveSettings = async () => {
 
 // 폼 초기화
 const resetForm = () => {
+  resetDialog.value = true
+}
+
+// ★★★ 신규 추가: 실제 초기화 실행 ★★★
+const executeReset = () => {
   settings.value = { ...defaultSettings }
   if (formRef.value) {
-    formRef.value.reset()
+    formRef.value.resetValidation()
   }
-  message.value = ''
+  resetDialog.value = false
+  message.value = '기본 설정값이 로드되었습니다. 저장 버튼을 눌러 적용하세요.'
+  messageType.value = 'info'
 }
 
 // 삭제 확인
@@ -711,14 +907,43 @@ const deleteSettings = async () => {
   try {
     await tradingApi.deleteSettings()
 
-    message.value = '거래 설정이 삭제되었습니다'
-    messageType.value = 'success'
-
     deleteDialog.value = false
-    hasExistingSettings.value = false
 
-    // 폼 초기화
-    resetForm()
+    // ★★★ 수정: 삭제 후 기본값으로 자동 저장 ★★★
+    settings.value = { ...defaultSettings }
+    
+    // 기본값으로 새로 생성
+    const payload = {
+      coinSymbols: settings.value.coinSymbols,
+      basePeriod: Number(settings.value.basePeriod),
+      buyThresholdPct: Number(settings.value.buyThresholdPct),
+      sellTargetPct: Number(settings.value.sellTargetPct),
+      stopLossPct: Number(settings.value.stopLossPct),
+      maxHoldingsPerCoin: Number(settings.value.maxHoldingsPerCoin),
+      dailyLimitAmount: Number(settings.value.dailyLimitAmount),
+      useTrailingStop: Boolean(settings.value.useTrailingStop),
+      trailingStopPct: -Math.abs(Number(settings.value.trailingStopPct)),
+      useAiAnalysis: Boolean(settings.value.useAiAnalysis),
+      rsiPeriod: Number(settings.value.rsiPeriod),
+      rsiBuyThreshold: Number(settings.value.rsiBuyThreshold),
+      rsiSellThreshold: Number(settings.value.rsiSellThreshold),
+      bbPeriod: Number(settings.value.bbPeriod),
+      bbMultiplier: Number(settings.value.bbMultiplier),
+      volumeThreshold: Number(settings.value.volumeThreshold),
+      dailyTradeLimitPct: Number(settings.value.dailyTradeLimitPct),
+      maxPositionPct: Number(settings.value.maxPositionPct),
+      dailyStopLossPct: Number(settings.value.dailyStopLossPct)
+    }
+    
+    await tradingApi.createSettings(payload)
+    hasExistingSettings.value = true
+    
+    if (formRef.value) {
+      formRef.value.resetValidation()
+    }
+    
+    message.value = '거래 설정이 초기화되고 기본값으로 저장되었습니다.'
+    messageType.value = 'success'
   } catch (error: any) {
     message.value = error.response?.data?.message || '거래 설정 삭제에 실패했습니다'
     messageType.value = 'error'

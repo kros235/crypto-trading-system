@@ -52,7 +52,7 @@ public class TradingSettingDTO {
     @DecimalMax(value = "0.00", message = "트레일링 스톱은 0% 이하여야 합니다")
     private BigDecimal trailingStopPct;
 
-  // ★★★ 신규 추가: RSI 설정 ★★★
+  // ★★★ RSI 설정 ★★★
     @Min(value = 5, message = "RSI 기간은 최소 5일 이상이어야 합니다")
     @Max(value = 50, message = "RSI 기간은 최대 50일 이하여야 합니다")
     private Integer rsiPeriod;
@@ -65,7 +65,7 @@ public class TradingSettingDTO {
     @Max(value = 90, message = "RSI 매도 임계값은 최대 90 이하여야 합니다")
     private Integer rsiSellThreshold;
 
-    // ★★★ 신규 추가: 볼린저 밴드 설정 ★★★
+    // ★★★ 볼린저 밴드 설정 ★★★
     @Min(value = 10, message = "볼린저 밴드 기간은 최소 10일 이상이어야 합니다")
     @Max(value = 50, message = "볼린저 밴드 기간은 최대 50일 이하여야 합니다")
     private Integer bbPeriod;
@@ -74,8 +74,24 @@ public class TradingSettingDTO {
     @Max(value = 4, message = "표준편차 승수는 최대 4 이하여야 합니다")
     private Integer bbMultiplier;
 
-    // ★★★ 신규 추가: 거래량 설정 ★★★
+    // ★★★ 거래량 설정 ★★★
     @Min(value = 100, message = "거래량 기준은 최소 100% 이상이어야 합니다")
     @Max(value = 500, message = "거래량 기준은 최대 500% 이하여야 합니다")
     private Integer volumeThreshold;
+
+    // ★★★ 리스크 관리 설정 ★★★
+    // 일일 최대 거래금액 (초기 자본 대비 %)
+    @Min(value = 10, message = "일일 거래 한도는 최소 10% 이상이어야 합니다")
+    @Max(value = 100, message = "일일 거래 한도는 최대 100% 이하여야 합니다")
+    private Integer dailyTradeLimitPct;
+
+    // 단일 종목 최대 비중 (총 자본 대비 %)
+    @Min(value = 10, message = "종목 비중은 최소 10% 이상이어야 합니다")
+    @Max(value = 100, message = "종목 비중은 최대 100% 이하여야 합니다")
+    private Integer maxPositionPct;
+
+    // 긴급 정지 조건 - 일일 손실률 (%)
+    @Min(value = -50, message = "긴급 정지는 최소 -50% 이상이어야 합니다")
+    @Max(value = 0, message = "긴급 정지는 최대 0% 이하여야 합니다")
+    private Integer dailyStopLossPct;
 }

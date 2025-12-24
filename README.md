@@ -1118,17 +1118,93 @@ DISCORD_BOT_TOKEN=your_discord_bot_token
 
 ---
 
+### ✅ Day 19 (2025-12-24) - 리스크 관리 설정 동기화 및 UX 개선
+**완료 항목:**
+- 리스크 관리 설정 동기화 (백테스팅 ↔ 거래설정)
+  - 백테스팅에만 있던 리스크 관리 필드를 거래설정에 추가
+  - dailyTradeLimitPct: 일일 거래 한도 (%)
+  - maxPositionPct: 단일 종목 최대 비중 (%)
+  - dailyStopLossPct: 긴급 정지 조건 (%)
+- 데이터베이스 스키마 업데이트
+  - trading_settings 테이블에 3개 컬럼 추가
+- 거래 설정 페이지 UX 개선 (Frontend)
+  - 리스크 관리 섹션 UI 추가 (슬라이더)
+  - 초기화 확인 다이얼로그 추가
+  - 삭제 후 기본값 자동 저장 기능
+  - 설정 없을 때 기본값 자동 생성 기능
+  - 트레일링 스톱 양수 입력으로 변경 (백테스팅과 통일)
+  - 일일 거래 금액 라벨/힌트 명확화
+
+**추가된 설정 필드:**
+| 필드 | 설명 | 기본값 | 범위 |
+|------|------|--------|------|
+| dailyTradeLimitPct | 일일 거래 한도 (%) | 20% | 10~100 |
+| maxPositionPct | 단일 종목 최대 비중 (%) | 25% | 10~100 |
+| dailyStopLossPct | 긴급 정지 조건 (%) | -5% | -50~0 |
+
+**수정된 파일 (Backend):**
+- `entity/TradingSetting.java` - 3개 필드 추가
+- `dto/TradingSettingDTO.java` - Validation 추가
+- `service/TradingSettingService.java` - 새 필드 처리 (create/update/convert)
+
+**수정된 파일 (Frontend):**
+- `views/TradingSettingsView.vue` - 전면 개선
+  - 리스크 관리 UI 섹션 추가
+  - resetDialog 상태 및 다이얼로그 추가
+  - executeReset() 함수 추가
+  - createDefaultSettings() 함수 추가
+  - loadSettings() 자동 생성 로직 추가
+  - deleteSettings() 기본값 자동 저장 로직 추가
+  - 트레일링 스톱 양수 입력/음수 저장 변환
+  - formatCurrency() 함수 위치 수정
+
+**DB 마이그레이션:**
+```sql
+ALTER TABLE trading_settings 
+ADD COLUMN daily_trade_limit_pct INT DEFAULT 20,
+ADD COLUMN max_position_pct INT DEFAULT 25,
+ADD COLUMN daily_stop_loss_pct INT DEFAULT -5;
+```
+
+**백테스팅 기본값과 동기화:**
+| 항목 | 값 |
+|------|-----|
+| 거래 종목 | BTC, ETH, XRP, SOL |
+| 이동평균선 기간 | 20일 |
+| 매수 기준 (하락률) | -6% |
+| 목표 수익률 | 4% |
+| 손절매 기준 | -8% |
+| 종목당 최대 보유 | 2건 |
+| 트레일링 스톱 | 사용 (4%) |
+| RSI 매수/매도 | 32 / 68 |
+| 거래량 급증 기준 | 140% |
+| 일일 거래 한도 | 20% |
+| 단일 종목 비중 | 25% |
+| 긴급 정지 | -5% |
+
+**테스트 완료:**
+- ✅ DB 스키마 업데이트 - MySQL
+- ✅ 거래 설정 조회 (새 필드 포함) - Postman
+- ✅ 거래 설정 생성/수정 - Postman
+- ✅ 리스크 관리 UI 표시 - 브라우저
+- ✅ 초기화 다이얼로그 동작 - 브라우저
+- ✅ 삭제 후 기본값 자동 저장 - 브라우저
+- ✅ 설정 없을 때 자동 생성 - 브라우저
+- ✅ 트레일링 스톱 양수 입력/저장 - 브라우저
+
+---
+
 ---
 
 ## 📊 현재 진행 상황
-- **전체 진척도**: 약 93%
+- **전체 진척도**: 약 95%
 - **Phase 1 (핵심 기능)**: 100% 완료 ✅
 - **Phase 2 (고도화)**: 100% 완료 ✅
 - **Phase 3 (안정화)**: 80% 진행중
 
 ---
 
-## 🎯 다음 단계 (Day 19)
+## 🎯 다음 단계 (Day 20)
 
 ### 예정 작업:
 

@@ -1322,11 +1322,68 @@ ADD COLUMN daily_stop_loss_pct INT DEFAULT -5;
 
 ---
 
+### ✅ Day 21 (2025-12-25) - 최종 보안 점검 및 운영 안정성 강화
+**완료 항목:**
+- DB 자동 백업 시스템
+  - backup-db.ps1: Windows PowerShell 백업 스크립트
+  - backup-db.sh: Linux/Mac Bash 백업 스크립트
+  - restore-db.ps1: 긴급 복원 스크립트
+  - 일일 백업 + 7일 보관 + 압축
+  - 동적 경로 설정 (이식성 확보)
+- Logback 로그 로테이션 강화
+  - 일별 로테이션 + 압축 (.gz)
+  - 에러 로그 분리 (90일 보관)
+  - 거래 로그 분리 (365일 보관)
+  - 슬로우 쿼리 로그 분리
+- Docker 헬스체크 및 자동 재시작
+  - backend 헬스체크 (30초 간격, 60초 시작 대기)
+  - mysql, redis 헬스체크
+  - 전체 컨테이너 자동 재시작 정책 (restart: unless-stopped)
+  - backend_logs 볼륨 마운트
+- 스케줄러 시간대 설정
+  - 모든 @Scheduled에 zone="Asia/Seoul" 추가
+  - 자동매매: 5분마다 (KST)
+  - 시스템 점검: 매일 04:00 KST
+  - 일일 리포트: 매일 23:50 KST
+- OWASP Top 10 보안 체크리스트 검토
+
+**생성된 파일:**
+- `scripts/backup-db.ps1` - Windows 백업 스크립트
+- `scripts/backup-db.sh` - Linux/Mac 백업 스크립트
+- `scripts/restore-db.ps1` - 복원 스크립트
+- `backend/src/main/resources/logback-spring.xml` - 로그 설정
+
+**수정된 파일:**
+- `backend/Dockerfile` - curl 설치 추가
+- `docker-compose.yml` - 헬스체크, 자동 재시작, 볼륨 추가
+- `scheduler/TradingScheduler.java` - 시간대 설정 추가
+- `.gitignore` - backups/ 제외 추가
+
+**로그 파일 구성:**
+| 로그 파일 | 용도 | 보관 기간 |
+|----------|------|----------|
+| crypto-trading.log | 일반 로그 | 30일 |
+| crypto-trading-error.log | 에러 로그 | 90일 |
+| crypto-trading-trading.log | 거래 로그 | 365일 |
+| crypto-trading-slow-query.log | 슬로우 쿼리 | 30일 |
+
+**테스트 완료:**
+- ✅ 컨테이너 상태 확인 (4개 모두 healthy) - PowerShell
+- ✅ 헬스체크 동작 확인 - PowerShell
+- ✅ Health API 응답 - Postman, 브라우저
+- ✅ 로그 파일 생성 확인 - PowerShell
+- ✅ 백업 스크립트 실행 - PowerShell
+- ✅ 백업 파일 생성 확인 - PowerShell
+- ✅ 자동 재시작 테스트 (kill 1 후 복구) - PowerShell
+- ✅ 스케줄러 시간대 설정 적용 확인 - Docker
+
+---
+
 ## 📊 현재 진행 상황
-- **전체 진척도**: 약 96%
+- **전체 진척도**: 약 97%
 - **Phase 1 (핵심 기능)**: 100% 완료 ✅
 - **Phase 2 (고도화)**: 100% 완료 ✅
-- **Phase 3 (안정화)**: 90% 진행중
+- **Phase 3 (안정화)**: 100% 완료 ✅
 
 ---
 
@@ -1336,8 +1393,8 @@ ADD COLUMN daily_stop_loss_pct INT DEFAULT -5;
 |------|------|------|
 | Phase 1 (핵심 기능) | Day 1~9 | ✅ 완료 |
 | Phase 2 (고도화) | Day 10~16 | ✅ 완료 |
-| Phase 3 (안정화) | Day 17~20 | ✅ 완료 |
-| Phase 4 (운영 준비) | Day 21~28 | 🔄 진행 예정 |
+| Phase 3 (안정화) | Day 17~21 | ✅ 완료 |
+| Phase 4 (운영 준비) | Day 22~28 | 🔄 진행 예정 |
 | **v1.0 릴리즈** | **Day 28** | 🎯 목표 |
 
 ---
@@ -1346,23 +1403,26 @@ ADD COLUMN daily_stop_loss_pct INT DEFAULT -5;
 
 ### 📅 상세 일정
 
-#### Day 21: HTTPS + 백업
+### ✅ Day 21 완료 항목 (2025-12-25)
+| 작업 | 상태 | 비고 |
+|------|------|------|
+| DB 자동 백업 | ✅ 완료 | backup-db.ps1, restore-db.ps1 |
+| 로그 로테이션 | ✅ 완료 | Logback 일별 로테이션, 에러/거래 로그 분리 |
+| 헬스체크 강화 | ✅ 완료 | Docker healthcheck, 자동 재시작 |
+| 스케줄러 시간대 | ✅ 완료 | zone="Asia/Seoul" 설정 |
+
+
+---
+
+### 📅 상세 일정
+
+#### Day 22: HTTPS + 운영 안정성
 | 시간 | 작업 | 상세 |
 |------|------|------|
 | 오전 | HTTPS 적용 | Let's Encrypt SSL 인증서 발급 |
 | 오전 | Nginx SSL 설정 | HTTPS 리다이렉트, HSTS 헤더 |
-| 오후 | DB 자동 백업 | cron + mysqldump 스크립트 |
-| 오후 | 로그 로테이션 | Logback 일별 로테이션 설정 |
-
----
-
-#### Day 22: 운영 안정성
-| 시간 | 작업 | 상세 |
-|------|------|------|
-| 오전 | 헬스체크 강화 | Docker healthcheck, 자동 재시작 |
-| 오전 | 환경변수 보안 | .env 분리, 프로덕션 설정 |
+| 오후 | 환경변수 보안 | .env 분리, 프로덕션 설정 |
 | 오후 | 업비트 API 재시도 | 3회 재시도 + 지수 백오프 |
-| 오후 | 알림 장애 대응 | 발송 실패 시 로깅 + 재시도 |
 
 ---
 
@@ -1429,8 +1489,8 @@ ADD COLUMN daily_stop_loss_pct INT DEFAULT -5;
 
 | Day | 주요 작업 | 카테고리 |
 |-----|----------|----------|
-| 21 | HTTPS, DB 백업, 로그 로테이션 | 🔴 필수 |
-| 22 | 헬스체크, API 재시도, 알림 장애 대응 | 🟡 권장 |
+| 21 | ✅ DB 백업, 로그 로테이션, 헬스체크, 시간대 설정 | ✅ 완료 |
+| 22 | HTTPS, 환경변수 보안, API 재시도 | 🔴 필수 |
 | 23 | 모니터링 대시보드, 슬로우 쿼리 | 🟢 선택 |
 | 24 | AI 뉴스 분석 - 기반 구축 | 🟢 선택 |
 | 25 | AI 뉴스 분석 - Gemini API 연동 | 🟢 선택 |
@@ -1506,24 +1566,25 @@ ADD COLUMN daily_stop_loss_pct INT DEFAULT -5;
 
 | 작업 | 설명 | 우선순위 | 예상 시간 |
 |------|------|----------|----------|
-| DB 자동 백업 | 일일 백업 스크립트 (7일 보관) | 🔴 필수 | 2시간 |
-| 로그 로테이션 | Logback 일별 로테이션 설정 | 🟡 권장 | 1시간 |
-| 거래 내역 아카이빙 | 월별 거래 내역 백업 | 🟢 선택 | 2시간 |
+| DB 자동 백업 | 일일 백업 스크립트 (7일 보관) | 🔴 필수 | ✅ Day 21 완료 |
+| 로그 로테이션 | Logback 일별 로테이션 설정 | 🟡 권장 | ✅ Day 21 완료 |
+| 거래 내역 아카이빙 | 월별 거래 내역 백업 | 🟢 선택 | 미완료 |
 
 ### 🖥️ 운영 안정성
 
 | 작업 | 설명 | 우선순위 | 예상 시간 |
 |------|------|----------|----------|
-| 헬스체크 강화 | 컨테이너 자동 재시작 설정 | 🟡 권장 | 1시간 |
-| 알림 장애 대응 | Discord/Email 발송 실패 시 대체 로직 | 🟢 선택 | 2시간 |
-| 업비트 API 장애 대응 | API 호출 실패 시 재시도 로직 강화 | 🟢 선택 | 2시간 |
+| 헬스체크 강화 | 컨테이너 자동 재시작 설정 | 🟡 권장 | ✅ Day 21 완료 |
+| 스케줄러 시간대 | Asia/Seoul 시간대 설정 | 🟡 권장 | ✅ Day 21 완료 |
+| 알림 장애 대응 | Discord/Email 발송 실패 시 대체 로직 | 🟢 선택 | 미완료 |
+| 업비트 API 장애 대응 | API 호출 실패 시 재시도 로직 강화 | 🟢 선택 | 미완료 |
 
 ### 📊 모니터링
 
-| 작업 | 설명 | 우선순위 | 예상 시간 |
-|------|------|----------|----------|
-| 시스템 모니터링 대시보드 | Actuator 메트릭 시각화 | 🟢 선택 | 3시간 |
-| 슬로우 쿼리 모니터링 | 1초 이상 쿼리 알림 | 🟢 선택 | 2시간 |
+| 작업 | 설명 | 우선순위 | 상태 |
+|------|------|----------|------|
+| 시스템 모니터링 대시보드 | Actuator 메트릭 시각화 | 🟢 선택 | 미완료 |
+| 슬로우 쿼리 모니터링 | 1초 이상 쿼리 로깅 | 🟢 선택 | ✅ Day 21 완료 (로그 분리) |
 
 ### 🚀 기능 확장 (Optional)
 
@@ -1598,8 +1659,10 @@ ADD COLUMN daily_stop_loss_pct INT DEFAULT -5;
 | 실투자 가능 여부 | ✅ 가능 | 업비트 API 연동 완료 |
 | 보안 수준 | ✅ 양호 | HTTPS 적용 시 A등급 |
 | 백테스팅 ↔ 실거래 일치 | ✅ 100% | 모든 지표 동일 적용 |
-| 운영 안정성 | ✅ 양호 | 모니터링 권장 |
-| **종합 완성도** | **96%** | 프로덕션 배포 준비 완료 |
+| 운영 안정성 | ✅ 양호 | 자동 재시작, 헬스체크 적용 |
+| DB 백업 | ✅ 완료 | 일일 백업, 7일 보관 |
+| 로그 관리 | ✅ 완료 | 일별 로테이션, 분리 저장 |
+| **종합 완성도** | **97%** | 운영 문서 최종 정리만 남음 |
 
 ---
 
@@ -1653,6 +1716,12 @@ docker-compose down
 
 ```
 crypto-trading-system/
+├── scripts/                      # 운영 스크립트
+│   ├── backup-db.ps1      # Windows DB 백업
+│   ├── backup-db.sh        # Linux/Mac DB 백업
+│   └── restore-db.ps1       # DB 복원
+├── backups/                    # 백업 저장소
+│   └── mysql/                 # MySQL 백업 파일
 ├── backend/                    # Spring Boot 백엔드
 │   ├── src/main/java/com/cryptotrading/
 │   │   ├── controller/        # REST API 컨트롤러
@@ -1718,8 +1787,10 @@ crypto-trading-system/
 │   │       ├── JwtUtil.java
 │   │       └── EncryptionUtil.java
 │   └── src/main/resources/
-│       ├── application.yml
-│       └── templates/email/   # 이메일 템플릿
+│   │    ├── application.yml
+│   │    ├── logback-spring.xml     # 로그 설정
+│   │    └── templates/email/       # 이메일 템플릿
+│   └── Dockerfile                       # curl 설치
 │
 ├── frontend/                   # Vue.js 프론트엔드
 │   ├── src/
@@ -1759,9 +1830,9 @@ crypto-trading-system/
 │   ├── index.html
 │   └── vite.config.ts
 │
-├── docker-compose.yml
+├── docker-compose.yml		# 헬스체크, 재시작
 ├── .env.example
-├── .gitignore
+├── .gitignore			# backups/ 제외
 └── README.md
 ```
 

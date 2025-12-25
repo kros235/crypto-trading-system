@@ -15,6 +15,7 @@ services:
     command: --default-authentication-plugin=mysql_native_password
     networks:
       - crypto-network
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       timeout: 20s
@@ -30,6 +31,7 @@ services:
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     networks:
       - crypto-network
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -69,6 +71,15 @@ services:
         condition: service_healthy
     networks:
       - crypto-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    volumes:
+      - backend_logs:/app/logs
 
   frontend:
     build: ./frontend
@@ -79,11 +90,14 @@ services:
       - backend
     networks:
       - crypto-network
+    restart: unless-stopped
 
 volumes:
   mysql_data:
     driver: local
   redis_data:
+    driver: local
+  backend_logs:
     driver: local
 
 networks:

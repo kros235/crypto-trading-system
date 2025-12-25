@@ -40,7 +40,7 @@ public class TradingScheduler {
      * 5분마다 자동매매 실행
      * cron: 초 분 시 일 월 요일
      */
-    @Scheduled(cron = "0 */5 * * * *")
+    @Scheduled(cron = "0 */5 * * * *", zone = "Asia/Seoul")  // 5분마다 (KST 기준)
     public void executeAutoTrading() {
         LocalTime now = LocalTime.now();
         
@@ -91,7 +91,7 @@ public class TradingScheduler {
     /**
      * 매일 새벽 4시에 시스템 점검
      */
-    @Scheduled(cron = "0 0 4 * * *")
+    @Scheduled(cron = "0 0 4 * * *", zone = "Asia/Seoul")  // 매일 04:00 KST
     public void dailySystemCheck() {
         log.info("========================================");
         log.info("일일 시스템 점검 시작: {}", LocalDateTime.now());
@@ -112,7 +112,7 @@ public class TradingScheduler {
      /**
      * 매일 23:50에 일일 리포트 발송
      */
-     @Scheduled(cron = "0 50 23 * * *")  // 매일 23:50
+     @Scheduled(cron = "0 50 23 * * *", zone = "Asia/Seoul")  // 매일 23:50 KST
      public void sendDailyReport() {
          log.info("========== 일일 리포트 발송 시작 ==========");
     

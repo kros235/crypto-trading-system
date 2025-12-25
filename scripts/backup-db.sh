@@ -9,7 +9,8 @@
 set -e
 
 # 설정
-PROJECT_DIR="/home/user/crypto-trading-system"  # 실제 경로로 수정
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 BACKUP_DIR="$PROJECT_DIR/backups/mysql"
 CONTAINER_NAME="crypto-mysql"
 DB_NAME="crypto_trading"

@@ -299,7 +299,9 @@ export const adminApi = {
   changeUserRole: (userId: string, role: string) => 
     api.put(`/admin/users/${userId}/role`, { role }),
   forceLogout: (userId: string) => 
-    api.post(`/admin/users/${userId}/logout`)
+    api.post(`/admin/users/${userId}/logout`),
+  getMonitoring: () => api.get('/admin/monitoring'),
+  getSlowQueries: () => api.get('/admin/monitoring/slow-queries'),
 }
 
 // Email Notification API (추가)

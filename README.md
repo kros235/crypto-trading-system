@@ -1437,12 +1437,90 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 
 ---
 
+### ✅ Day 23 (2025-12-26) - 시스템 모니터링 및 알림 고도화
+**완료 항목:**
+- 시스템 모니터링 대시보드 (Backend)
+  - MonitoringService: 시스템 메트릭 수집
+  - MonitoringDTO: 모니터링 데이터 DTO
+  - JVM 메모리 (Heap/Non-Heap) 사용량
+  - DB 커넥션 풀 상태 (Active/Idle/Total)
+  - Redis 연결 상태 및 메모리 사용량
+  - 시스템 업타임, 스레드 정보, CPU 로드
+- 슬로우 쿼리 모니터링
+  - 1초 이상 쿼리 기록 및 표시
+  - application.yml 슬로우 쿼리 로깅 설정
+- 시스템 이상징후 자동 감지 (Backend)
+  - MonitoringAlertService: 5분마다 시스템 상태 점검
+  - JVM 메모리 80%/90% 경고 알림
+  - DB 커넥션 풀 고갈 경고 알림
+  - Redis 연결 끊김 경고 알림
+  - 시간당 에러 10건 이상 경고 알림
+  - 알림 중복 방지 (AtomicBoolean 플래그)
+- 서버 시작/종료 Discord 알림 (Backend)
+  - StartupNotificationConfig: @PostConstruct, @PreDestroy
+  - 서버 시작 시 Discord 알림 발송
+  - 서버 종료 시 Discord 알림 발송
+- 관리자 대시보드 모니터링 UI (Frontend)
+  - 시스템 모니터링 섹션 추가
+  - JVM Heap 게이지, DB 커넥션 풀 상태
+  - Redis 상태 칩, 시스템 정보 카드
+  - 전체화면 상세 다이얼로그
+  - 30초 자동 새로고침
+- 거래 내역 아카이빙 스크립트
+  - archive-transactions.ps1 (Windows)
+  - archive-transactions.sh (Linux/Mac)
+  - 월별 거래 내역 백업 및 압축
+
+**API 엔드포인트:**
+| Method | Endpoint | 인증 | 설명 |
+|--------|----------|------|------|
+| GET | /api/admin/monitoring | 🔐 | 시스템 모니터링 데이터 (관리자) |
+
+**생성된 파일 (Backend):**
+- `service/MonitoringService.java` - 시스템 메트릭 수집
+- `service/MonitoringAlertService.java` - 이상징후 감지 및 알림
+- `config/StartupNotificationConfig.java` - 서버 시작/종료 알림
+- `dto/admin/MonitoringDTO.java` - 모니터링 데이터 DTO
+
+**생성된 파일 (Scripts):**
+- `scripts/archive-transactions.ps1` - Windows 아카이빙 스크립트
+- `scripts/archive-transactions.sh` - Linux/Mac 아카이빙 스크립트
+
+**수정된 파일 (Backend):**
+- `service/NotificationService.java` - sendSystemNotification() 메서드 추가
+- `controller/AdminController.java` - 모니터링 API 엔드포인트 추가
+- `application.yml` - Actuator, 슬로우 쿼리 로깅 설정 추가
+
+**수정된 파일 (Frontend):**
+- `views/AdminDashboardView.vue` - 모니터링 섹션 및 다이얼로그 추가
+- `api/index.ts` - getMonitoring() API 추가
+
+**모니터링 알림 임계값:**
+| 항목 | 경고 | 위험 |
+|------|------|------|
+| JVM Heap 사용률 | 80% | 90% |
+| DB 활성 커넥션 | 8개 | Max-1개 |
+| Redis 연결 | - | 연결 끊김 |
+| 시간당 에러 | 10건 | - |
+
+**테스트 완료:**
+- ✅ Discord 서버 시작 알림 - Discord
+- ✅ Discord 서버 종료 알림 - Discord
+- ✅ 모니터링 API 응답 - Postman
+- ✅ 관리자 대시보드 모니터링 섹션 - 브라우저
+- ✅ 전체화면 다이얼로그 - 브라우저
+- ✅ 30초 자동 새로고침 - 브라우저
+
+---
+
+
+
 ## 📊 현재 진행 상황
-- **전체 진척도**: 약 98%
+- **전체 진척도**: 약 92%
 - **Phase 1 (핵심 기능)**: 100% 완료 ✅
-- **Phase 2 (고도화)**: 100% 완료 ✅
-- **Phase 3 (안정화)**: 100% 완료 ✅
-- **Phase 4 (운영 준비)**: 30% 진행 중 🔄 
+- **Phase 2 (고도화)**: 98% 완료 ✅
+- **Phase 3 (안정화)**: 60% 진행 중 🔄
+- **Phase 4 (운영 준비)**: 30% 진행 중 🔄
 
 ---
 
@@ -1486,12 +1564,14 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 
 ---
 
-#### Day 23: 모니터링
-| 시간 | 작업 | 상세 |
-|------|------|------|
-| 오전 | 시스템 모니터링 대시보드 | Actuator 메트릭 + 간단한 UI |
-| 오후 | 슬로우 쿼리 모니터링 | 1초 이상 쿼리 로깅 + 알림 |
-| 오후 | 거래 내역 아카이빙 | 월별 백업 스크립트 |
+#### ✅ Day 23: 모니터링 (2025-12-26 완료)
+| 시간 | 작업 | 상세 | 상태 |
+|------|------|------|------|
+| 오전 | 시스템 모니터링 대시보드 | JVM, DB, Redis 메트릭 + 관리자 UI | ✅ 완료 |
+| 오전 | 서버 시작/종료 알림 | Discord 알림 자동 발송 | ✅ 완료 |
+| 오후 | 시스템 이상징후 감지 | 5분마다 자동 점검 + Discord 알림 | ✅ 완료 |
+| 오후 | 슬로우 쿼리 모니터링 | 1초 이상 쿼리 로깅 | ✅ 완료 |
+| 오후 | 거래 내역 아카이빙 | 월별 백업 스크립트 (ps1, sh) | ✅ 완료 |
 
 ---
 
@@ -1552,7 +1632,7 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 |-----|----------|----------|
 | 21 | ✅ DB 백업, 로그 로테이션, 헬스체크, 시간대 설정 | ✅ 완료 |
 | 22 | ✅ 환경변수 보안, API 재시도, 운영 Docker Compose | ✅ 완료 |
-| 23 | 모니터링 대시보드, 슬로우 쿼리 | 🟢 선택 |
+| 23 | ✅ 모니터링 대시보드, 슬로우 쿼리, 서버 알림 | ✅ 완료 |
 | 24 | AI 뉴스 분석 - 기반 구축 | 🟢 선택 |
 | 25 | AI 뉴스 분석 - Gemini API 연동 | 🟢 선택 |
 | 26 | AI 뉴스 분석 - 지표 연동 | 🟢 선택 |
@@ -1629,7 +1709,7 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 |------|------|----------|----------|
 | DB 자동 백업 | 일일 백업 스크립트 (7일 보관) | 🔴 필수 | ✅ Day 21 완료 |
 | 로그 로테이션 | Logback 일별 로테이션 설정 | 🟡 권장 | ✅ Day 21 완료 |
-| 거래 내역 아카이빙 | 월별 거래 내역 백업 | 🟢 선택 | 미완료 |
+| 거래 내역 아카이빙 | 월별 거래 내역 백업 | 🟢 선택 | ✅ Day 23 완료 |
 
 ### 🖥️ 운영 안정성
 
@@ -1644,8 +1724,10 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 
 | 작업 | 설명 | 우선순위 | 상태 |
 |------|------|----------|------|
-| 시스템 모니터링 대시보드 | Actuator 메트릭 시각화 | 🟢 선택 | 미완료 |
-| 슬로우 쿼리 모니터링 | 1초 이상 쿼리 로깅 | 🟢 선택 | ✅ Day 21 완료 (로그 분리) |
+| 시스템 모니터링 대시보드 | JVM, DB, Redis 메트릭 시각화 | 🟢 선택 | ✅ Day 23 완료 |
+| 슬로우 쿼리 모니터링 | 1초 이상 쿼리 로깅 | 🟢 선택 | ✅ Day 23 완료 |
+| 시스템 이상징후 알림 | 자동 감지 + Discord 알림 | 🟢 선택 | ✅ Day 23 완료 |
+| 서버 시작/종료 알림 | Discord 자동 알림 | 🟢 선택 | ✅ Day 23 완료 |
 
 ### 🚀 기능 확장 (Optional)
 
@@ -1784,7 +1866,9 @@ crypto-trading-system/
 │   ├── backup-db.ps1      # Windows DB 백업
 │   ├── backup-db.sh        # Linux/Mac DB 백업
 │   ├── restore-db.ps1       # DB 복원
-│   └── init-ssl.sh              # SSL 인증서 발급 스크립트
+│   ├── init-ssl.sh               # SSL 인증서 발급 스크립트
+│   ├── archive-transactions.ps1  # ⭐ Day 23: Windows 거래 아카이빙
+│   └── archive-transactions.sh   # ⭐ Day 23: Linux 거래 아카이빙
 ├── backups/                    # 백업 저장소
 │   └── mysql/                 # MySQL 백업 파일
 ├── .env.example                  # 환경변수 템플릿
@@ -1816,11 +1900,14 @@ crypto-trading-system/
 │   │   │   ├── EmailService.java     
 │   │   │   ├── AdminService.java
 │   │   │   ├── DiscordBotService.java        
-│   │   │   └── LoginAttemptService.java      # ⭐ Day 20: 로그인 시도 제한
+│   │   │   ├── LoginAttemptService.java      # ⭐ Day 20: 로그인 시도 제한
+│   │   │   ├── MonitoringService.java         # ⭐ Day 23: 시스템 메트릭 수집
+│   │   │   └── MonitoringAlertService.java   # ⭐ Day 23: 이상징후 감지
 │   │   ├── config/            # 설정 클래스
 │   │   │   ├── SecurityConfig.java
 │   │   │   ├── NotificationConfig.java
-│   │   │   ├── SwaggerConfig.java            # ⭐ Day 20: Swagger/OpenAPI
+│   │   │   ├── SwaggerConfig.java                 # ⭐ Day 20: Swagger/OpenAPI
+│   │   │   ├── StartupNotificationConfig.java   # ⭐ Day 23: 서버 시작/종료 알림
 │   │   │   └── security/      # Security 핸들러
 │   │   │       ├── CustomAuthenticationEntryPoint.java
 │   │   │       └── CustomAccessDeniedHandler.java
@@ -1851,6 +1938,9 @@ crypto-trading-system/
 │   │   │   ├── notification/  # 알림 DTO
 │   │   │   ├── backtest/      # 백테스트 DTO
 │   │   │   └── admin/         # 관리자 DTO
+│   │   │       ├── SystemStatsDTO.java
+│   │   │       ├── AdminUserDTO.java
+│   │   │       └── MonitoringDTO.java        # ⭐ Day 23: 모니터링 DTO
 │   │   ├── filter/            # 필터
 │   │   │   └── JwtAuthenticationFilter.java
 │   │   └── util/              # 유틸리티

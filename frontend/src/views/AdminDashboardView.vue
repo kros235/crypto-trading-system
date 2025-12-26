@@ -93,6 +93,147 @@
       </v-col>
     </v-row>
 
+    <!-- 시스템 모니터링 섹션 -->
+    <v-row class="mb-4">
+      <v-col cols="12">
+        <v-card elevation="2">
+          <v-card-title class="d-flex align-center">
+            <v-icon class="mr-2">mdi-monitor-dashboard</v-icon>
+            시스템 모니터링
+            <v-spacer />
+            <v-btn
+              variant="text"
+              size="small"
+              @click="fetchMonitoring"
+              :loading="monitoringLoading"
+            >
+              <v-icon>mdi-refresh</v-icon>
+            </v-btn>
+            <v-btn
+              variant="text"
+              size="small"
+              @click="showMonitoringDialog = true"
+              v-if="monitoring"
+            >
+              <v-icon>mdi-fullscreen</v-icon>
+            </v-btn>
+          </v-card-title>
+          
+          <v-card-text v-if="monitoring">
+            <v-row>
+              <!-- JVM 메모리 -->
+              <v-col cols="12" md="3">
+                <v-card variant="outlined" class="pa-3">
+                  <div class="text-caption text-grey mb-1">JVM Heap 사용량</div>
+                  <v-progress-linear
+                    :model-value="monitoring.heapUsagePercent"
+                    :color="getHeapColor(monitoring.heapUsagePercent)"
+                    height="20"
+                    rounded
+                  >
+                    <template v-slot:default>
+                      <strong>{{ monitoring.heapUsagePercent.toFixed(1) }}%</strong>
+                    </template>
+                  </v-progress-linear>
+                  <div class="text-caption mt-1">
+                    {{ formatBytes(monitoring.heapUsed) }} / {{ formatBytes(monitoring.heapMax) }}
+                  </div>
+                </v-card>
+              </v-col>
+              
+              <!-- DB 커넥션 풀 -->
+              <v-col cols="12" md="3">
+                <v-card variant="outlined" class="pa-3">
+                  <div class="text-caption text-grey mb-1">DB 커넥션 풀</div>
+                  <v-progress-linear
+                    :model-value="(monitoring.dbActiveConnections / monitoring.dbMaxConnections) * 100"
+                    :color="getDbPoolColor(monitoring.dbActiveConnections, monitoring.dbMaxConnections)"
+                    height="20"
+                    rounded
+                  >
+                    <template v-slot:default>
+                      <strong>{{ monitoring.dbActiveConnections }} / {{ monitoring.dbMaxConnections }}</strong>
+                    </template>
+                  </v-progress-linear>
+                  <div class="text-caption mt-1">
+                    Active: {{ monitoring.dbActiveConnections }} | Idle: {{ monitoring.dbIdleConnections }}
+                  </div>
+                </v-card>
+              </v-col>
+              
+              <!-- Redis 상태 -->
+              <v-col cols="12" md="3">
+                <v-card variant="outlined" class="pa-3">
+                  <div class="text-caption text-grey mb-1">Redis 상태</div>
+                  <div class="d-flex align-center">
+                    <v-chip
+                      :color="monitoring.redisConnected ? 'success' : 'error'"
+                      size="small"
+                      class="mr-2"
+                    >
+                      {{ monitoring.redisConnected ? '연결됨' : '연결 끊김' }}
+                    </v-chip>
+                    <span class="text-body-2">
+                      {{ formatBytes(monitoring.redisUsedMemory) }}
+                    </span>
+                  </div>
+                  <div class="text-caption mt-1">
+                    연결 클라이언트: {{ monitoring.redisConnectedClients }}
+                  </div>
+                </v-card>
+              </v-col>
+              
+              <!-- 업타임 & 스레드 -->
+              <v-col cols="12" md="3">
+                <v-card variant="outlined" class="pa-3">
+                  <div class="text-caption text-grey mb-1">시스템 정보</div>
+                  <div class="text-body-2">
+                    <v-icon size="small" class="mr-1">mdi-clock-outline</v-icon>
+                    업타임: {{ monitoring.uptimeFormatted }}
+                  </div>
+                  <div class="text-caption mt-1">
+                    스레드: {{ monitoring.threadCount }} (Peak: {{ monitoring.peakThreadCount }})
+                  </div>
+                </v-card>
+              </v-col>
+            </v-row>
+            
+            <!-- 슬로우 쿼리 -->
+            <v-row class="mt-2" v-if="monitoring.recentSlowQueries && monitoring.recentSlowQueries.length > 0">
+              <v-col cols="12">
+                <v-alert type="warning" variant="tonal" density="compact">
+                  <div class="d-flex align-center">
+                    <v-icon class="mr-2">mdi-database-alert</v-icon>
+                    <strong>최근 슬로우 쿼리: {{ monitoring.recentSlowQueries.length }}건</strong>
+                  </div>
+                  <v-expansion-panels class="mt-2" variant="accordion">
+                    <v-expansion-panel
+                      v-for="(sq, idx) in monitoring.recentSlowQueries.slice(0, 5)"
+                      :key="idx"
+                    >
+                      <v-expansion-panel-title>
+                        <span class="text-error font-weight-bold mr-2">{{ sq.executionTimeMs }}ms</span>
+                        <span class="text-truncate">{{ sq.query.substring(0, 50) }}...</span>
+                      </v-expansion-panel-title>
+                      <v-expansion-panel-text>
+                        <div class="text-caption mb-1">실행 시간: {{ formatDateTime(sq.executedAt) }}</div>
+                        <div class="text-caption mb-2">Source: {{ sq.source }}</div>
+                        <code class="text-body-2" style="white-space: pre-wrap; word-break: break-all;">{{ sq.query }}</code>
+                      </v-expansion-panel-text>
+                    </v-expansion-panel>
+                  </v-expansion-panels>
+                </v-alert>
+              </v-col>
+            </v-row>
+          </v-card-text>
+          
+          <v-card-text v-else>
+            <v-skeleton-loader type="article" />
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
     <!-- 알림 설정 상태 -->
     <v-row class="mb-4">
       <v-col cols="12">
@@ -185,11 +326,143 @@
     </v-row>
   </v-container>
     </v-main>
+    <!-- 모니터링 상세 다이얼로그 -->
+    <v-dialog v-model="showMonitoringDialog" max-width="900">
+      <v-card v-if="monitoring">
+        <v-card-title class="d-flex align-center">
+          <v-icon class="mr-2">mdi-monitor-dashboard</v-icon>
+          시스템 모니터링 상세
+          <v-spacer />
+          <v-btn icon variant="text" @click="showMonitoringDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+        
+        <v-card-text>
+          <v-row>
+            <!-- JVM 메모리 상세 -->
+            <v-col cols="12" md="6">
+              <v-card variant="outlined" class="pa-4">
+                <h4 class="mb-3">💾 JVM 메모리</h4>
+                <v-progress-linear
+                  :model-value="monitoring.heapUsagePercent"
+                  :color="getHeapColor(monitoring.heapUsagePercent)"
+                  height="25"
+                  rounded
+                  class="mb-3"
+                >
+                  <template v-slot:default>
+                    <strong>{{ monitoring.heapUsagePercent.toFixed(1) }}%</strong>
+                  </template>
+                </v-progress-linear>
+                <div class="text-body-2 mb-1">
+                  <strong>Heap Used:</strong> {{ formatBytes(monitoring.heapUsed) }}
+                </div>
+                <div class="text-body-2 mb-1">
+                  <strong>Heap Max:</strong> {{ formatBytes(monitoring.heapMax) }}
+                </div>
+                <div class="text-body-2">
+                  <strong>Non-Heap:</strong> {{ formatBytes(monitoring.nonHeapUsed) }}
+                </div>
+              </v-card>
+            </v-col>
+            
+            <!-- DB 커넥션 상세 -->
+            <v-col cols="12" md="6">
+              <v-card variant="outlined" class="pa-4">
+                <h4 class="mb-3">🗄️ DB 커넥션 풀</h4>
+                <v-progress-linear
+                  :model-value="(monitoring.dbActiveConnections / monitoring.dbMaxConnections) * 100"
+                  :color="getDbPoolColor(monitoring.dbActiveConnections, monitoring.dbMaxConnections)"
+                  height="25"
+                  rounded
+                  class="mb-3"
+                >
+                  <template v-slot:default>
+                    <strong>{{ monitoring.dbActiveConnections }} / {{ monitoring.dbMaxConnections }}</strong>
+                  </template>
+                </v-progress-linear>
+                <div class="text-body-2 mb-1">
+                  <strong>Active:</strong> {{ monitoring.dbActiveConnections }}
+                </div>
+                <div class="text-body-2 mb-1">
+                  <strong>Idle:</strong> {{ monitoring.dbIdleConnections }}
+                </div>
+                <div class="text-body-2">
+                  <strong>Total:</strong> {{ monitoring.dbTotalConnections }}
+                </div>
+              </v-card>
+            </v-col>
+            
+            <!-- Redis 상세 -->
+            <v-col cols="12" md="6">
+              <v-card variant="outlined" class="pa-4">
+                <h4 class="mb-3">🔴 Redis</h4>
+                <v-chip
+                  :color="monitoring.redisConnected ? 'success' : 'error'"
+                  class="mb-3"
+                >
+                  {{ monitoring.redisConnected ? '✅ 연결됨' : '❌ 연결 끊김' }}
+                </v-chip>
+                <div class="text-body-2 mb-1">
+                  <strong>메모리 사용:</strong> {{ formatBytes(monitoring.redisUsedMemory) }}
+                </div>
+                <div class="text-body-2">
+                  <strong>연결 클라이언트:</strong> {{ monitoring.redisConnectedClients }}
+                </div>
+              </v-card>
+            </v-col>
+            
+            <!-- 시스템 정보 상세 -->
+            <v-col cols="12" md="6">
+              <v-card variant="outlined" class="pa-4">
+                <h4 class="mb-3">⚙️ 시스템 정보</h4>
+                <div class="text-body-2 mb-1">
+                  <strong>업타임:</strong> {{ monitoring.uptimeFormatted }}
+                </div>
+                <div class="text-body-2 mb-1">
+                  <strong>CPU 코어:</strong> {{ monitoring.availableProcessors }}개
+                </div>
+                <div class="text-body-2 mb-1">
+                  <strong>시스템 로드:</strong> {{ monitoring.systemLoadAverage.toFixed(2) }}
+                </div>
+                <div class="text-body-2 mb-1">
+                  <strong>스레드:</strong> {{ monitoring.threadCount }} (Peak: {{ monitoring.peakThreadCount }})
+                </div>
+                <div class="text-body-2">
+                  <strong>데몬 스레드:</strong> {{ monitoring.daemonThreadCount }}
+                </div>
+              </v-card>
+            </v-col>
+          </v-row>
+          
+          <!-- 에러 카운트 -->
+          <v-row class="mt-2">
+            <v-col cols="12">
+              <v-alert
+                :type="monitoring.recentErrorCount > 0 ? 'warning' : 'success'"
+                variant="tonal"
+              >
+                최근 1시간 에러: <strong>{{ monitoring.recentErrorCount }}건</strong>
+              </v-alert>
+            </v-col>
+          </v-row>
+          
+          <!-- 수집 시간 -->
+          <div class="text-caption text-grey mt-3 text-right">
+            마지막 수집: {{ formatDateTime(monitoring.collectedAt) }}
+          </div>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
   </v-app>
 </template>
 
+
+
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { onUnmounted } from 'vue'
 import { adminApi } from '@/api'
 
 import TheHeader from '@/components/TheHeader.vue'
@@ -229,6 +502,38 @@ interface AdminUser {
   holdingCount: number
 }
 
+interface MonitoringMetrics {
+  heapUsed: number
+  heapMax: number
+  heapUsagePercent: number
+  nonHeapUsed: number
+  availableProcessors: number
+  systemLoadAverage: number
+  uptimeSeconds: number
+  uptimeFormatted: string
+  threadCount: number
+  peakThreadCount: number
+  daemonThreadCount: number
+  dbActiveConnections: number
+  dbIdleConnections: number
+  dbTotalConnections: number
+  dbMaxConnections: number
+  redisConnected: boolean
+  redisUsedMemory: number
+  redisConnectedClients: number
+  recentSlowQueries: SlowQueryInfo[]
+  apiResponseTimes: Record<string, number>
+  recentErrorCount: number
+  collectedAt: string
+}
+
+interface SlowQueryInfo {
+  query: string
+  executionTimeMs: number
+  executedAt: string
+  source: string
+}
+
 const sidebarRef = ref()
 
 const loading = ref(false)
@@ -265,6 +570,11 @@ const headers = [
   { title: '가입일', key: 'joinDate' },
   { title: '액션', key: 'actions', sortable: false }
 ]
+
+// ★★★ 추가: 모니터링 데이터 ref ★★★
+const monitoring = ref<MonitoringMetrics | null>(null)
+const monitoringLoading = ref(false)
+const showMonitoringDialog = ref(false)
 
 const formatKRW = (value: number) => {
   if (!value) return '0원'
@@ -305,12 +615,62 @@ const toggleUserActive = async (user: AdminUser) => {
 
 const refreshData = async () => {
   loading.value = true
-  await Promise.all([fetchStats(), fetchUsers()])
+  await Promise.all([fetchStats(), fetchUsers(), fetchMonitoring()])
   loading.value = false
 }
 
+// 모니터링 데이터 조회 함수
+const fetchMonitoring = async () => {
+  monitoringLoading.value = true
+  try {
+    const response = await adminApi.getMonitoring()
+    monitoring.value = response.data
+  } catch (error) {
+    console.error('모니터링 데이터 조회 실패:', error)
+  } finally {
+    monitoringLoading.value = false
+  }
+}
+
+const formatBytes = (bytes: number) => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+const formatDateTime = (dateStr: string) => {
+  if (!dateStr) return '-'
+  return new Date(dateStr).toLocaleString('ko-KR')
+}
+
+const getHeapColor = (percent: number) => {
+  if (percent >= 90) return 'error'
+  if (percent >= 70) return 'warning'
+  return 'success'
+}
+
+const getDbPoolColor = (active: number, max: number) => {
+  const ratio = active / max
+  if (ratio >= 0.9) return 'error'
+  if (ratio >= 0.7) return 'warning'
+  return 'success'
+}
+
+// 30초마다 모니터링 자동 새로고침
+let monitoringInterval: ReturnType<typeof setInterval> | null = null
+
 onMounted(() => {
   refreshData()
+  // 30초마다 모니터링 데이터 갱신
+  monitoringInterval = setInterval(fetchMonitoring, 30000)
+})
+
+onUnmounted(() => {
+  if (monitoringInterval) {
+    clearInterval(monitoringInterval)
+  }
 })
 </script>
 

@@ -311,4 +311,12 @@ public class NotificationService {
         if (quantity == null) return "0";
         return quantity.stripTrailingZeros().toPlainString();
     }
+
+    /**
+     * 시스템 알림 발송 (모니터링, 서버 시작/종료 등)
+     * 사용자 ID가 없는 시스템 레벨 알림용
+     */
+    public void sendSystemNotification(String message) {
+        sendDiscordNotification(message, 0);
+    }
 }

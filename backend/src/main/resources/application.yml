@@ -31,6 +31,10 @@ spring:
           batch_size: 20
         order_inserts: true
         order_updates: true
+        session:
+          events:
+            log:
+              LOG_QUERIES_SLOWER_THAN_MS: 1000
     open-in-view: false
   
   data:
@@ -90,10 +94,16 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
+      base-path: /actuator
   endpoint:
     health:
       show-details: when-authorized
+    metrics:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
 
 # Logging Configuration
 logging:
@@ -103,6 +113,8 @@ logging:
     org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.hibernate.SQL_SLOW: WARN
+    org.hibernate.stat: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

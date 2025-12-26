@@ -5,6 +5,8 @@ import com.cryptotrading.dto.admin.SystemStatsDTO;
 import com.cryptotrading.service.AdminService;
 import com.cryptotrading.service.CacheService;
 import com.cryptotrading.service.LoginAttemptService;
+import com.cryptotrading.dto.admin.MonitoringDTO;
+import com.cryptotrading.service.MonitoringService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -30,6 +33,7 @@ public class AdminController {
     private final AdminService adminService;
     private final CacheService cacheService;
     private final LoginAttemptService loginAttemptService;
+    private final MonitoringService monitoringService;
     
     /**
      * 시스템 통계 조회
@@ -125,4 +129,25 @@ public class AdminController {
         loginAttemptService.unblockUser(userId);
         return ResponseEntity.ok(Map.of("message", userId + " 계정 잠금이 해제되었습니다"));
     } 
+
+    // 시스템 모니터링 API
+    /**
+     * 시스템 모니터링 메트릭 조회
+     */
+    @GetMapping("/monitoring")
+    @Operation(summary = "시스템 모니터링", description = "JVM, DB, Redis 등 시스템 메트릭을 조회합니다")
+    public ResponseEntity<MonitoringDTO> getSystemMonitoring() {
+        return ResponseEntity.ok(monitoringService.getSystemMetrics());
+    }
+    
+    /**
+     * 슬로우 쿼리 목록 조회
+     */
+    @GetMapping("/monitoring/slow-queries")
+    @Operation(summary = "슬로우 쿼리 목록", description = "최근 슬로우 쿼리 목록을 조회합니다")
+    public ResponseEntity<List<MonitoringDTO.SlowQueryInfo>> getSlowQueries() {
+        MonitoringDTO metrics = monitoringService.getSystemMetrics();
+        return ResponseEntity.ok(metrics.getRecentSlowQueries());
+    }
+
 }

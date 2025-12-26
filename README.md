@@ -1377,13 +1377,72 @@ ADD COLUMN daily_stop_loss_pct INT DEFAULT -5;
 - ✅ 자동 재시작 테스트 (kill 1 후 복구) - PowerShell
 - ✅ 스케줄러 시간대 설정 적용 확인 - Docker
 
+
+---
+
+### ✅ Day 22 (2025-12-26) - 환경변수 보안 강화 및 운영 안정성
+**완료 항목:**
+- 환경변수 분리 (개발/운영)
+  - .env.development: 개발 환경 설정
+  - .env.production: 운영 환경 설정 (강화된 키)
+  - .env.example: 템플릿 업데이트 (사용법 안내)
+  - .gitignore: 환경 파일 제외 추가
+- 업비트 API 재시도 로직 구현
+  - UpbitApiService에 Retry 로직 추가
+  - 3회 재시도 + 지수 백오프 (500ms → 5s)
+  - 5xx 서버 오류, 429 Rate Limit 시 자동 재시도
+  - 네트워크 오류 시 자동 재시도
+- 운영용 Docker Compose 생성
+  - docker-compose.prod.yml 생성
+  - 리소스 제한 (MySQL 1G, Redis 512M, Backend 1.5G)
+  - JVM 옵션 최적화 (-Xms512m -Xmx1024m)
+  - 볼륨 분리 (_prod 접미사)
+  - 자동 재시작 정책 (restart: always)
+- HTTPS 준비 (템플릿)
+  - frontend/nginx.ssl.conf: SSL 설정 템플릿
+  - scripts/init-ssl.sh: Let's Encrypt 인증서 발급 스크립트
+  - ⏳ 실제 적용은 Day 28로 이동 (도메인 확보 후)
+
+**생성된 파일:**
+- `.env.development` - 개발 환경 설정
+- `.env.production` - 운영 환경 설정
+- `docker-compose.prod.yml` - 운영용 Docker Compose
+- `frontend/nginx.ssl.conf` - HTTPS 설정 템플릿
+- `scripts/init-ssl.sh` - SSL 인증서 발급 스크립트
+
+**수정된 파일:**
+- `backend/src/main/java/com/cryptotrading/service/UpbitApiService.java` - 재시도 로직 추가
+- `.env.example` - 환경 분리 안내 추가
+- `.gitignore` - 환경 파일 제외 추가
+
+**환경별 Docker 실행:**
+```bash
+# 개발 환경
+docker-compose --env-file .env.development up -d --build
+
+# 운영 환경
+docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+```
+
+**테스트 완료:**
+- ✅ .env.development로 Docker 실행 - PowerShell
+- ✅ 컨테이너 상태 확인 (4개 모두 healthy) - PowerShell
+- ✅ Health Check API (profile: dev 확인) - PowerShell
+- ✅ 로그인 토큰 발급 - Postman
+- ✅ 백엔드 로그 정상 확인 - Docker
+
+**Day 28로 이동된 작업:**
+- ⏳ HTTPS 실제 적용 (Let's Encrypt 인증서 발급)
+- ⏳ Nginx SSL 설정 활성화
+
 ---
 
 ## 📊 현재 진행 상황
-- **전체 진척도**: 약 97%
+- **전체 진척도**: 약 98%
 - **Phase 1 (핵심 기능)**: 100% 완료 ✅
 - **Phase 2 (고도화)**: 100% 완료 ✅
 - **Phase 3 (안정화)**: 100% 완료 ✅
+- **Phase 4 (운영 준비)**: 30% 진행 중 🔄 
 
 ---
 
@@ -1416,13 +1475,14 @@ ADD COLUMN daily_stop_loss_pct INT DEFAULT -5;
 
 ### 📅 상세 일정
 
-#### Day 22: HTTPS + 운영 안정성
-| 시간 | 작업 | 상세 |
-|------|------|------|
-| 오전 | HTTPS 적용 | Let's Encrypt SSL 인증서 발급 |
-| 오전 | Nginx SSL 설정 | HTTPS 리다이렉트, HSTS 헤더 |
-| 오후 | 환경변수 보안 | .env 분리, 프로덕션 설정 |
-| 오후 | 업비트 API 재시도 | 3회 재시도 + 지수 백오프 |
+#### ✅ Day 22: 환경변수 보안 + 운영 안정성 (2025-12-26 완료)
+| 시간 | 작업 | 상세 | 상태 |
+|------|------|------|------|
+| 오후 | 환경변수 보안 | .env.development, .env.production 분리 | ✅ 완료 |
+| 오후 | 업비트 API 재시도 | 3회 재시도 + 지수 백오프 | ✅ 완료 |
+| 오후 | 운영용 Docker Compose | docker-compose.prod.yml 생성 | ✅ 완료 |
+| 오후 | HTTPS 템플릿 준비 | nginx.ssl.conf, init-ssl.sh | ✅ 완료 |
+| - | HTTPS 실제 적용 | Let's Encrypt 인증서 발급 | ⏳ Day 28로 이동 |
 
 ---
 
@@ -1475,11 +1535,12 @@ ADD COLUMN daily_stop_loss_pct INT DEFAULT -5;
 
 ---
 
-#### Day 28: 운영 문서 + 릴리즈
+#### Day 28: 운영 문서 + HTTPS + v1.0 릴리즈
 | 시간 | 작업 | 상세 |
 |------|------|------|
 | 오전 | 운영 문서 작성 | 아키텍처 다이어그램, 배포 절차서 |
 | 오전 | 장애 대응 매뉴얼 | 오류 해결, 재시작 절차, 백업/복원 |
+| 오후 | HTTPS 적용 (도메인 확보 시) | Let's Encrypt 인증서 발급, Nginx SSL 활성화 |
 | 오후 | README 최종 업데이트 | 완료 항목 정리 |
 | 오후 | v1.0 릴리즈 | Git 태깅, 최종 배포 |
 
@@ -1490,7 +1551,7 @@ ADD COLUMN daily_stop_loss_pct INT DEFAULT -5;
 | Day | 주요 작업 | 카테고리 |
 |-----|----------|----------|
 | 21 | ✅ DB 백업, 로그 로테이션, 헬스체크, 시간대 설정 | ✅ 완료 |
-| 22 | HTTPS, 환경변수 보안, API 재시도 | 🔴 필수 |
+| 22 | ✅ 환경변수 보안, API 재시도, 운영 Docker Compose | ✅ 완료 |
 | 23 | 모니터링 대시보드, 슬로우 쿼리 | 🟢 선택 |
 | 24 | AI 뉴스 분석 - 기반 구축 | 🟢 선택 |
 | 25 | AI 뉴스 분석 - Gemini API 연동 | 🟢 선택 |
@@ -1556,11 +1617,11 @@ ADD COLUMN daily_stop_loss_pct INT DEFAULT -5;
 
 ### 🔐 보안 강화 (프로덕션 배포 전 필수)
 
-| 작업 | 설명 | 우선순위 | 예상 시간 |
-|------|------|----------|----------|
-| HTTPS 적용 | Let's Encrypt SSL 인증서 설정 | 🔴 필수 | 1~2시간 |
-| Nginx SSL 설정 | HTTPS 리다이렉트, HSTS 헤더 | 🔴 필수 | 1시간 |
-| 환경변수 보안 | 프로덕션 시크릿 매니저 검토 | 🟡 권장 | 1시간 |
+| 작업 | 설명 | 우선순위 | 상태 |
+|------|------|----------|------|
+| HTTPS 적용 | Let's Encrypt SSL 인증서 설정 | 🔴 필수 | ⏳ Day 28 (도메인 확보 후) |
+| Nginx SSL 설정 | HTTPS 리다이렉트, HSTS 헤더 | 🔴 필수 | ✅ 템플릿 준비 완료 |
+| 환경변수 보안 | 개발/운영 환경 분리 | 🟡 권장 | ✅ Day 22 완료 |
 
 ### 💾 데이터 관리
 
@@ -1577,7 +1638,7 @@ ADD COLUMN daily_stop_loss_pct INT DEFAULT -5;
 | 헬스체크 강화 | 컨테이너 자동 재시작 설정 | 🟡 권장 | ✅ Day 21 완료 |
 | 스케줄러 시간대 | Asia/Seoul 시간대 설정 | 🟡 권장 | ✅ Day 21 완료 |
 | 알림 장애 대응 | Discord/Email 발송 실패 시 대체 로직 | 🟢 선택 | 미완료 |
-| 업비트 API 장애 대응 | API 호출 실패 시 재시도 로직 강화 | 🟢 선택 | 미완료 |
+| 업비트 API 장애 대응 | API 호출 실패 시 재시도 로직 강화 | 🟢 선택 | ✅ Day 22 완료 |
 
 ### 📊 모니터링
 
@@ -1690,8 +1751,11 @@ DISCORD_BOT_TOKEN=your_discord_bot_token
 
 ### 2. Docker 실행
 ```bash
-# 전체 서비스 시작
-docker-compose up -d --build
+# 개발 환경 실행
+docker-compose --env-file .env.development up -d --build
+
+# 운영 환경 실행 (프로덕션)
+docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --build
 
 # 로그 확인
 docker-compose logs -f
@@ -1719,9 +1783,15 @@ crypto-trading-system/
 ├── scripts/                      # 운영 스크립트
 │   ├── backup-db.ps1      # Windows DB 백업
 │   ├── backup-db.sh        # Linux/Mac DB 백업
-│   └── restore-db.ps1       # DB 복원
+│   ├── restore-db.ps1       # DB 복원
+│   └── init-ssl.sh              # SSL 인증서 발급 스크립트
 ├── backups/                    # 백업 저장소
 │   └── mysql/                 # MySQL 백업 파일
+├── .env.example                  # 환경변수 템플릿
+├── .env.development            # 개발 환경 설정 (Git 제외)
+├── .env.production               # 운영 환경 설정 (Git 제외)
+├── docker-compose.yml        # 개발용 Docker Compose
+├── docker-compose.prod.yml # 운영용 Docker Compose
 ├── backend/                    # Spring Boot 백엔드
 │   ├── src/main/java/com/cryptotrading/
 │   │   ├── controller/        # REST API 컨트롤러
@@ -1827,12 +1897,17 @@ crypto-trading-system/
 │   │   │   └── index.ts
 │   │   ├── App.vue
 │   │   └── main.ts
+│   ├── nginx.conf                # 개발용 Nginx 설정
+│   ├── nginx.ssl.conf            # HTTPS용 Nginx 설정 템플릿
 │   ├── index.html
 │   └── vite.config.ts
 │
-├── docker-compose.yml		# 헬스체크, 재시작
-├── .env.example
-├── .gitignore			# backups/ 제외
+├── docker-compose.yml            # 개발용 (헬스체크, 재시작)
+├── docker-compose.prod.yml       # ⭐ Day 22: 운영용 (리소스 제한)
+├── .env.example                  # 환경변수 템플릿
+├── .env.development              # ⭐ Day 22: 개발 환경 (Git 제외)
+├── .env.production               # ⭐ Day 22: 운영 환경 (Git 제외)
+├── .gitignore                    # backups/, .env.* 제외
 └── README.md
 ```
 

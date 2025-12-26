@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -24,6 +25,9 @@ import java.util.UUID;
 import java.util.ArrayList;
 import java.util.Collections;
 
+import java.time.Duration;  
+import reactor.util.retry.Retry;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -32,10 +36,51 @@ public class UpbitApiService {
     @Value("${upbit.api.url}")
     private String upbitApiUrl;
 
+    // 재시도 설정 상수
+    private static final int MAX_RETRY_ATTEMPTS = 3;
+    private static final Duration INITIAL_BACKOFF = Duration.ofMillis(500);
+    private static final Duration MAX_BACKOFF = Duration.ofSeconds(5);
     private final WebClient webClient = WebClient.builder()
             .baseUrl("https://api.upbit.com/v1")
             .defaultHeader(HttpHeaders.ACCEPT_CHARSET, "UTF-8")
             .build();
+
+    // 재시도 스펙 생성 메서드
+    /**
+     * API 호출 재시도 설정
+     * - 최대 3회 재시도
+     * - 지수 백오프 (500ms → 1s → 2s)
+     * - 최대 대기시간 5초
+     * - 5xx 서버 오류 및 연결 오류만 재시도
+     */
+    private Retry getRetrySpec() {
+        return Retry.backoff(MAX_RETRY_ATTEMPTS, INITIAL_BACKOFF)
+                .maxBackoff(MAX_BACKOFF)
+                .filter(throwable -> {
+                    // 재시도 대상 오류 판단
+                    if (throwable instanceof WebClientResponseException) {
+                        int statusCode = ((WebClientResponseException) throwable).getStatusCode().value();
+                        // 5xx 서버 오류, 429 Too Many Requests만 재시도
+                        boolean shouldRetry = statusCode >= 500 || statusCode == 429;
+                        if (shouldRetry) {
+                            log.warn("업비트 API 오류 (재시도 예정): HTTP {} - {}", 
+                                    statusCode, throwable.getMessage());
+                        }
+                        return shouldRetry;
+                    }
+                    // 네트워크 오류는 재시도
+                    log.warn("업비트 API 연결 오류 (재시도 예정): {}", throwable.getMessage());
+                    return true;
+                })
+                .doBeforeRetry(retrySignal -> {
+                    log.info("업비트 API 재시도 #{} - 대기 후 재요청", 
+                            retrySignal.totalRetries() + 1);
+                })
+                .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
+                    log.error("업비트 API 최대 재시도 횟수({}) 초과", MAX_RETRY_ATTEMPTS);
+                    return retrySignal.failure();
+                });
+    }
 
     /**
      * JWT 토큰 생성 (업비트 API 인증용) - 사용자 API 키 사용
@@ -90,6 +135,7 @@ public class UpbitApiService {
                 .uri("/market/all?isDetails=true")
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<List<UpbitMarketDTO>>() {})
+                .retryWhen(getRetrySpec())
                 .doOnSuccess(markets -> log.info("마켓 코드 {}개 조회 완료", markets.size()))
                 .doOnError(error -> log.error("마켓 코드 조회 실패: {}", error.getMessage()))
                 .block();
@@ -110,6 +156,7 @@ public class UpbitApiService {
                         .build())
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<List<UpbitTickerDTO>>() {})
+                .retryWhen(getRetrySpec())
                 .doOnSuccess(tickers -> log.info("현재가 {}개 조회 완료", tickers.size()))
                 .doOnError(error -> log.error("현재가 조회 실패: {}", error.getMessage()))
                 .block();
@@ -128,6 +175,7 @@ public class UpbitApiService {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<List<UpbitAccountDTO>>() {})
+                .retryWhen(getRetrySpec())
                 .doOnSuccess(accounts -> log.info("계좌 {}개 조회 완료", accounts.size()))
                 .doOnError(error -> log.error("계좌 조회 실패: {}", error.getMessage()))
                 .block();
@@ -154,6 +202,7 @@ public class UpbitApiService {
                 .bodyValue(params)
                 .retrieve()
                 .bodyToMono(UpbitOrderDTO.class)
+                .retryWhen(getRetrySpec())
                 .doOnSuccess(order -> log.info("매수 주문 완료: uuid={}", order.getUuid()))
                 .doOnError(error -> log.error("매수 주문 실패: {}", error.getMessage()))
                 .block();
@@ -180,6 +229,7 @@ public class UpbitApiService {
                 .bodyValue(params)
                 .retrieve()
                 .bodyToMono(UpbitOrderDTO.class)
+                .retryWhen(getRetrySpec()) 
                 .doOnSuccess(order -> log.info("매도 주문 완료: uuid={}", order.getUuid()))
                 .doOnError(error -> log.error("매도 주문 실패: {}", error.getMessage()))
                 .block();
@@ -204,6 +254,7 @@ public class UpbitApiService {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .retrieve()
                 .bodyToMono(UpbitOrderDTO.class)
+                .retryWhen(getRetrySpec()) 
                 .doOnSuccess(order -> log.info("주문 취소 완료: uuid={}", order.getUuid()))
                 .doOnError(error -> log.error("주문 취소 실패: {}", error.getMessage()))
                 .block();
@@ -223,6 +274,7 @@ public class UpbitApiService {
                         .build())
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<List<UpbitCandleDTO>>() {})
+                .retryWhen(getRetrySpec())
                 .doOnSuccess(candles -> log.info("일봉 {}개 조회 완료: {}", candles.size(), market))
                 .doOnError(error -> log.error("일봉 조회 실패: {}", error.getMessage()))
                 .block();
@@ -243,6 +295,7 @@ public class UpbitApiService {
                         .build())
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<List<UpbitCandleDTO>>() {})
+                .retryWhen(getRetrySpec())
                 .doOnError(error -> log.error("일봉 캔들 조회 실패: {} - {}", market, error.getMessage()))
                 .block();
     }
@@ -261,6 +314,7 @@ public class UpbitApiService {
                         .build())
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<List<UpbitCandleDTO>>() {})
+                .retryWhen(getRetrySpec())
                 .doOnSuccess(candles -> log.info("분봉 {}개 조회 완료: {}", candles.size(), market))
                 .doOnError(error -> log.error("분봉 조회 실패: {}", error.getMessage()))
                 .block();

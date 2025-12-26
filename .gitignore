@@ -1,8 +1,10 @@
-# Environment variables
+# 환경별 설정 파일
 .env
 *.env
-.env.local
+.env.development
 .env.production
+.env.local
+.env.staging
 
 # Java
 *.class

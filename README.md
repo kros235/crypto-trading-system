@@ -1503,6 +1503,15 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 | Redis 연결 | - | 연결 끊김 |
 | 시간당 에러 | 10건 | - |
 
+**추가 수정 사항:**
+- 서버 종료 알림 안정화
+  - StartupNotificationConfig: CountDownLatch로 알림 완료 대기 (최대 10초)
+  - docker-compose.yml: stop_grace_period: 30s 추가
+- KST 시간대 적용
+  - StartupNotificationConfig: ZoneId.of("Asia/Seoul") 적용
+  - MonitoringAlertService: 모든 시간 표시에 KST 적용
+  - Discord 알림 시간이 한국 시간으로 정확히 표시
+
 **테스트 완료:**
 - ✅ Discord 서버 시작 알림 - Discord
 - ✅ Discord 서버 종료 알림 - Discord

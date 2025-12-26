@@ -78,6 +78,7 @@ services:
       retries: 3
       start_period: 60s
     restart: unless-stopped
+    stop_grace_period: 30s  # ⭐ 추가: 종료 시 30초 대기
     volumes:
       - backend_logs:/app/logs
 

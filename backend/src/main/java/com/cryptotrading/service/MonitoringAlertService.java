@@ -8,6 +8,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -35,6 +36,7 @@ public class MonitoringAlertService {
     private final AtomicBoolean redisAlertSent = new AtomicBoolean(false);
     
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");  // ⭐ 추가
     
     /**
      * 5분마다 시스템 상태 점검
@@ -69,7 +71,7 @@ public class MonitoringAlertService {
                     heapUsage,
                     formatBytes(metrics.getHeapUsed()),
                     formatBytes(metrics.getHeapMax()),
-                    LocalDateTime.now().format(formatter)
+                    LocalDateTime.now(KST).format(formatter)  // ⭐ 수정
                 );
                 sendAlert("🚨 JVM 메모리 위험", message);
             }
@@ -85,7 +87,7 @@ public class MonitoringAlertService {
                     heapUsage,
                     formatBytes(metrics.getHeapUsed()),
                     formatBytes(metrics.getHeapMax()),
-                    LocalDateTime.now().format(formatter)
+                    LocalDateTime.now(KST).format(formatter)  // ⭐ 수정
                 );
                 sendAlert("⚠️ JVM 메모리 경고", message);
             }
@@ -109,7 +111,7 @@ public class MonitoringAlertService {
                     "🕐 시간: %s\n" +
                     "⚠️ 커넥션 풀이 거의 소진되었습니다!",
                     activeConnections, maxConnections,
-                    LocalDateTime.now().format(formatter)
+                    LocalDateTime.now(KST).format(formatter)  // ⭐ 수정
                 );
                 sendAlert("🚨 DB 커넥션 위험", message);
             }
@@ -122,7 +124,7 @@ public class MonitoringAlertService {
                     "🕐 시간: %s\n" +
                     "📈 커넥션 사용량이 높습니다.",
                     activeConnections, maxConnections,
-                    LocalDateTime.now().format(formatter)
+                    LocalDateTime.now(KST).format(formatter)  // ⭐ 수정
                 );
                 sendAlert("⚠️ DB 커넥션 경고", message);
             }
@@ -140,7 +142,7 @@ public class MonitoringAlertService {
                     "❌ Redis 서버와 연결이 끊어졌습니다.\n" +
                     "🕐 시간: %s\n" +
                     "⚠️ 캐싱 및 세션 관리에 문제가 발생할 수 있습니다!",
-                    LocalDateTime.now().format(formatter)
+                    LocalDateTime.now(KST).format(formatter)  // ⭐ 수정
                 );
                 sendAlert("🚨 Redis 연결 끊김", message);
             }
@@ -160,7 +162,7 @@ public class MonitoringAlertService {
                 "🕐 시간: %s\n" +
                 "📋 로그를 확인해 주세요.",
                 errorCount,
-                LocalDateTime.now().format(formatter)
+                LocalDateTime.now(KST).format(formatter)  // ⭐ 수정
             );
             sendAlert("⚠️ 에러 다수 발생", message);
         }

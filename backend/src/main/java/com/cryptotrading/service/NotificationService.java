@@ -319,4 +319,43 @@ public class NotificationService {
     public void sendSystemNotification(String message) {
         sendDiscordNotification(message, 0);
     }
+
+    /**
+     * ⭐ 추가: 시스템 알림 발송 (동기 - 서버 종료 시 사용)
+     * 서버 종료 시 비동기 요청이 완료되기 전에 애플리케이션이 종료되는 것을 방지
+     */
+    public void sendSystemNotificationSync(String message) {
+        if (!notificationConfig.isEnabled()) {
+            log.debug("Discord 알림 비활성화 상태");
+            return;
+        }
+        
+        String webhookUrl = notificationConfig.getWebhookUrl();
+        if (webhookUrl == null || webhookUrl.isBlank()) {
+            log.warn("Discord Webhook URL이 설정되지 않았습니다");
+            return;
+        }
+        
+        try {
+            String payload = String.format(
+                "{\"embeds\":[{\"description\":\"%s\",\"color\":%d}]}",
+                message.replace("\"", "\\\"").replace("\n", "\\n"),
+                0
+            );
+            
+            // ⭐ block()으로 동기 처리
+            webClient.post()
+                    .uri(webhookUrl)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(payload)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block(java.time.Duration.ofSeconds(10));  // 최대 10초 대기
+                    
+            log.debug("Discord 알림 동기 발송 성공");
+                    
+        } catch (Exception e) {
+            log.error("Discord 알림 동기 발송 오류: {}", e.getMessage());
+        }
+    }
 }

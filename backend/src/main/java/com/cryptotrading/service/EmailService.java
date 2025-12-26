@@ -22,6 +22,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.time.ZoneId;
 
 @Slf4j
 @Service
@@ -35,6 +36,7 @@ public class EmailService {
     private static final NumberFormat KRW_FORMAT = NumberFormat.getNumberInstance(Locale.KOREA);
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter DATETIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
     
     /**
      * 일반 이메일 발송
@@ -74,6 +76,75 @@ public class EmailService {
         } catch (Exception e) {
             log.error("이메일 발송 실패: to={}, error={}", dto.getTo(), e.getMessage());
         }
+    }
+
+    // ⭐⭐⭐ 추가: 시스템 알림 이메일 발송 (관리자용) ⭐⭐⭐
+    /**
+     * 시스템 알림 이메일 발송 (관리자용)
+     */
+    public boolean sendSystemAlert(String email, String subject, String htmlContent) {
+        if (!emailConfig.isEnabled()) {
+            log.debug("이메일 알림이 비활성화되어 있습니다.");
+            return false;
+        }
+        
+        if (email == null || email.isBlank()) {
+            log.debug("이메일 주소가 없습니다.");
+            return false;
+        }
+        
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            
+            helper.setFrom(emailConfig.getFromAddress(), emailConfig.getFromName());
+            helper.setTo(email);
+            helper.setSubject("[코인봇 시스템] " + subject);
+            
+            String wrappedHtml = wrapSystemAlertHtml(subject, htmlContent);
+            helper.setText(wrappedHtml, true);
+            
+            mailSender.send(message);
+            log.info("시스템 알림 이메일 발송 성공: to={}, subject={}", email, subject);
+            return true;
+            
+        } catch (Exception e) {
+            log.error("시스템 알림 이메일 발송 실패: to={}, error={}", email, e.getMessage());
+            return false;
+        }
+    }
+    
+    private String wrapSystemAlertHtml(String subject, String content) {
+        String timestamp = LocalDateTime.now(KST).format(DATETIME_FORMAT);
+        
+        String borderColor = "#1976d2";
+        if (subject.contains("긴급") || subject.contains("🚨") || subject.contains("위험")) {
+            borderColor = "#f44336";
+        } else if (subject.contains("경고") || subject.contains("⚠️")) {
+            borderColor = "#ff9800";
+        } else if (subject.contains("시작") || subject.contains("✅")) {
+            borderColor = "#4caf50";
+        } else if (subject.contains("종료") || subject.contains("🛑")) {
+            borderColor = "#757575";
+        }
+        
+        return String.format("""
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="UTF-8"></head>
+            <body style="font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 20px; background: #f5f5f5;">
+                <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <div style="background: %s; color: white; padding: 20px;">
+                        <h1 style="margin: 0; font-size: 18px;">🤖 코인 자동매매 시스템 - 관리자 알림</h1>
+                    </div>
+                    <div style="padding: 20px;">%s</div>
+                    <div style="padding: 15px 20px; background: #fafafa; border-top: 1px solid #eee; font-size: 12px; color: #888;">
+                        <p>발송 시간: %s (KST)</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """, borderColor, content, timestamp);
     }
     
     /**
@@ -211,4 +282,6 @@ public class EmailService {
             return false;
         }
     }
+
+
 }

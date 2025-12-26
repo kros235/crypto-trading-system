@@ -19,6 +19,7 @@ public class MonitoringAlertService {
     
     private final MonitoringService monitoringService;
     private final NotificationService notificationService;
+    private final AdminAlertNotificationService adminAlertNotificationService;
     
     @Value("${app.monitoring.alert.admin-email:}")
     private String adminEmail;
@@ -169,13 +170,17 @@ public class MonitoringAlertService {
     }
     
     /**
-     * Discord 및 이메일 알림 발송
+     * Discord Webhook 및 Admin 계정에게 알림 발송
+     * Admin 이메일/Discord DM 알림 추가
      */
     private void sendAlert(String subject, String message) {
         try {
-            // 시스템 알림 발송
+            // 1. 기존: Discord Webhook으로 시스템 알림 발송
             notificationService.sendSystemNotification(message);
-            log.warn("모니터링 알림 발송: {}", subject);
+            log.warn("모니터링 알림 발송 (Webhook): {}", subject);
+            
+            // 2. ⭐ 추가: Admin 계정들에게 이메일/Discord DM 알림 발송
+            adminAlertNotificationService.sendAdminAlert(subject, message);
             
         } catch (Exception e) {
             log.error("모니터링 알림 발송 실패: {}", e.getMessage());

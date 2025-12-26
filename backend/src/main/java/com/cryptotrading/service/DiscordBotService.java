@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.awt.Color;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.ZoneId;
 
 @Service
 @Slf4j
@@ -26,6 +27,8 @@ public class DiscordBotService {
     private JDA jda;
     private boolean initialized = false;
 
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+
     @PostConstruct
     public void init() {
         if (botToken == null || botToken.isBlank()) {
@@ -36,6 +39,7 @@ public class DiscordBotService {
         try {
             jda = JDABuilder.createDefault(botToken)
                     .enableIntents(GatewayIntent.DIRECT_MESSAGES)
+                    .setEnableShutdownHook(false) 
                     .build();
             jda.awaitReady();
             initialized = true;
@@ -48,8 +52,19 @@ public class DiscordBotService {
     @PreDestroy
     public void shutdown() {
         if (jda != null) {
+            log.info("Discord Bot 종료 시작...");
             jda.shutdown();
-            log.info("Discord Bot 종료");
+            try {
+                // ⭐ 추가: JDA 종료 완료 대기 (최대 5초)
+                if (!jda.awaitShutdown(java.time.Duration.ofSeconds(5))) {
+                    log.warn("Discord Bot 종료 타임아웃, 강제 종료");
+                    jda.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                jda.shutdownNow();
+            }
+            log.info("Discord Bot 종료 완료");
         }
     }
 
@@ -94,6 +109,79 @@ public class DiscordBotService {
             log.error("테스트 DM 발송 실패: {} - {}", discordUserId, e.getMessage());
             return false;
         }
+    }
+
+    // ⭐⭐⭐ 추가: 시스템 알림 DM 발송 (관리자용) ⭐⭐⭐
+    /**
+     * 시스템 알림 DM 발송 (관리자용)
+     */
+    public boolean sendSystemAlertDM(String discordUserId, String subject, String message) {
+        if (!isEnabled()) {
+            log.warn("Discord Bot이 비활성화 상태입니다.");
+            return false;
+        }
+
+        if (discordUserId == null || discordUserId.isBlank()) {
+            log.warn("Discord User ID가 없습니다.");
+            return false;
+        }
+
+        try {
+            User user = jda.retrieveUserById(discordUserId).complete();
+            if (user == null) {
+                log.error("Discord 사용자를 찾을 수 없습니다: {}", discordUserId);
+                return false;
+            }
+
+            Color color = determineAlertColor(subject);
+            String formattedMessage = message.replace("━", "─").trim();
+
+            EmbedBuilder embed = new EmbedBuilder()
+                    .setTitle(subject)
+                    .setDescription(formattedMessage)
+                    .setColor(color)
+                    .setFooter("코인 자동매매 시스템 - 관리자 알림", null)
+                    .setTimestamp(LocalDateTime.now().atZone(KST).toInstant());
+
+            user.openPrivateChannel()
+                    .flatMap(channel -> channel.sendMessageEmbeds(embed.build()))
+                    .complete();
+
+            log.info("시스템 알림 DM 발송 성공: {} - {}", discordUserId, subject);
+            return true;
+
+        } catch (Exception e) {
+            log.error("시스템 알림 DM 발송 실패: {} - {}", discordUserId, e.getMessage());
+            return false;
+        }
+    }
+
+    private Color determineAlertColor(String subject) {
+        if (subject == null) return Color.GRAY;
+        
+        if (subject.contains("긴급") || subject.contains("🚨") || subject.contains("위험")) {
+            return Color.RED;
+        } else if (subject.contains("경고") || subject.contains("⚠️")) {
+            return Color.ORANGE;
+        } else if (subject.contains("시작") || subject.contains("✅")) {
+            return Color.GREEN;
+        } else if (subject.contains("종료") || subject.contains("🛑")) {
+            return Color.DARK_GRAY;
+        }
+        return Color.BLUE;
+    }
+
+    /**
+     * Discord Embed에 맞게 메시지 포맷팅
+     */
+    private String formatForDiscordEmbed(String message) {
+        if (message == null) return "";
+        
+        // Discord Embed은 이미 Markdown을 지원하므로 대부분 그대로 사용
+        // 일부 특수문자 이스케이프만 처리
+        return message
+                .replace("━", "─")  // 일부 문자 호환성
+                .trim();
     }
 
     /**

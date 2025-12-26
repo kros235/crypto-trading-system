@@ -1460,6 +1460,14 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
   - StartupNotificationConfig: @PostConstruct, @PreDestroy
   - 서버 시작 시 Discord 알림 발송
   - 서버 종료 시 Discord 알림 발송
+- 관리자 멀티채널 알림 시스템 확장 
+  - AdminAlertNotificationService: Admin 계정 전용 알림 서비스
+  - Admin 프로필에 등록된 이메일로 시스템 알림 발송
+  - Admin 프로필에 등록된 Discord User ID로 DM 알림 발송
+  - 시스템 모니터링 알림 → Admin 이메일/Discord DM 추가
+  - 서버 시작/종료 알림 → Admin 이메일/Discord DM 추가
+  - JDA shutdown hook 비활성화로 종료 시 DM 발송 안정화
+  - 동기/비동기 메서드 분리 (서버 종료 시 동기 처리)
 - 관리자 대시보드 모니터링 UI (Frontend)
   - 시스템 모니터링 섹션 추가
   - JVM Heap 게이지, DB 커넥션 풀 상태
@@ -1479,6 +1487,7 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 **생성된 파일 (Backend):**
 - `service/MonitoringService.java` - 시스템 메트릭 수집
 - `service/MonitoringAlertService.java` - 이상징후 감지 및 알림
+- `service/AdminAlertNotificationService.java` - Admin 멀티채널 알림 서비스
 - `config/StartupNotificationConfig.java` - 서버 시작/종료 알림
 - `dto/admin/MonitoringDTO.java` - 모니터링 데이터 DTO
 
@@ -1487,7 +1496,12 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 - `scripts/archive-transactions.sh` - Linux/Mac 아카이빙 스크립트
 
 **수정된 파일 (Backend):**
-- `service/NotificationService.java` - sendSystemNotification() 메서드 추가
+- `service/NotificationService.java` - sendSystemNotification() 메서드 추가, sendSystemNotificationSync() 동기 메서드 추가
+- `service/DiscordBotService.java` - sendSystemAlertDM() 메서드 추가, setEnableShutdownHook(false) 설정
+- `service/EmailService.java` - sendSystemAlert() 메서드 추가
+- `service/MonitoringAlertService.java` - AdminAlertNotificationService 연동 추가
+- `config/StartupNotificationConfig.java` - AdminAlertNotificationService 연동, 동기 발송 처리
+- `repository/UserRepository.java` - findByRole(), findByRoleAndIsActive() 메서드 추가
 - `controller/AdminController.java` - 모니터링 API 엔드포인트 추가
 - `application.yml` - Actuator, 슬로우 쿼리 로깅 설정 추가
 
@@ -1503,18 +1517,36 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 | Redis 연결 | - | 연결 끊김 |
 | 시간당 에러 | 10건 | - |
 
+**⭐ 관리자 알림 채널 (신규):**
+| 알림 종류 | Discord Webhook | Admin Email | Admin Discord DM |
+|----------|-----------------|-------------|------------------|
+| 서버 시작 | ✅ | ✅ | ✅ |
+| 서버 종료 | ✅ | ✅ | ✅ |
+| JVM 메모리 경고 | ✅ | ✅ | ✅ |
+| DB 커넥션 경고 | ✅ | ✅ | ✅ |
+| Redis 연결 끊김 | ✅ | ✅ | ✅ |
+| 에러 다수 발생 | ✅ | ✅ | ✅ |
+
 **추가 수정 사항:**
 - 서버 종료 알림 안정화
   - StartupNotificationConfig: CountDownLatch로 알림 완료 대기 (최대 10초)
   - docker-compose.yml: stop_grace_period: 30s 추가
+- JDA Discord Bot 종료 순서 보장
+  - setEnableShutdownHook(false): JDA 자체 shutdown hook 비활성화
+  - Spring @PreDestroy에서 수동 종료 관리
+  - 서버 종료 시 Admin DM 발송 후 Bot 종료
 - KST 시간대 적용
   - StartupNotificationConfig: ZoneId.of("Asia/Seoul") 적용
   - MonitoringAlertService: 모든 시간 표시에 KST 적용
   - Discord 알림 시간이 한국 시간으로 정확히 표시
 
 **테스트 완료:**
-- ✅ Discord 서버 시작 알림 - Discord
-- ✅ Discord 서버 종료 알림 - Discord
+- ✅ Discord 서버 시작 알림 - Discord Webhook
+- ✅ Discord 서버 종료 알림 - Discord Webhook
+- ✅ Admin Discord DM 서버 시작 알림 - Discord DM
+- ✅ Admin Discord DM 서버 종료 알림 - Discord DM
+- ✅ Admin 이메일 서버 시작 알림 - Email
+- ✅ Admin 이메일 서버 종료 알림 - Email
 - ✅ 모니터링 API 응답 - Postman
 - ✅ 관리자 대시보드 모니터링 섹션 - 브라우저
 - ✅ 전체화면 다이얼로그 - 브라우저
@@ -1527,8 +1559,8 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 ## 📊 현재 진행 상황
 - **전체 진척도**: 약 92%
 - **Phase 1 (핵심 기능)**: 100% 완료 ✅
-- **Phase 2 (고도화)**: 98% 완료 ✅
-- **Phase 3 (안정화)**: 60% 진행 중 🔄
+- **Phase 2 (고도화)**: 100% 완료 ✅
+- **Phase 3 (안정화)**: 65% 진행 중 🔄
 - **Phase 4 (운영 준비)**: 30% 진행 중 🔄
 
 ---
@@ -1909,36 +1941,41 @@ crypto-trading-system/
 │   │   │   ├── EmailService.java     
 │   │   │   ├── AdminService.java
 │   │   │   ├── DiscordBotService.java        
-│   │   │   ├── LoginAttemptService.java      # ⭐ Day 20: 로그인 시도 제한
-│   │   │   ├── MonitoringService.java         # ⭐ Day 23: 시스템 메트릭 수집
-│   │   │   └── MonitoringAlertService.java   # ⭐ Day 23: 이상징후 감지
-│   │   ├── config/            # 설정 클래스
+│   │   │   ├── LoginAttemptService.java      		# ⭐ Day 20: 로그인 시도 제한
+│   │   │   ├── MonitoringService.java         		# ⭐ Day 23: 시스템 메트릭 수집
+│   │   │   ├── MonitoringAlertService.java      	# Day 23: 이상징후 감지
+│   │   │   ├── AdminAlertNotificationService.java  	# ⭐ Day 23: Admin 멀티채널 알림 (신규)
+│   │   │   ├── NotificationService.java         		# ⭐ Day 23: sendSystemNotificationSync() 추가
+│   │   │   ├── DiscordBotService.java           		# ⭐ Day 23: sendSystemAlertDM() 추가
+│   │   │   └── EmailService.java                		# ⭐ Day 23: sendSystemAlert() 추가
+│   │   ├── config/            			# 설정 클래스
 │   │   │   ├── SecurityConfig.java
 │   │   │   ├── NotificationConfig.java
-│   │   │   ├── SwaggerConfig.java                 # ⭐ Day 20: Swagger/OpenAPI
-│   │   │   ├── StartupNotificationConfig.java   # ⭐ Day 23: 서버 시작/종료 알림
-│   │   │   └── security/      # Security 핸들러
+│   │   │   ├── SwaggerConfig.java                 	# ⭐ Day 20: Swagger/OpenAPI
+│   │   │   ├── StartupNotificationConfig.java   	# ⭐ Day 23: 서버 시작/종료 알림
+│   │   │   └── security/      			# Security 핸들러
 │   │   │       ├── CustomAuthenticationEntryPoint.java
 │   │   │       └── CustomAccessDeniedHandler.java
-│   │   ├── filter/            # 필터
+│   │   ├── filter/            				# 필터
 │   │   │   ├── JwtAuthenticationFilter.java
 │   │   │   ├── RateLimitFilter.java
-│   │   │   └── RequestLoggingFilter.java     # 응답 시간 로깅
-│   │   ├── exception/         # ⭐ 확장: 예외 처리
+│   │   │   └── RequestLoggingFilter.java     		# 응답 시간 로깅
+│   │   ├── exception/         			# 예외 처리
 │   │   │   ├── GlobalExceptionHandler.java
-│   │   │   ├── ErrorCode.java              # ⭐ 추가
-│   │   │   ├── BusinessException.java      # ⭐ 추가
-│   │   │   ├── EntityNotFoundException.java    # ⭐ 추가
-│   │   │   ├── DuplicateResourceException.java # ⭐ 추가
-│   │   │   ├── UnauthorizedException.java  # ⭐ 추가
-│   │   │   ├── UpbitApiException.java      # ⭐ 추가
-│   │   │   └── TradingException.java       # ⭐ 추가
-│   │   ├── scheduler/         # 스케줄러
+│   │   │   ├── ErrorCode.java             
+│   │   │   ├── BusinessException.java      
+│   │   │   ├── EntityNotFoundException.java   
+│   │   │   ├── DuplicateResourceException.java 
+│   │   │   ├── UnauthorizedException.java 
+│   │   │   ├── UpbitApiException.java     
+│   │   │   └── TradingException.java       
+│   │   ├── scheduler/         			# 스케줄러
 │   │   │   └── TradingScheduler.java
-│   │   ├── repository/        # 데이터 접근 계층
-│   │   ├── entity/            # JPA 엔티티
-│   │   ├── dto/               # 데이터 전송 객체
-│   │   │   ├── common/        # ⭐ 추가: 공통 DTO
+│   │   ├── repository/        			# 데이터 접근 계층
+│   │   │      └── UserRepository.java              	# ⭐ Day 23: findByRoleAndIsActive() 추가
+│   │   ├── entity/            			# JPA 엔티티
+│   │   ├── dto/               			# 데이터 전송 객체
+│   │   │   ├── common/        			# 공통 DTO
 │   │   │   │   ├── ApiResponse.java
 │   │   │   │   └── PageResponse.java
 │   │   │   ├── indicator/     # 기술적 지표 DTO

@@ -99,7 +99,7 @@ public class EmailService {
             
             helper.setFrom(emailConfig.getFromAddress(), emailConfig.getFromName());
             helper.setTo(email);
-            helper.setSubject("[코인봇 시스템] " + subject);
+            helper.setSubject("[모니터링] " + subject);
             
             String wrappedHtml = wrapSystemAlertHtml(subject, htmlContent);
             helper.setText(wrappedHtml, true);
@@ -158,7 +158,7 @@ public class EmailService {
         }
         
         String typeKr = "BUY".equals(type) ? "매수" : "매도";
-        String subject = String.format("[코인봇] %s %s 체결 알림", coinSymbol, typeKr);
+        String subject = String.format("[거래] %s %s 체결 알림", coinSymbol, typeKr);
         
         Map<String, Object> variables = new HashMap<>();
         variables.put("type", typeKr);
@@ -188,24 +188,23 @@ public class EmailService {
             return;
         }
     
-        // ★★★ 수정: getDate() → getReportDate() ★★★
-        String subject = String.format("[코인봇] %s 일일 리포트", report.getReportDate());
+        String subject = String.format("[리포트] %s 일일 리포트", report.getReportDate());
     
         Map<String, Object> variables = new HashMap<>();
-        // ★★★ 수정: 필드명 변경 ★★★
+        
         variables.put("date", report.getReportDate());
         variables.put("realizedProfit", KRW_FORMAT.format(report.getRealizedProfit()));
         variables.put("unrealizedProfit", KRW_FORMAT.format(report.getUnrealizedProfit()));
         variables.put("totalProfit", KRW_FORMAT.format(report.getTotalProfit()));
-        // ★★★ 수정: getTotalProfitRate() → getProfitRate() ★★★
+        
         variables.put("totalProfitRate", report.getProfitRate());
         variables.put("profitClass", report.getTotalProfit().compareTo(BigDecimal.ZERO) >= 0 ? "profit" : "loss");
         variables.put("buyCount", report.getBuyCount());
         variables.put("sellCount", report.getSellCount());
         variables.put("totalInvestment", KRW_FORMAT.format(report.getTotalInvestment()));
-        // ★★★ 수정: getTotalEvaluation() → getTotalHoldingValue() ★★★
+        
         variables.put("totalEvaluation", KRW_FORMAT.format(report.getTotalHoldingValue()));
-        // ★★★ 수정: getHoldings() → getCoinSummaries() ★★★
+        
         variables.put("holdings", report.getCoinSummaries());
         variables.put("timestamp", LocalDateTime.now().format(DATETIME_FORMAT));
     
@@ -228,7 +227,7 @@ public class EmailService {
             return;
         }
         
-        String subject = String.format("[코인봇] ⚠️ %s 손절매 발생!", coinSymbol);
+        String subject = String.format("[거래] ⚠️ %s 손절매 발생!", coinSymbol);
         
         Map<String, Object> variables = new HashMap<>();
         variables.put("coinSymbol", coinSymbol);
@@ -261,7 +260,7 @@ public class EmailService {
             
             helper.setFrom(emailConfig.getFromAddress(), emailConfig.getFromName());
             helper.setTo(email);
-            helper.setSubject("[코인봇] 이메일 테스트");
+            helper.setSubject("[모니터링] 이메일 테스트");
             
             String htmlContent = """
                 <div style="font-family: 'Malgun Gothic', sans-serif; max-width: 600px; margin: 0 auto;">

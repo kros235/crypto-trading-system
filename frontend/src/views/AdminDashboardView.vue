@@ -238,7 +238,34 @@
     <v-row class="mb-4">
       <v-col cols="12">
         <v-card>
-          <v-card-title>📢 알림 설정 상태</v-card-title>
+          <v-card-title class="d-flex align-center justify-space-between">
+            <span>📢 알림 설정 상태</span>
+            <div>
+              <v-btn
+                color="deep-purple"
+                variant="outlined"
+                size="small"
+                class="mr-2"
+                :loading="sendingDiscordTest"
+                :disabled="!stats.discordEnabled"
+                @click="sendSystemDiscordTest"
+              >
+                <v-icon left>mdi-discord</v-icon>
+                디스코드 Hook 채널 테스트
+              </v-btn>
+              <v-btn
+                color="success"
+                variant="outlined"
+                size="small"
+                :loading="sendingEmailTest"
+                :disabled="!stats.emailEnabled"
+                @click="sendSystemEmailTest"
+              >
+                <v-icon left>mdi-email</v-icon>
+                이메일 테스트
+              </v-btn>
+            </div>
+          </v-card-title>
           <v-card-text>
             <v-chip :color="stats.discordEnabled ? 'success' : 'grey'" class="mr-2">
               <v-icon left small>mdi-discord</v-icon>
@@ -250,8 +277,8 @@
             </v-chip>
           </v-card-text>
         </v-card>
-      </v-col>
-    </v-row>
+  </v-col>
+</v-row>
 
     <!-- Users Table -->
     <v-row>
@@ -463,7 +490,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { onUnmounted } from 'vue'
-import { adminApi } from '@/api'
+import api, { adminApi } from '@/api'
 
 import TheHeader from '@/components/TheHeader.vue'
 import TheSidebar from '@/components/TheSidebar.vue'
@@ -571,10 +598,14 @@ const headers = [
   { title: '액션', key: 'actions', sortable: false }
 ]
 
-// ★★★ 추가: 모니터링 데이터 ref ★★★
+// 모니터링 데이터 ref
 const monitoring = ref<MonitoringMetrics | null>(null)
 const monitoringLoading = ref(false)
 const showMonitoringDialog = ref(false)
+
+// 상태 변수 추가
+const sendingDiscordTest = ref(false)
+const sendingEmailTest = ref(false)
 
 const formatKRW = (value: number) => {
   if (!value) return '0원'
@@ -656,6 +687,33 @@ const getDbPoolColor = (active: number, max: number) => {
   if (ratio >= 0.9) return 'error'
   if (ratio >= 0.7) return 'warning'
   return 'success'
+}
+
+const sendSystemDiscordTest = async () => {
+  sendingDiscordTest.value = true
+  try {
+    await api.post('/notifications/test')
+    // 성공 알림 (스낵바 사용 시)
+    alert('디스코드 테스트 알림이 발송되었습니다.')
+  } catch (error) {
+    console.error('디스코드 테스트 실패:', error)
+    alert('디스코드 알림 발송에 실패했습니다.')
+  } finally {
+    sendingDiscordTest.value = false
+  }
+}
+
+const sendSystemEmailTest = async () => {
+  sendingEmailTest.value = true
+  try {
+    await api.post('/notifications/email/test')
+    alert('테스트 이메일이 발송되었습니다.')
+  } catch (error) {
+    console.error('이메일 테스트 실패:', error)
+    alert('이메일 발송에 실패했습니다.')
+  } finally {
+    sendingEmailTest.value = false
+  }
 }
 
 // 30초마다 모니터링 자동 새로고침

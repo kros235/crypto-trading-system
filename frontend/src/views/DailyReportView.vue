@@ -96,20 +96,20 @@
           <!-- 손익 상세 -->
           <v-row class="mb-4">
             <v-col cols="12" md="6">
-              <v-card class="pa-4">
+              <v-card class="pa-4 detail-card">
                 <v-card-title>
                   <v-icon class="mr-2">mdi-chart-pie</v-icon>
                   손익 상세
                 </v-card-title>
                 <v-card-text>
-                  <v-list density="compact">
+                  <v-list>
                     <v-list-item>
                       <template v-slot:prepend>
-                        <v-icon color="success">mdi-check-circle</v-icon>
+                        <v-icon color="success" size="28">mdi-check-circle</v-icon>
                       </template>
-                      <v-list-item-title>실현 손익</v-list-item-title>
+                      <v-list-item-title class="text-body-1 font-weight-medium">실현 손익</v-list-item-title>
                       <template v-slot:append>
-                        <span :class="report.realizedProfit >= 0 ? 'text-success' : 'text-error'">
+                        <span :class="[report.realizedProfit >= 0 ? 'text-success' : 'text-error', 'text-h6']">
                           {{ report.realizedProfit >= 0 ? '+' : '' }}{{ formatCurrency(report.realizedProfit) }}
                         </span>
                       </template>
@@ -117,29 +117,28 @@
                     
                     <v-list-item>
                       <template v-slot:prepend>
-                        <v-icon color="warning">mdi-clock-outline</v-icon>
+                        <v-icon color="warning" size="28">mdi-clock-outline</v-icon>
                       </template>
-                      <v-list-item-title>평가 손익</v-list-item-title>
+                      <v-list-item-title class="text-body-1 font-weight-medium">평가 손익</v-list-item-title>
                       <template v-slot:append>
-                        <span :class="report.unrealizedProfit >= 0 ? 'text-success' : 'text-error'">
-                          {{ report.unrealizedProfit >= 0 ? '+' : '' }}{{ formatCurrency(report.unrealizedProfit) }}
+                        <span :class="[report.unrealizedProfit >= 0 ? 'text-success' : 'text-error', 'text-h6']">
+                                  {{ report.unrealizedProfit >= 0 ? '+' : '' }}{{ formatCurrency(report.unrealizedProfit) }}
                         </span>
                       </template>
                     </v-list-item>
-                    
-                    <v-divider class="my-2"></v-divider>
-                    
+          
+                    <v-divider class="my-3"></v-divider>
+          
                     <v-list-item>
                       <template v-slot:prepend>
-                        <v-icon :color="report.totalProfit >= 0 ? 'success' : 'error'">
+                        <v-icon :color="report.totalProfit >= 0 ? 'success' : 'error'" size="28">
                           {{ report.totalProfit >= 0 ? 'mdi-trending-up' : 'mdi-trending-down' }}
                         </v-icon>
                       </template>
-                      <v-list-item-title class="font-weight-bold">총 손익</v-list-item-title>
+                      <v-list-item-title class="text-body-1 font-weight-bold">총 손익</v-list-item-title>
                       <template v-slot:append>
                         <span 
-                          :class="report.totalProfit >= 0 ? 'text-success' : 'text-error'"
-                          class="font-weight-bold text-h6"
+                          :class="[report.totalProfit >= 0 ? 'text-success' : 'text-error', 'font-weight-bold', 'text-h5']"
                         >
                           {{ report.totalProfit >= 0 ? '+' : '' }}{{ formatCurrency(report.totalProfit) }}
                         </span>
@@ -151,7 +150,7 @@
             </v-col>
             
             <v-col cols="12" md="6">
-              <v-card class="pa-4">
+              <v-card class="pa-4 detail-card">
                 <v-card-title>
                   <v-icon class="mr-2">mdi-bell</v-icon>
                   알림
@@ -392,11 +391,37 @@ onMounted(() => {
 </script>
 
 <style scoped>
+
+.detail-card {
+  height: 100%;
+  min-height: 280px;
+}
+
 .text-success {
   color: #4CAF50 !important;
 }
 
 .text-error {
   color: #F44336 !important;
+}
+
+
+:deep(.v-data-table) {
+  font-size: 1rem !important;
+}
+
+:deep(.v-data-table th) {
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+}
+
+:deep(.v-data-table td) {
+  font-size: 1rem !important;
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+}
+
+:deep(.v-chip) {
+  font-size: 0.9rem !important;
 }
 </style>

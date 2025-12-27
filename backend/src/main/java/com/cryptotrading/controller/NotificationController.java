@@ -19,6 +19,7 @@ import com.cryptotrading.service.DiscordBotService;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/api/notifications")
@@ -136,6 +137,82 @@ public class NotificationController {
         response.put("email", user.getEmail());
     
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 매수 체결 테스트 이메일 발송
+     */
+    @PostMapping("/email/test-buy")
+    public ResponseEntity<Map<String, Object>> sendTestBuyEmail(
+            @AuthenticationPrincipal String userId) {
+        
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+    
+        Map<String, Object> response = new HashMap<>();
+    
+        if (user.getEmail() == null || user.getEmail().isEmpty()) {
+            response.put("success", false);
+            response.put("message", "이메일이 설정되지 않았습니다.");
+            return ResponseEntity.badRequest().body(response);
+        }
+    
+        try {
+            emailService.sendTradeNotification(
+                user.getEmail(),
+                "BUY",
+                "KRW-BTC",
+                new BigDecimal("0.001"),
+                new BigDecimal("50000000"),
+                new BigDecimal("50000")
+            );
+        
+            response.put("success", true);
+            response.put("message", "매수 체결 테스트 이메일이 발송되었습니다.");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "이메일 발송에 실패했습니다: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    /**
+     * 매도 체결 테스트 이메일 발송
+     */
+    @PostMapping("/email/test-sell")
+    public ResponseEntity<Map<String, Object>> sendTestSellEmail(
+            @AuthenticationPrincipal String userId) {
+        
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+    
+        Map<String, Object> response = new HashMap<>();
+    
+        if (user.getEmail() == null || user.getEmail().isEmpty()) {
+            response.put("success", false);
+            response.put("message", "이메일이 설정되지 않았습니다.");
+            return ResponseEntity.badRequest().body(response);
+        }
+        
+        try {
+            emailService.sendTradeNotification(
+                user.getEmail(),
+                "SELL",
+                "KRW-BTC",
+                new BigDecimal("0.001"),
+                new BigDecimal("52000000"),
+                new BigDecimal("52000")
+            );
+        
+            response.put("success", true);
+            response.put("message", "매도 체결 테스트 이메일이 발송되었습니다.");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "이메일 발송에 실패했습니다: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
     }
 
     /**

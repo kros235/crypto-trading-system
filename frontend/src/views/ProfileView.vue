@@ -245,70 +245,12 @@
                 </div>
 
                 <v-divider class="mb-3" />
-                
-                <div class="text-subtitle-2 mb-2">알림 유형별 테스트</div>
-                
-                <v-row dense>
-                  <v-col cols="3">
-                    <v-btn
-                      color="blue"
-                      variant="tonal"
-                      size="small"
-                      block
-                      :loading="testBuyLoading"
-                      :disabled="!profileForm.discordUserId || !discordBotEnabled"
-                      @click="testBuyDM"
-                    >
-                      <v-icon icon="mdi-arrow-up-bold" size="small" />
-                      매수
-                    </v-btn>
-                  </v-col>
 
-                  <v-col cols="3">
-                    <v-btn
-                      color="green"
-                      variant="tonal"
-                      size="small"
-                      block
-                      :loading="testSellLoading"
-                      :disabled="!profileForm.discordUserId || !discordBotEnabled"
-                      @click="testSellDM"
-                    >
-                      <v-icon icon="mdi-arrow-down-bold" size="small" />
-                      매도
-                    </v-btn>
-                  </v-col>
-
-                  <v-col cols="3">
-                    <v-btn
-                      color="red"
-                      variant="tonal"
-                      size="small"
-                      block
-                      :loading="testStopLossLoading"
-                      :disabled="!profileForm.discordUserId || !discordBotEnabled"
-                      @click="testStopLossDM"
-                    >
-                      <v-icon icon="mdi-alert" size="small" />
-                      손절
-                    </v-btn>
-                  </v-col>
-
-                  <v-col cols="3">
-                    <v-btn
-                      color="purple"
-                      variant="tonal"
-                      size="small"
-                      block
-                      :loading="testDailyReportLoading"
-                      :disabled="!profileForm.discordUserId || !discordBotEnabled"
-                      @click="testDailyReportDM"
-                    >
-                      <v-icon icon="mdi-file-chart" size="small" />
-                      리포트
-                    </v-btn>
-                  </v-col>
-                </v-row>
+                <v-alert type="info" variant="tonal" density="compact">
+                  알림 유형별 테스트는 
+                  <router-link to="/bot-monitor" class="text-decoration-underline">봇 모니터링</router-link> 
+                  페이지에서 이용하실 수 있습니다.
+                </v-alert>
               </v-card-text>
             </v-card>
           </v-col>

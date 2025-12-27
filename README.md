@@ -1478,6 +1478,20 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
   - archive-transactions.ps1 (Windows)
   - archive-transactions.sh (Linux/Mac)
   - 월별 거래 내역 백업 및 압축
+- UI 버그 수정 및 개선 :
+  - BotMonitorView.vue 버그 수정
+    - API 엔드포인트 수정: `/users/me` → `/user/profile`
+    - Discord Bot 상태 필드명 수정: `enabled` → `botEnabled`
+  - BotMonitorView.vue UI 개선
+    - 수동제어 + 이메일 테스트 + 디스코드 DM 테스트 → 한 줄 3등분 배치 (`md="4"`)
+    - 버튼 스타일 통일: `variant="outlined"` (테두리 스타일)
+    - 이메일 테스트 버튼 색상 통일: `color="teal"`
+    - 디스코드 DM 테스트 버튼 색상 통일: `color="deep-purple"`
+    - 아이콘 변경: 수동 제어 `mdi-account-cog`, 디스코드 DM 테스트 `mdi-robot`
+    - 제목-버튼 간격 증가 (`pt-6`)
+  - DailyReportView.vue UI 개선
+    - 손익 상세 카드 폰트 크기 증가 (아이콘 `size="28"`, 값 `text-h6`/`text-h5`)
+    - 코인별 현황 테이블 폰트 크기 증가 (CSS `:deep(.v-data-table)`)
 
 **API 엔드포인트:**
 | Method | Endpoint | 인증 | 설명 |
@@ -1504,6 +1518,12 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 - `repository/UserRepository.java` - findByRole(), findByRoleAndIsActive() 메서드 추가
 - `controller/AdminController.java` - 모니터링 API 엔드포인트 추가
 - `application.yml` - Actuator, 슬로우 쿼리 로깅 설정 추가
+
+**수정된 파일 (Frontend):**
+- `views/BotMonitorView.vue` - API 수정, UI 개선
+- `views/DailyReportView.vue` - 폰트 크기 개선
+- `views/ProfileView.vue` - v-alert 중복 아이콘 제거
+- `views/AdminDashboardView.vue` - `import api` 누락 추가
 
 **수정된 파일 (Frontend):**
 - `views/AdminDashboardView.vue` - 모니터링 섹션 및 다이얼로그 추가
@@ -1551,6 +1571,12 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 - ✅ 관리자 대시보드 모니터링 섹션 - 브라우저
 - ✅ 전체화면 다이얼로그 - 브라우저
 - ✅ 30초 자동 새로고침 - 브라우저
+- ✅ 봇 모니터링 프로필 로딩 정상 - 브라우저
+- ✅ Discord Bot 상태 표시 정상 - 브라우저
+- ✅ 수동제어/이메일/디스코드 카드 3등분 배치 - 브라우저
+- ✅ 버튼 스타일 통일 (outlined) - 브라우저
+- ✅ 일일 리포트 손익 상세 폰트 크기 - 브라우저
+- ✅ 일일 리포트 코인별 현황 테이블 폰트 크기 - 브라우저
 
 ---
 

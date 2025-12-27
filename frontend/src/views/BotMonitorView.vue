@@ -66,66 +66,222 @@
           </v-col>
         </v-row>
 
-        <!-- 수동 실행 버튼 -->
+        <!-- 수동 제어 + 테스트 발송 카드 (한 줄 배치) -->
         <v-row class="mb-4">
-          <v-col cols="12">
-            <v-card class="pa-4">
-              <v-card-title class="d-flex align-center">
-                <v-icon class="mr-2">mdi-play-circle</v-icon>
+          <!-- 수동 제어 -->
+          <v-col cols="12" md="4">
+            <v-card class="pa-4 control-card">
+              <v-card-title class="d-flex align-center pb-0">
+                <v-icon class="mr-2" color="primary">mdi-account-cog</v-icon>
                 수동 제어
               </v-card-title>
-              <v-card-text>
-                <v-btn 
-                  color="primary" 
-                  size="large"
-                  :loading="executing"
-                  :disabled="executing"
-                  @click="executeBot"
-                  class="mr-4"
-                >
-                  <v-icon left>mdi-play</v-icon>
-                  수동 매매 실행
-                </v-btn>
+              <v-card-text class="pt-6">
+                <div class="d-flex flex-column gap-3">
+                  <v-btn 
+                    color="primary" 
+                    variant="outlined"
+                    size="large"
+                    block
+                    :loading="executing"
+                    :disabled="executing"
+                    @click="executeBot"
+                  >
+                    <v-icon left>mdi-play</v-icon>
+                    수동 매매 실행
+                  </v-btn>
+                  
+                  <v-btn 
+                    color="grey-darken-2" 
+                    variant="outlined"
+                    size="large"
+                    block
+                    :loading="refreshing"
+                    @click="refreshIndicators"
+                  >
+                    <v-icon left>mdi-refresh</v-icon>
+                    지표 새로고침
+                  </v-btn>
+                </div>
                 
-                <v-btn 
-                  color="secondary" 
-                  size="large"
-                  :loading="refreshing"
-                  @click="refreshIndicators"
-                  class="mr-4"
+                <!-- 실행 결과 표시 (수동 제어 카드 내부로 이동) -->
+                <v-alert 
+                  v-if="executionResult" 
+                  :type="executionResult.status === 'SUCCESS' ? 'success' : 'error'" 
+                  variant="tonal"
+                  class="mt-4"
                 >
-                  <v-icon left>mdi-refresh</v-icon>
-                  지표 새로고침
-                </v-btn>
-                
-                <v-btn 
-                  color="info" 
-                  size="large"
-                  :loading="sendingTest"
-                  @click="sendTestNotification"
-                >
-                  <v-icon left>mdi-bell</v-icon>
-                  디스코드 테스트 알림
-                </v-btn>
-                <v-btn 
-                  color="success" 
-                  size="large"
-                  :loading="sendingEmailTest"
-                  @click="sendTestEmail"
-                  class="ml-4"
-                >
-                  <v-icon left>mdi-email</v-icon>
-                  이메일 테스트
-                </v-btn>
-              </v-card-text>
-              
-              <!-- 실행 결과 표시 -->
-              <v-card-text v-if="executionResult">
-                <v-alert :type="executionResult.status === 'SUCCESS' ? 'success' : 'warning'" class="mt-4">
-                  <div class="font-weight-bold">실행 결과: {{ executionResult.status }}</div>
-                  <div v-if="executionResult.message">{{ executionResult.message }}</div>
-                  <div>매수: {{ executionResult.buyCount }}건 | 매도: {{ executionResult.sellCount }}건</div>
+                  <div class="font-weight-bold">{{ executionResult.message }}</div>
+                  <div v-if="executionResult.buyCount > 0 || executionResult.sellCount > 0">
+                    매수: {{ executionResult.buyCount }}건 / 매도: {{ executionResult.sellCount }}건
+                  </div>
                 </v-alert>
+              </v-card-text>
+            </v-card>
+          </v-col>
+
+          <!-- 이메일 테스트 발송 -->
+          <v-col cols="12" md="4">
+            <v-card class="pa-4 control-card">
+              <v-card-title class="d-flex align-center pb-0">
+                <v-icon class="mr-2" color="success">mdi-email</v-icon>
+                이메일 테스트 발송
+              </v-card-title>
+              <v-card-text class="pt-6">
+                <v-alert 
+                  v-if="!userProfile.email" 
+                  type="warning" 
+                  variant="tonal" 
+                  density="compact"
+                  class="mb-4"
+                >
+                  이메일 미등록
+                  <v-btn 
+                    variant="flat" 
+                    color="primary" 
+                    size="small" 
+                    to="/profile"
+                    class="ml-2"
+                  >
+                    등록하기
+                  </v-btn>
+                </v-alert>
+                
+                <div class="d-flex flex-column gap-3">
+                  <v-btn
+                    color="teal"
+                    variant="outlined"
+                    size="large"
+                    block
+                    :loading="emailTestLoading.buy"
+                    :disabled="!userProfile.email"
+                    @click="sendEmailTest('buy')"
+                  >
+                    <v-icon left>mdi-cart-arrow-down</v-icon>
+                    매수 체결
+                  </v-btn>
+  
+                  <v-btn
+                    color="teal"
+                    variant="outlined"
+                    size="large"
+                    block
+                    :loading="emailTestLoading.sell"
+                    :disabled="!userProfile.email"
+                    @click="sendEmailTest('sell')"
+                  >
+                    <v-icon left>mdi-cart-arrow-up</v-icon>
+                    매도 체결
+                  </v-btn>
+  
+                  <v-btn
+                    color="teal"
+                    variant="outlined"
+                    size="large"
+                    block
+                    :loading="emailTestLoading.report"
+                    :disabled="!userProfile.email"
+                    @click="sendEmailTest('report')"
+                  >
+                    <v-icon left>mdi-file-chart</v-icon>
+                    일간 리포트
+                  </v-btn>
+                </div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+          
+          <!-- 디스코드 DM 테스트 발송 -->
+          <v-col cols="12" md="4">
+            <v-card class="pa-4 control-card">
+              <v-card-title class="d-flex align-center pb-0">
+                <v-icon class="mr-2" color="deep-purple">mdi-robot</v-icon>
+                디스코드 DM 테스트
+                <v-chip 
+                  :color="discordBotEnabled ? 'success' : 'grey'" 
+                  size="small" 
+                  class="ml-2"
+                >
+                  {{ discordBotEnabled ? 'Bot 활성화' : 'Bot 비활성화' }}
+                </v-chip>
+              </v-card-title>
+              <v-card-text class="pt-6">
+                <v-alert 
+                  v-if="!userProfile.discordUserId" 
+                  type="warning" 
+                  variant="tonal" 
+                  density="compact"
+                  class="mb-4"
+                >
+                  Discord ID 미등록
+                  <v-btn 
+                    variant="flat" 
+                    color="deep-purple" 
+                    size="small" 
+                    to="/profile"
+                    class="ml-2"
+                  >
+                    등록하기
+                  </v-btn>
+                </v-alert>
+                
+                <v-row dense>
+                  <v-col cols="6">
+                    <v-btn
+                      color="deep-purple"
+                      variant="outlined"
+                      size="large"
+                      block
+                      :loading="discordTestLoading.buy"
+                      :disabled="!userProfile.discordUserId || !discordBotEnabled"
+                      @click="sendDiscordTest('buy')"
+                    >
+                      <v-icon left>mdi-cart-arrow-down</v-icon>
+                      매수
+                    </v-btn>
+                  </v-col>
+                  <v-col cols="6">
+                    <v-btn
+                      color="deep-purple"
+                      variant="outlined"
+                      size="large"
+                      block
+                      :loading="discordTestLoading.sell"
+                      :disabled="!userProfile.discordUserId || !discordBotEnabled"
+                      @click="sendDiscordTest('sell')"
+                    >
+                      <v-icon left>mdi-cart-arrow-up</v-icon>
+                      매도
+                    </v-btn>
+                  </v-col>
+                  <v-col cols="6">
+                    <v-btn
+                      color="deep-purple"
+                      variant="outlined"
+                      size="large"
+                      block
+                      :loading="discordTestLoading.stoploss"
+                      :disabled="!userProfile.discordUserId || !discordBotEnabled"
+                      @click="sendDiscordTest('stoploss')"
+                    >
+                      <v-icon left>mdi-alert</v-icon>
+                      손절매
+                    </v-btn>
+                  </v-col>
+                  <v-col cols="6">
+                    <v-btn
+                      color="deep-purple"
+                      variant="outlined"
+                      size="large"
+                      block
+                      :loading="discordTestLoading.report"
+                      :disabled="!userProfile.discordUserId || !discordBotEnabled"
+                      @click="sendDiscordTest('report')"
+                    >
+                      <v-icon left>mdi-file-chart</v-icon>
+                      리포트
+                    </v-btn>
+                  </v-col>
+                </v-row>
               </v-card-text>
             </v-card>
           </v-col>
@@ -135,146 +291,95 @@
         <v-row>
           <v-col cols="12">
             <v-card>
-              <v-card-title class="d-flex align-center">
-                <v-icon class="mr-2">mdi-chart-line</v-icon>
-                기술적 지표
-                <v-spacer></v-spacer>
-                <v-chip color="primary" class="mr-2">
+              <v-card-title class="d-flex justify-space-between align-center">
+                <span>
+                  <v-icon class="mr-2">mdi-chart-line</v-icon>
+                  기술적 지표
+                </span>
+                <span class="text-caption text-grey">
                   마지막 업데이트: {{ lastUpdated }}
-                </v-chip>
+                </span>
               </v-card-title>
               
-              <v-card-text>
-                <v-data-table
-                  :headers="indicatorHeaders"
-                  :items="indicators"
-                  :loading="loading"
-                  class="elevation-1"
-                  item-key="market"
-                >
-                  <!-- 코인 심볼 -->
-                  <template v-slot:item.market="{ item }">
-                    <v-chip color="primary" small>
-                      {{ item.market }}
-                    </v-chip>
-                  </template>
-                  
-                  <!-- 현재가 -->
-                  <template v-slot:item.currentPrice="{ item }">
-                    <span class="font-weight-bold">
-                      {{ formatPrice(item.currentPrice) }}
-                    </span>
-                  </template>
-                  
-                  <!-- MA20 -->
-                  <template v-slot:item.ma20="{ item }">
-                    {{ item.ma20 ? formatPrice(item.ma20) : '-' }}
-                  </template>
-                  
-                  <!-- RSI -->
-                  <template v-slot:item.rsi="{ item }">
-                    <v-chip 
-                      :color="getRsiColor(item.rsi)" 
-                      small
-                      dark
-                    >
-                      {{ item.rsi ? item.rsi.toFixed(2) : '-' }}
-                    </v-chip>
-                  </template>
-                  
-                  <!-- 볼린저 위치 -->
-                  <template v-slot:item.bbPosition="{ item }">
-                    <v-chip 
-                      :color="getBbPositionColor(item)" 
-                      small
-                      dark
-                    >
-                      {{ getBbPosition(item) }}
-                    </v-chip>
-                  </template>
-                  
-                  <!-- 거래량 비율 -->
-                  <template v-slot:item.volumeRatio="{ item }">
-                    <v-chip 
-                      :color="item.volumeRatio >= 1.5 ? 'success' : 'grey'" 
-                      small
-                      dark
-                    >
-                      {{ item.volumeRatio ? (item.volumeRatio * 100).toFixed(0) + '%' : '-' }}
-                    </v-chip>
-                  </template>
-                  
-                  <!-- MA 대비 -->
-                  <template v-slot:item.maPosition="{ item }">
-                    <span :class="getMaPositionClass(item)">
-                      {{ getMaPosition(item) }}
-                    </span>
-                  </template>
-                  
-                  <!-- 매수 신호 -->
-                  <template v-slot:item.signal="{ item }">
-                    <v-chip 
-                      :color="getSignalColor(item)" 
-                      small
-                      dark
-                    >
-                      {{ getSignal(item) }}
-                    </v-chip>
-                  </template>
-                </v-data-table>
-              </v-card-text>
+              <v-data-table
+                :headers="indicatorHeaders"
+                :items="indicators"
+                :loading="loading"
+                class="elevation-0"
+              >
+                <template v-slot:item.market="{ item }">
+                  <div class="font-weight-medium">{{ item.market }}</div>
+                </template>
+
+                <template v-slot:item.currentPrice="{ item }">
+                  {{ formatPrice(item.currentPrice) }}
+                </template>
+
+                <template v-slot:item.ma20="{ item }">
+                  {{ formatPrice(item.ma20) }}
+                </template>
+
+                <template v-slot:item.rsi="{ item }">
+                  <v-chip :color="getRsiColor(item.rsi)" size="small">
+                    {{ item.rsi ? item.rsi.toFixed(1) : '-' }}
+                  </v-chip>
+                </template>
+
+                <template v-slot:item.bbPosition="{ item }">
+                  <v-chip :color="getBbPositionColor(item)" size="small">
+                    {{ getBbPosition(item) }}
+                  </v-chip>
+                </template>
+
+                <template v-slot:item.volumeRatio="{ item }">
+                  <span :class="item.volumeRatio >= 1.5 ? 'text-success font-weight-bold' : ''">
+                    {{ item.volumeRatio ? `${item.volumeRatio.toFixed(2)}x` : '-' }}
+                  </span>
+                </template>
+
+                <template v-slot:item.maPosition="{ item }">
+                  <span :class="getMaPositionClass(item)">
+                    {{ getMaPosition(item) }}
+                  </span>
+                </template>
+
+                <template v-slot:item.signal="{ item }">
+                  <v-chip :color="getSignalColor(item)" size="small">
+                    {{ getSignal(item) }}
+                  </v-chip>
+                </template>
+              </v-data-table>
             </v-card>
           </v-col>
         </v-row>
 
-        <!-- 알림 -->
-        <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="3000">
-          {{ snackbarMessage }}
-        </v-snackbar>
       </v-container>
     </v-main>
+
+    <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="3000">
+      {{ snackbarMessage }}
+    </v-snackbar>
   </v-app>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import TheHeader from '@/components/TheHeader.vue'
 import TheSidebar from '@/components/TheSidebar.vue'
-import type { IndicatorResult, BotExecutionResult } from '@/types/bot'
+import api from '@/api'
+import type { IndicatorResult } from '@/types/bot'
 
-// 사이드바 Ref
 const sidebarRef = ref()
 
-// API 호출 함수
-const api = {
-  get: async (url: string) => {
-    const token = localStorage.getItem('token')
-    const response = await fetch(`/api${url}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-    return response.json()
-  },
-  post: async (url: string) => {
-    const token = localStorage.getItem('token')
-    const response = await fetch(`/api${url}`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-    return response.json()
-  }
-}
-
-// 상태
+// 상태 변수
 const loading = ref(false)
 const executing = ref(false)
 const refreshing = ref(false)
-const sendingTest = ref(false)
-const sendingEmailTest = ref(false) 
 const indicators = ref<IndicatorResult[]>([])
-const executionResult = ref<BotExecutionResult | null>(null)
-const botRunning = ref(true)
-const lastUpdated = ref('-')
+const lastUpdated = ref('')
+const executionResult = ref<any>(null)
 
+// Snackbar
 const snackbar = ref(false)
 const snackbarMessage = ref('')
 const snackbarColor = ref('success')
@@ -282,8 +387,33 @@ const snackbarColor = ref('success')
 // 오늘 통계
 const todayStats = ref({
   buyCount: 0,
-  sellCount: 0,
-  profitLoss: 0
+  sellCount: 0
+})
+
+const botRunning = ref(true)
+
+// 사용자 프로필 정보
+const userProfile = ref({
+  email: '',
+  discordUserId: ''
+})
+
+// Discord Bot 상태
+const discordBotEnabled = ref(false)
+
+// 이메일 테스트 로딩 상태
+const emailTestLoading = ref({
+  buy: false,
+  sell: false,
+  report: false
+})
+
+// 디스코드 테스트 로딩 상태
+const discordTestLoading = ref({
+  buy: false,
+  sell: false,
+  stoploss: false,
+  report: false
 })
 
 // 다음 실행 시간 계산
@@ -311,23 +441,60 @@ const indicatorHeaders = [
   { title: '신호', key: 'signal', sortable: false },
 ]
 
-// 메서드
+// 사용자 프로필 조회
+const fetchUserProfile = async () => {
+  try {
+    // ⭐ 수정: /users/me → /user/profile (올바른 엔드포인트)
+    const response = await api.get('/user/profile')
+    // API 응답 구조에 따라 data 접근 방식 처리
+    const userData = response.data || response
+    userProfile.value = {
+      email: userData.email || '',
+      discordUserId: userData.discordUserId || ''
+    }
+  } catch (error) {
+    console.error('프로필 조회 실패:', error)
+    // 에러 시에도 기본값 유지
+    userProfile.value = {
+      email: '',
+      discordUserId: ''
+    }
+  }
+}
+
+// Discord Bot 상태 조회
+const fetchDiscordBotStatus = async () => {
+  try {
+    const response = await api.get('/notifications/discord/bot-status')
+    // API 응답 구조에 따라 data 접근 방식 처리
+    const statusData = response.data || response
+    discordBotEnabled.value = statusData?.botEnabled || false
+  } catch (error) {
+    console.error('Discord Bot 상태 조회 실패:', error)
+    discordBotEnabled.value = false
+  }
+}
+
+// 지표 조회
 const fetchIndicators = async () => {
   loading.value = true
   try {
-    // 기본 코인 목록 (거래 설정에서 가져오거나 기본값 사용)
     const markets = ['KRW-BTC', 'KRW-ETH', 'KRW-XRP', 'KRW-SOL', 'KRW-DOGE']
     const response = await api.get(`/bot/indicators?markets=${markets.join(',')}`)
-    indicators.value = response
+    // API 응답 구조에 따라 data 접근 방식 처리
+    const indicatorData = response.data || response
+    indicators.value = Array.isArray(indicatorData) ? indicatorData : []
     lastUpdated.value = new Date().toLocaleTimeString('ko-KR')
   } catch (error) {
     console.error('지표 조회 실패:', error)
     showSnackbar('지표 조회에 실패했습니다.', 'error')
+    indicators.value = []
   } finally {
     loading.value = false
   }
 }
 
+// 봇 실행
 const executeBot = async () => {
   executing.value = true
   executionResult.value = null
@@ -335,8 +502,6 @@ const executeBot = async () => {
     const result = await api.post('/bot/execute')
     executionResult.value = result
     showSnackbar(`실행 완료: 매수 ${result.buyCount}건, 매도 ${result.sellCount}건`, 'success')
-    
-    // 지표 새로고침
     await fetchIndicators()
   } catch (error) {
     console.error('봇 실행 실패:', error)
@@ -346,6 +511,7 @@ const executeBot = async () => {
   }
 }
 
+// 지표 새로고침
 const refreshIndicators = async () => {
   refreshing.value = true
   await fetchIndicators()
@@ -353,29 +519,71 @@ const refreshIndicators = async () => {
   showSnackbar('지표가 새로고침되었습니다.', 'success')
 }
 
-const sendTestNotification = async () => {
-  sendingTest.value = true
+// 이메일 테스트 발송
+const sendEmailTest = async (type: 'buy' | 'sell' | 'report') => {
+  emailTestLoading.value[type] = true
   try {
-    await api.post('/notifications/test')
-    showSnackbar('테스트 알림이 발송되었습니다.', 'success')
+    let endpoint = ''
+    let successMsg = ''
+    
+    switch (type) {
+      case 'buy':
+        endpoint = '/notifications/email/test-buy'
+        successMsg = '매수 체결 테스트 이메일이 발송되었습니다.'
+        break
+      case 'sell':
+        endpoint = '/notifications/email/test-sell'
+        successMsg = '매도 체결 테스트 이메일이 발송되었습니다.'
+        break
+      case 'report':
+        endpoint = '/notifications/email/daily-report'
+        successMsg = '일간 리포트 테스트 이메일이 발송되었습니다.'
+        break
+    }
+    
+    await api.post(endpoint)
+    showSnackbar(successMsg, 'success')
   } catch (error) {
-    console.error('알림 발송 실패:', error)
-    showSnackbar('알림 발송에 실패했습니다.', 'error')
+    console.error('이메일 테스트 발송 실패:', error)
+    showSnackbar('이메일 발송에 실패했습니다.', 'error')
   } finally {
-    sendingTest.value = false
+    emailTestLoading.value[type] = false
   }
 }
 
-const sendTestEmail = async () => {
-  sendingEmailTest.value = true
+// 디스코드 테스트 발송
+const sendDiscordTest = async (type: 'buy' | 'sell' | 'stoploss' | 'report') => {
+  discordTestLoading.value[type] = true
   try {
-    await api.post('/notifications/email/test')
-    showSnackbar('테스트 이메일이 발송되었습니다.', 'success')
+    let endpoint = ''
+    let successMsg = ''
+    
+    switch (type) {
+      case 'buy':
+        endpoint = '/notifications/discord/test-buy'
+        successMsg = '매수 알림 테스트 DM이 발송되었습니다.'
+        break
+      case 'sell':
+        endpoint = '/notifications/discord/test-sell'
+        successMsg = '매도 알림 테스트 DM이 발송되었습니다.'
+        break
+      case 'stoploss':
+        endpoint = '/notifications/discord/test-stoploss'
+        successMsg = '손절매 알림 테스트 DM이 발송되었습니다.'
+        break
+      case 'report':
+        endpoint = '/notifications/discord/test-daily-report'
+        successMsg = '일간 리포트 테스트 DM이 발송되었습니다.'
+        break
+    }
+    
+    await api.post(endpoint)
+    showSnackbar(successMsg, 'success')
   } catch (error) {
-    console.error('이메일 발송 실패:', error)
-    showSnackbar('이메일 발송에 실패했습니다.', 'error')
+    console.error('디스코드 테스트 발송 실패:', error)
+    showSnackbar('디스코드 DM 발송에 실패했습니다.', 'error')
   } finally {
-    sendingEmailTest.value = false
+    discordTestLoading.value[type] = false
   }
 }
 
@@ -387,8 +595,8 @@ const formatPrice = (price: number) => {
 
 const getRsiColor = (rsi: number | null) => {
   if (!rsi) return 'grey'
-  if (rsi <= 30) return 'success'  // 과매도 (매수 기회)
-  if (rsi >= 70) return 'error'    // 과매수 (매도 기회)
+  if (rsi <= 30) return 'success'
+  if (rsi >= 70) return 'error'
   return 'grey'
 }
 
@@ -425,16 +633,9 @@ const getMaPositionClass = (item: IndicatorResult) => {
 const getSignal = (item: IndicatorResult) => {
   let score = 0
   
-  // RSI 체크
   if (item.rsi && item.rsi <= 30) score++
-  
-  // BB 하단 체크
   if (item.bbLower && item.currentPrice <= item.bbLower * 1.02) score++
-  
-  // MA 아래 체크
   if (item.ma20 && item.currentPrice < item.ma20) score++
-  
-  // 거래량 체크
   if (item.volumeRatio && item.volumeRatio >= 1.5) score++
   
   if (score >= 3) return '강력 매수'
@@ -460,6 +661,8 @@ const showSnackbar = (message: string, color: string) => {
 // 마운트 시 데이터 로드
 onMounted(() => {
   fetchIndicators()
+  fetchUserProfile()  
+  fetchDiscordBotStatus() 
   
   // 30초마다 자동 새로고침
   setInterval(fetchIndicators, 30000)
@@ -467,30 +670,41 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.text-success {
+  color: #4CAF50 !important;
+  font-weight: bold;
+}
 
-  .text-success {
-    color: #4CAF50 !important;
-    font-weight: bold;
-  }
+.text-error {
+  color: #F44336 !important;
+  font-weight: bold;
+}
 
-  .text-error {
-    color: #F44336 !important;
-    font-weight: bold;
-  }
+.bot-stats-card {
+  height: 100%;
+  min-height: 120px;
+}
 
-  /* ✅ 추가: 봇 상태 카드 높이 통일 */
-  .bot-stats-card {
-    height: 100%;
-    min-height: 120px;
-  }
+.bot-stats-card .d-flex {
+  height: 100%;
+  align-items: center;
+}
 
-  .bot-stats-card .d-flex {
-    height: 100%;
-    align-items: center;
-  }
+.bot-stats-card .text-h4,
+.bot-stats-card .text-h5 {
+  white-space: nowrap;
+}
 
-  .bot-stats-card .text-h4,
-  .bot-stats-card .text-h5 {
-    white-space: nowrap;
-  }
+.gap-2 {
+  gap: 8px;
+}
+
+.control-card {
+  height: 100%;
+  min-height: 280px;
+}
+
+.gap-3 {
+  gap: 12px;
+}
 </style>

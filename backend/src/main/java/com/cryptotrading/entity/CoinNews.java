@@ -2,6 +2,7 @@ package com.cryptotrading.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -43,6 +44,15 @@ public class CoinNews {
     
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "analyzed")
+    private Boolean analyzed = false;
+    
+    @Column(name = "analyzed_at")
+    private LocalDateTime analyzedAt;
+    
+    @Column(name = "sentiment_score", precision = 3, scale = 2)
+    private BigDecimal sentimentScore;
     
     @PrePersist
     protected void onCreate() {
@@ -50,5 +60,29 @@ public class CoinNews {
         if (collectedAt == null) {
             collectedAt = LocalDateTime.now();
         }
+    }
+
+    public Boolean getAnalyzed() {
+        return analyzed;
+    }
+
+    public void setAnalyzed(Boolean analyzed) {
+        this.analyzed = analyzed;
+    }
+
+    public LocalDateTime getAnalyzedAt() {
+        return analyzedAt;
+    }
+
+    public void setAnalyzedAt(LocalDateTime analyzedAt) {
+        this.analyzedAt = analyzedAt;
+    }
+
+    public BigDecimal getSentimentScore() {
+        return sentimentScore;
+    }
+
+    public void setSentimentScore(BigDecimal sentimentScore) {
+        this.sentimentScore = sentimentScore;
     }
 }

@@ -54,4 +54,12 @@ public interface CoinNewsRepository extends JpaRepository<CoinNews, Long> {
             @Param("startOfDay") LocalDateTime startOfDay,
             @Param("endOfDay") LocalDateTime endOfDay
     );
+
+    // 분석되지 않은 뉴스만 조회
+    List<CoinNews> findByCoinSymbolAndAnalyzedFalseAndPublishedAtBetweenOrderByPublishedAtDesc(
+            String coinSymbol, LocalDateTime start, LocalDateTime end);
+    
+    // 분석되지 않은 뉴스 조회 (심볼 무관)
+    List<CoinNews> findByAnalyzedFalseAndPublishedAtBetweenOrderByPublishedAtDesc(
+            LocalDateTime start, LocalDateTime end);
 }

@@ -61,4 +61,11 @@ public interface CoinNewsAnalysisRepository extends JpaRepository<CoinNewsAnalys
     @Modifying
     @Query("DELETE FROM CoinNewsAnalysis a WHERE a.createdAt < :threshold")
     int deleteOldAnalysis(@Param("threshold") LocalDateTime threshold);
+
+     /**
+     * 특정 일자의 모든 가중치를 0으로 초기화 (관리자 수동 초기화용)
+     */
+    @Modifying
+    @Query("UPDATE CoinNewsAnalysis a SET a.weightAdjustment = 0 WHERE a.analysisDate = :date")
+    int resetWeightsByDate(@Param("date") LocalDate date);
 }

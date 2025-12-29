@@ -158,5 +158,21 @@ news:
     # 데이터 보관 기간 (일)
     retention-days: 7
   analysis:
-    # Gemini API (Day 25에서 설정)
-    enabled: false
+    # ⭐ Day 25: Gemini API 연동 (2025-12-29 추가)
+    enabled: ${GEMINI_API_ENABLED:false}
+    api-key: ${GEMINI_API_KEY:}
+    model: gemini-2.0-flash
+    # API 호출 제한 (분당 15회 무료 한도)
+    rate-limit-per-minute: 10
+    # 요청 타임아웃 (초)
+    timeout-seconds: 30
+
+# ============================================
+# Groq API 설정 (Gemini 대체 - 2025-12-29 추가)
+# ============================================
+groq:
+  api:
+    key: ${GROQ_API_KEY:}
+    model: ${GROQ_MODEL:llama-3.3-70b-versatile}
+    base-url: https://api.groq.com/openai/v1/chat/completions
+    timeout: 60

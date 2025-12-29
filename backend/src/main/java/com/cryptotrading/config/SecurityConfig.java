@@ -83,8 +83,9 @@ public class SecurityConfig {
 	  .requestMatchers("/api/admin/**").hasRole("ADMIN")
 	  .requestMatchers("/api/notifications/email/**").authenticated()
 
-                .requestMatchers("/api/news/today/**").permitAll()  // 뉴스 조회는 공개
-
+	  .requestMatchers("/api/news/today/**").permitAll()     // 당일 뉴스 조회 - 공개
+	  .requestMatchers("/api/news/analysis/status").permitAll()  // AI 상태 확인 - 공개
+	  .requestMatchers("/api/news/**").authenticated()       // 나머지 뉴스 API - 인증 필요
                 // 나머지는 인증 필요
                 .anyRequest().authenticated()
             )

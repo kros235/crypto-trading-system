@@ -1646,10 +1646,86 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 
 ---
 
+### ✅ Day 25 (2025-12-29) - AI 뉴스 분석 (2) - AI 연동 + 최적화
+**완료 항목:**
+- AI API 연동 (Gemini → Groq 전환)
+  - Google Gemini API: Rate Limit 문제 (15 req/분, 1,500 req/일)
+  - Groq API로 전환: 30 req/분, 14,400 req/일 (무료)
+  - GeminiApiService 전면 개편 (Groq API 호출)
+  - application.yml에 groq 설정 추가
+  - .env.development에 GROQ_API_KEY, GROQ_MODEL 추가
+- 프롬프트 설계
+  - 호재/악재 분류 프롬프트
+  - 점수화 (-1.0 ~ +1.0)
+  - JSON 배열 응답 형식
+- 뉴스 분석 서비스 (NewsAnalysisService)
+  - 미분석 뉴스만 조회하여 API 호출 최소화
+  - 벌크 분석: N건 뉴스 → 1회 API 호출
+  - 분석 결과 캐싱 (새 뉴스 없으면 0회 API 호출)
+  - 평균 점수 계산 및 감성 판단 (POSITIVE/NEGATIVE/NEUTRAL)
+- DB 스키마 확장
+  - coin_news 테이블에 analyzed, analyzed_at, sentiment_score 컬럼 추가
+  - 분석 완료 플래그로 중복 분석 방지
+- 점수 → 가중치 변환
+  - 평균 점수 기반 가중치 계산
+  - buyThresholdPct ±0.5% 조정 로직
+
+**생성된 파일:**
+- `dto/news/NewsAnalysisResultDTO.java` - 분석 결과 DTO
+
+**수정된 파일:**
+- `service/GeminiApiService.java` - ✅ **Groq API로 전면 개편**
+  - Gemini API → Groq API 호출로 변경
+  - analyzeBulkNews() 벌크 분석 메서드 추가
+  - NewsAnalysisResult 내부 클래스 추가
+- `service/NewsAnalysisService.java` - ✅ **벌크 분석 + 캐싱 로직 추가**
+  - 미분석 뉴스만 조회
+  - 벌크 분석 후 개별 뉴스에 결과 저장
+  - 캐싱으로 중복 API 호출 방지
+- `entity/CoinNews.java` - analyzed, analyzedAt, sentimentScore 필드 추가
+- `repository/CoinNewsRepository.java` - 미분석 뉴스 조회 메서드 추가
+- `application.yml` - groq API 설정 추가
+- `.env.development` - GROQ_API_KEY, GROQ_MODEL 추가
+- `docker-compose.yml` - GROQ_API_KEY, GROQ_MODEL 환경변수 추가
+
+**API 엔드포인트:**
+| Method | Endpoint | 인증 | 설명 |
+|--------|----------|------|------|
+| POST | /api/news/analyze | ✅ | 뉴스 AI 분석 실행 |
+
+**최적화 효과:**
+| 항목 | 기존 (Gemini) | 최적화 후 (Groq) |
+|------|---------------|------------------|
+| Rate Limit | 15 req/분 | **30 req/분** |
+| 일일 한도 | 1,500 req | **14,400 req** |
+| 뉴스 N건 분석 | N회 API 호출 | **1회** (벌크) |
+| 재분석 (새 뉴스 0건) | N회 API 호출 | **0회** (캐시) |
+| 504 타임아웃 | 빈번 발생 | **없음** |
+| 분석 소요 시간 | 5분+ | **1초 미만** |
+
+**테스트 완료:**
+- ✅ Groq API 초기화 확인 - Docker 로그
+- ✅ 벌크 뉴스 분석 (2건 → 1회 API) - Postman
+- ✅ 분석 결과 응답 정상 (score, sentiment) - Postman
+- ✅ 캐싱 동작 확인 (재요청 시 API 미호출) - Postman
+- ✅ analyzed 플래그 업데이트 - MySQL
+
+**DB 마이그레이션:**
+```sql
+ALTER TABLE coin_news ADD COLUMN analyzed BOOLEAN DEFAULT FALSE;
+ALTER TABLE coin_news ADD COLUMN analyzed_at DATETIME NULL;
+ALTER TABLE coin_news ADD COLUMN sentiment_score DECIMAL(5,2) NULL;
+CREATE INDEX idx_coin_news_analyzed ON coin_news(analyzed, coin_symbol);
+```
+
+---
+
+---
+
 
 
 ## 📊 현재 진행 상황
-- **전체 진척도**: 약 **94%**
+- **전체 진척도**: 약 **95%**
 - **Phase 1 (핵심 기능)**: 100% 완료 ✅
 - **Phase 2 (고도화)**: 100% 완료 ✅
 - **Phase 3 (안정화)**: **70%** 진행 중 🔄
@@ -1718,13 +1794,15 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 
 ---
 
-#### Day 25: AI 뉴스 분석 (2) - AI 연동
-| 시간 | 작업 | 상세 |
-|------|------|------|
-| 오전 | Google Gemini API 연동 | 무료 API 클라이언트 구현 |
-| 오전 | 프롬프트 설계 | 호재/악재 분류, 점수화 (-100~+100) |
-| 오후 | 뉴스 분석 서비스 | NewsAnalysisService 구현 |
-| 오후 | 점수 → 가중치 변환 | 평균 점수 계산, ±1% 매핑 로직 |
+#### ✅ Day 25: AI 뉴스 분석 (2) - AI 연동 + 최적화 (2025-12-29 완료)
+| 시간 | 작업 | 상세 | 상태 |
+|------|------|------|------|
+| 오전 | AI API 연동 | Gemini → **Groq API로 전환** (Rate Limit 해결) | ✅ 완료 |
+| 오전 | 프롬프트 설계 | 호재/악재 분류, 점수화 (-1.0~+1.0) | ✅ 완료 |
+| 오후 | 뉴스 분석 서비스 | NewsAnalysisService 구현 | ✅ 완료 |
+| 오후 | 점수 → 가중치 변환 | 평균 점수 계산, ±0.5% 매핑 로직 | ✅ 완료 |
+| 오후 | **벌크 분석 최적화** | N건 → 1회 API 호출 | ✅ 완료 |
+| 오후 | **캐싱 최적화** | 분석 완료 플래그로 중복 방지 | ✅ 완료 |
 
 ---
 
@@ -1769,7 +1847,7 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 | 22 | ✅ 환경변수 보안, API 재시도, 운영 Docker Compose | ✅ 완료 |
 | 23 | ✅ 모니터링 대시보드, 슬로우 쿼리, 서버 알림 | ✅ 완료 |
 | 24 | ✅ AI 뉴스 분석 - 기반 구축 | ✅ 완료 |
-| 25 | AI 뉴스 분석 - Gemini API 연동 | 🟢 선택 |
+| 25 | ✅ AI 뉴스 분석 - Groq API 연동 + 최적화 | ✅ 완료 |
 | 26 | AI 뉴스 분석 - 지표 연동 + 뉴스 페이지 UI | 🟢 선택 |
 | 27 | 2FA, IP 제한, 수익 분석 UI, 보안 점검, 테스트 | 🟢 선택 |
 | 28 | 운영 문서 작성, v1.0 릴리즈 | 🔴 필수 |
@@ -1780,7 +1858,7 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 
 #### 개요
 - **실행 주기**: 3시간마다 (스케줄러)
-- **AI API**: Google Gemini API (무료)
+- **AI API**: ~~Google Gemini API~~ → **Groq API (Llama 3.3 70B)** - 무료, Rate Limit 우수
 - **분석 대상**: 각 사용자 투자 코인별 글로벌 뉴스
 - **뉴스 범위**: KST 기준 당일 발행 뉴스만
 - **적용 방식**: 호재/악재 분석 → buyThresholdPct ±0.5% 조정
@@ -1882,10 +1960,12 @@ DELETE FROM coin_news WHERE created_at < DATE_SUB(NOW(), INTERVAL 7 DAY);
 DELETE FROM coin_news_analysis WHERE created_at < DATE_SUB(NOW(), INTERVAL 7 DAY);
 ```
 
-#### Gemini API 무료 한도
-- 분당 15회 요청
-- 일일 1,500회 요청
-- 3시간마다 5코인 분석 시: 월 ~1,200회 (한도 내)
+#### Groq API 무료 한도 (Gemini 대체)
+- 분당 30회 요청 (Gemini의 2배)
+- 일일 14,400회 요청 (Gemini의 10배)
+- 3시간마다 5코인 분석 시: 월 ~1,200회 (한도의 0.3%)
+- **벌크 분석 최적화**: N건 뉴스 → 1회 API 호출
+- **캐싱 최적화**: 이미 분석된 뉴스는 API 미호출
 
 #### 코인 뉴스 페이지 (Frontend)
 수집된 뉴스를 사용자가 조회할 수 있는 게시판 형식의 UI
@@ -2114,9 +2194,9 @@ crypto-trading-system/
 ├── backups/                      # 백업 저장소
 │   └── mysql/                    # MySQL 백업 파일
 ├── .env.example                  # 환경변수 템플릿
-├── .env.development              # 개발 환경 설정 (Git 제외)
+├── .env.development              # 개발 환경 설정 (Git 제외) ⭐ Day 25: GROQ_API_KEY 추가
 ├── .env.production               # 운영 환경 설정 (Git 제외)
-├── docker-compose.yml            # 개발용 Docker Compose
+├── docker-compose.yml            # 개발용 Docker Compose ⭐ Day 25: GROQ 환경변수 추가
 ├── docker-compose.prod.yml       # ⭐ Day 22: 운영용 Docker Compose
 ├── backend/                      # Spring Boot 백엔드
 │   ├── src/main/java/com/cryptotrading/
@@ -2132,6 +2212,12 @@ crypto-trading-system/
 │   │   │   ├── AdminController.java
 │   │   │   └── NewsController.java               # ⭐ Day 24: 뉴스 API
 │   │   ├── service/              # 비즈니스 로직
+│   │   │   ├── AuthService.java
+│   │   │   ├── UserService.java
+│   │   │   ├── CoinInfoService.java
+│   │   │   ├── TradingSettingService.java
+│   │   │   ├── TransactionService.java
+│   │   │   ├── UpbitApiService.java
 │   │   │   ├── CacheService.java
 │   │   │   ├── TechnicalIndicatorService.java
 │   │   │   ├── SignalDetectorService.java
@@ -2147,7 +2233,9 @@ crypto-trading-system/
 │   │   │   ├── MonitoringService.java            # ⭐ Day 23: 시스템 메트릭 수집
 │   │   │   ├── MonitoringAlertService.java       # ⭐ Day 23: 이상징후 감지
 │   │   │   ├── AdminAlertNotificationService.java # ⭐ Day 23: Admin 멀티채널 알림
-│   │   │   └── NewsCollectorService.java         # ⭐ Day 24: 뉴스 수집 서비스
+│   │   │   ├── NewsCollectorService.java         # ⭐ Day 24: 뉴스 수집 서비스
+│   │   │   ├── GeminiApiService.java             # ⭐ Day 25: Groq API 연동 (Gemini→Groq 전환)
+│   │   │   └── NewsAnalysisService.java          # ⭐ Day 25: AI 뉴스 분석 서비스
 │   │   ├── config/               # 설정 클래스
 │   │   │   ├── SecurityConfig.java
 │   │   │   ├── NotificationConfig.java
@@ -2176,14 +2264,14 @@ crypto-trading-system/
 │   │   │   ├── TradingSettingRepository.java
 │   │   │   ├── TransactionRepository.java
 │   │   │   ├── CoinInfoRepository.java
-│   │   │   ├── CoinNewsRepository.java           # ⭐ Day 24: 뉴스 Repository
+│   │   │   ├── CoinNewsRepository.java           # ⭐ Day 24-25: 뉴스 Repository (미분석 조회 추가)
 │   │   │   └── CoinNewsAnalysisRepository.java   # ⭐ Day 24: 분석 Repository
 │   │   ├── entity/               # JPA 엔티티
 │   │   │   ├── User.java
 │   │   │   ├── TradingSetting.java
 │   │   │   ├── Transaction.java
 │   │   │   ├── CoinInfo.java
-│   │   │   ├── CoinNews.java                     # ⭐ Day 24: 뉴스 엔티티
+│   │   │   ├── CoinNews.java                     # ⭐ Day 24-25: 뉴스 엔티티 (analyzed 플래그 추가)
 │   │   │   └── CoinNewsAnalysis.java             # ⭐ Day 24: 분석 결과 엔티티
 │   │   ├── dto/                  # 데이터 전송 객체
 │   │   │   ├── common/           # 공통 DTO
@@ -2194,19 +2282,23 @@ crypto-trading-system/
 │   │   │   ├── upbit/            # 업비트 API DTO
 │   │   │   ├── notification/     # 알림 DTO
 │   │   │   ├── backtest/         # 백테스트 DTO
+│   │   │   ├── gemini/           # Gemini/Groq API DTO
+│   │   │   │   ├── GeminiRequestDTO.java
+│   │   │   │   └── GeminiResponseDTO.java
 │   │   │   ├── admin/            # 관리자 DTO
 │   │   │   │   ├── SystemStatsDTO.java
 │   │   │   │   ├── AdminUserDTO.java
 │   │   │   │   └── MonitoringDTO.java            # ⭐ Day 23: 모니터링 DTO
-│   │   │   └── news/             # ⭐ Day 24: 뉴스 DTO
+│   │   │   └── news/             # ⭐ Day 24-25: 뉴스 DTO
 │   │   │       ├── CoinNewsDTO.java              # ⭐ Day 24: 뉴스 DTO
 │   │   │       ├── CoinNewsAnalysisDTO.java      # ⭐ Day 24: 분석 결과 DTO
-│   │   │       └── RssNewsItem.java              # ⭐ Day 24: RSS 아이템 DTO
+│   │   │       ├── RssNewsItem.java              # ⭐ Day 24: RSS 아이템 DTO
+│   │   │       └── NewsAnalysisResultDTO.java    # ⭐ Day 25: AI 분석 결과 DTO
 │   │   └── util/                 # 유틸리티
 │   │       ├── JwtUtil.java
 │   │       └── EncryptionUtil.java
 │   └── src/main/resources/
-│       ├── application.yml
+│       ├── application.yml                       # ⭐ Day 25: groq API 설정 추가
 │       ├── logback-spring.xml    # 로그 설정
 │       └── templates/email/      # 이메일 템플릿
 │   └── Dockerfile                # curl 설치
@@ -2255,10 +2347,10 @@ crypto-trading-system/
 │   └── mysql/
 │       └── init.sql              # DB 초기화 (coin_news, coin_news_analysis 포함)
 │
-├── docker-compose.yml            # 개발용 (헬스체크, 재시작)
+├── docker-compose.yml            # 개발용 (헬스체크, 재시작) ⭐ Day 25: GROQ 환경변수
 ├── docker-compose.prod.yml       # ⭐ Day 22: 운영용 (리소스 제한)
 ├── .env.example                  # 환경변수 템플릿
-├── .env.development              # ⭐ Day 22: 개발 환경 (Git 제외)
+├── .env.development              # ⭐ Day 22-25: 개발 환경 (GROQ_API_KEY 추가)
 ├── .env.production               # ⭐ Day 22: 운영 환경 (Git 제외)
 ├── .gitignore                    # backups/, .env.* 제외
 └── README.md

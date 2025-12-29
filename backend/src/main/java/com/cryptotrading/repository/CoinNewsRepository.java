@@ -1,6 +1,8 @@
 package com.cryptotrading.repository;
 
 import com.cryptotrading.entity.CoinNews;
+import org.springframework.data.domain.Page;     
+import org.springframework.data.domain.Pageable; 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -62,4 +64,10 @@ public interface CoinNewsRepository extends JpaRepository<CoinNews, Long> {
     // 분석되지 않은 뉴스 조회 (심볼 무관)
     List<CoinNews> findByAnalyzedFalseAndPublishedAtBetweenOrderByPublishedAtDesc(
             LocalDateTime start, LocalDateTime end);
+
+    // 페이징 조회 메서드
+    Page<CoinNews> findByCoinSymbol(String coinSymbol, Pageable pageable);
+    Page<CoinNews> findByTitleContainingIgnoreCase(String keyword, Pageable pageable);
+    Page<CoinNews> findByCoinSymbolAndTitleContainingIgnoreCase(
+            String coinSymbol, String keyword, Pageable pageable);
 }

@@ -146,46 +146,64 @@
                   </v-btn>
                 </v-alert>
                 
-                <div class="d-flex flex-column gap-3">
-                  <v-btn
-                    color="teal"
-                    variant="outlined"
-                    size="large"
-                    block
-                    :loading="emailTestLoading.buy"
-                    :disabled="!userProfile.email"
-                    @click="sendEmailTest('buy')"
-                  >
-                    <v-icon left>mdi-cart-arrow-down</v-icon>
-                    매수 체결
-                  </v-btn>
-  
-                  <v-btn
-                    color="teal"
-                    variant="outlined"
-                    size="large"
-                    block
-                    :loading="emailTestLoading.sell"
-                    :disabled="!userProfile.email"
-                    @click="sendEmailTest('sell')"
-                  >
-                    <v-icon left>mdi-cart-arrow-up</v-icon>
-                    매도 체결
-                  </v-btn>
-  
-                  <v-btn
-                    color="teal"
-                    variant="outlined"
-                    size="large"
-                    block
-                    :loading="emailTestLoading.report"
-                    :disabled="!userProfile.email"
-                    @click="sendEmailTest('report')"
-                  >
-                    <v-icon left>mdi-file-chart</v-icon>
-                    일간 리포트
-                  </v-btn>
-                </div>
+                <v-row dense>
+                  <v-col cols="6">
+                    <v-btn
+                      color="teal"
+                      variant="outlined"
+                      size="large"
+                      block
+                      :loading="emailTestLoading.buy"
+                      :disabled="!userProfile.email"
+                      @click="sendEmailTest('buy')"
+                    >
+                      <v-icon left>mdi-cart-arrow-down</v-icon>
+                      매수
+                    </v-btn>
+                  </v-col>
+                  <v-col cols="6">
+                    <v-btn
+                      color="teal"
+                      variant="outlined"
+                      size="large"
+                      block
+                      :loading="emailTestLoading.sell"
+                      :disabled="!userProfile.email"
+                      @click="sendEmailTest('sell')"
+                    >
+                      <v-icon left>mdi-cart-arrow-up</v-icon>
+                      매도
+                    </v-btn>
+                  </v-col>
+                  <v-col cols="6">
+                    <v-btn
+                      color="teal"
+                      variant="outlined"
+                      size="large"
+                      block
+                      :loading="emailTestLoading.report"
+                      :disabled="!userProfile.email"
+                      @click="sendEmailTest('report')"
+                    >
+                      <v-icon left>mdi-file-chart</v-icon>
+                      리포트
+                    </v-btn>
+                  </v-col>
+                  <v-col cols="6">
+                    <v-btn
+                      color="teal"
+                      variant="outlined"
+                      size="large"
+                      block
+                      :loading="emailTestLoading.weight"
+                      :disabled="!userProfile.email"
+                      @click="sendEmailTest('weight')"
+                    >
+                      <v-icon left>mdi-chart-line</v-icon>
+                      가중치
+                    </v-btn>
+                  </v-col>
+                </v-row>
               </v-card-text>
             </v-card>
           </v-col>
@@ -279,6 +297,22 @@
                     >
                       <v-icon left>mdi-file-chart</v-icon>
                       리포트
+                    </v-btn>
+                  </v-col>
+                </v-row>
+                <v-row dense>
+                  <v-col cols="6">
+                    <v-btn
+                      color="deep-purple"
+                      variant="outlined"
+                      size="large"
+                      block
+                      :loading="discordTestLoading.weight"
+                      :disabled="!userProfile.discordUserId || !discordBotEnabled"
+                      @click="sendDiscordTest('weight')"
+                    >
+                      <v-icon left>mdi-chart-line</v-icon>
+                      가중치
                     </v-btn>
                   </v-col>
                 </v-row>
@@ -405,7 +439,8 @@ const discordBotEnabled = ref(false)
 const emailTestLoading = ref({
   buy: false,
   sell: false,
-  report: false
+  report: false,
+  weight: false  
 })
 
 // 디스코드 테스트 로딩 상태
@@ -413,7 +448,8 @@ const discordTestLoading = ref({
   buy: false,
   sell: false,
   stoploss: false,
-  report: false
+  report: false,
+  weight: false 
 })
 
 // 다음 실행 시간 계산
@@ -539,6 +575,10 @@ const sendEmailTest = async (type: 'buy' | 'sell' | 'report') => {
         endpoint = '/notifications/email/daily-report'
         successMsg = '일간 리포트 테스트 이메일이 발송되었습니다.'
         break
+      case 'weight':
+        endpoint = '/notifications/email/test-weight-change'
+        successMsg = '가중치 변경 테스트 이메일이 발송되었습니다.'
+        break
     }
     
     await api.post(endpoint)
@@ -574,6 +614,10 @@ const sendDiscordTest = async (type: 'buy' | 'sell' | 'stoploss' | 'report') => 
       case 'report':
         endpoint = '/notifications/discord/test-daily-report'
         successMsg = '일간 리포트 테스트 DM이 발송되었습니다.'
+        break
+      case 'weight':
+        endpoint = '/notifications/discord/test-weight-change'
+        successMsg = '가중치 변경 테스트 DM이 발송되었습니다.'
         break
     }
     

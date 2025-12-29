@@ -6,8 +6,13 @@ import com.cryptotrading.service.DailyReportService;
 import com.cryptotrading.service.NotificationService;
 import com.cryptotrading.service.EmailService;
 import com.cryptotrading.service.DiscordBotService;
+import com.cryptotrading.service.NewsCollectorService;      
+import com.cryptotrading.service.NewsAnalysisService;       
 import com.cryptotrading.entity.User;
+import com.cryptotrading.entity.TradingSetting;             
 import com.cryptotrading.repository.UserRepository;
+import com.cryptotrading.repository.TradingSettingRepository; 
+import com.cryptotrading.repository.CoinNewsRepository;
 import com.cryptotrading.dto.notification.DailyReportDTO;
 
 import lombok.RequiredArgsConstructor;
@@ -15,10 +20,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Arrays;
 import java.util.List;
-import java.math.RoundingMode;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -31,6 +38,11 @@ public class TradingScheduler {
     private final EmailService emailService;
     private final UserRepository userRepository;
     private final DiscordBotService discordBotService;
+
+    private final NewsCollectorService newsCollectorService;
+    private final NewsAnalysisService newsAnalysisService;
+    private final CoinNewsRepository coinNewsRepository;
+    private final TradingSettingRepository tradingSettingRepository;
     
     // 업비트 점검 시간 (매일 09:00 ~ 09:10 KST)
     private static final LocalTime MAINTENANCE_START = LocalTime.of(9, 0);
@@ -160,4 +172,106 @@ public class TradingScheduler {
     
          log.info("========== 일일 리포트 발송 완료 ==========");
      }
+
+    // ======================================================
+    // AI 뉴스 분석 스케줄러
+    // ======================================================
+
+    /**
+     * 매일 00:00 KST - AI 가중치 초기화
+     */
+    @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
+    public void resetAiWeights() {
+        log.info("====== AI 가중치 초기화 시작 (매일 00:00 KST) ======");
+        try {
+            newsAnalysisService.resetAllWeights();
+            log.info("✅ AI 가중치 초기화 완료");
+        } catch (Exception e) {
+            log.error("❌ AI 가중치 초기화 실패: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 3시간마다 - 뉴스 수집 및 AI 분석
+     * 실행 시간: 00:00, 03:00, 06:00, 09:00, 12:00, 15:00, 18:00, 21:00 KST
+     */
+    @Scheduled(cron = "0 0 */3 * * *", zone = "Asia/Seoul")
+    public void collectAndAnalyzeNews() {
+        log.info("====== 뉴스 수집 및 AI 분석 시작 (3시간마다) ======");
+        
+        try {
+            // 1. 뉴스 수집
+            log.info("📰 뉴스 수집 시작...");
+            List<String> targetCoins = getActiveUserCoins();
+            
+            if (targetCoins.isEmpty()) {
+                log.info("활성 사용자의 투자 코인이 없습니다. 스킵.");
+                return;
+            }
+            
+            // List를 받아서 size() 호출
+            List<?> collected = newsCollectorService.collectAllNews(targetCoins);
+            int collectedCount = collected.size();
+            log.info("📰 뉴스 수집 완료: {}건", collectedCount);
+            
+            // 2. AI 분석 실행 (각 사용자별로)
+            log.info("🤖 AI 뉴스 분석 시작...");
+            analyzeNewsForAllUsers();
+            
+            log.info("====== 뉴스 수집 및 AI 분석 완료 ======");
+            
+        } catch (Exception e) {
+            log.error("❌ 뉴스 수집/분석 실패: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 매일 04:00 KST - 오래된 뉴스 데이터 정리 (시스템 점검 시간)
+     */
+    @Scheduled(cron = "0 0 4 * * *", zone = "Asia/Seoul")
+    public void cleanupOldNews() {
+        log.info("====== 뉴스 데이터 정리 시작 (매일 04:00 KST) ======");
+        try {
+            int deleted = newsCollectorService.cleanupOldNews();
+            log.info("✅ 오래된 뉴스 삭제 완료: {}건", deleted);
+        } catch (Exception e) {
+            log.error("❌ 뉴스 데이터 정리 실패: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 활성 사용자들의 투자 코인 목록 조회
+     */
+    private List<String> getActiveUserCoins() {
+        List<TradingSetting> settings = tradingSettingRepository.findAll();
+        return settings.stream()
+                .filter(s -> s.getCoinSymbols() != null && !s.getCoinSymbols().isEmpty())
+                .flatMap(s -> s.getCoinSymbols().stream())
+                .map(String::trim)
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * 모든 활성 사용자에 대해 AI 분석 실행
+     */
+    private void analyzeNewsForAllUsers() {
+        List<TradingSetting> settings = tradingSettingRepository.findAll();
+        
+        for (TradingSetting setting : settings) {
+            if (setting.getUseAiAnalysis() == null || !setting.getUseAiAnalysis()) {
+                continue; // AI 분석 비활성화된 사용자 스킵
+            }
+            
+            String userId = setting.getUser().getUserId();
+
+            for (String coin : setting.getCoinSymbols()) {
+                try {
+                    newsAnalysisService.analyzeNewsForCoin(userId, coin.trim());
+                } catch (Exception e) {
+                    log.error("사용자 {} 코인 {} 분석 실패: {}", userId, coin, e.getMessage());
+                }
+            }
+        }
+    }
 }

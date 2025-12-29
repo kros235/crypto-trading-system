@@ -47,7 +47,12 @@
         title="백테스팅"
         @click="$router.push('/backtest')"
       />
-
+      
+     <v-list-item
+        prepend-icon="mdi-newspaper"
+        title="코인 뉴스"
+        @click="$router.push('/news')"
+      />
       <v-divider class="my-2" />
 
       <v-list-item

@@ -2,6 +2,7 @@ package com.cryptotrading.dto.news;
 
 import com.cryptotrading.entity.CoinNews;
 import lombok.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
@@ -19,6 +20,8 @@ public class CoinNewsDTO {
     private String sourceUrl;
     private LocalDateTime publishedAt;
     private LocalDateTime collectedAt;
+    private Boolean analyzed;
+    private BigDecimal sentimentScore;
     
     public static CoinNewsDTO fromEntity(CoinNews entity) {
         return CoinNewsDTO.builder()
@@ -30,6 +33,8 @@ public class CoinNewsDTO {
                 .sourceUrl(entity.getSourceUrl())
                 .publishedAt(entity.getPublishedAt())
                 .collectedAt(entity.getCollectedAt())
+                .analyzed(entity.getAnalyzed())           
+                .sentimentScore(entity.getSentimentScore())
                 .build();
     }
     

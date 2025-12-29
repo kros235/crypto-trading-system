@@ -15,6 +15,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
+import com.cryptotrading.dto.common.ApiResponse;
+import com.cryptotrading.exception.EntityNotFoundException;
+import io.swagger.v3.oas.annotations.Operation;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 import com.cryptotrading.service.DiscordBotService;
 
 import java.util.HashMap;
@@ -243,7 +249,7 @@ public class NotificationController {
         return ResponseEntity.ok(response);
     }
 
-    // ★★★ 추가: Discord DM 테스트 API ★★★
+    // Discord DM 테스트 API
     /**
      * Discord DM 테스트 발송
      */
@@ -292,7 +298,7 @@ public class NotificationController {
         return ResponseEntity.ok(status);
     }
 
-    // ★★★ 추가: 일일 리포트 DM 테스트 API ★★★
+    // 일일 리포트 DM 테스트 API
     /**
      * 일일 리포트 DM 테스트 발송
      */
@@ -340,7 +346,7 @@ public class NotificationController {
         }
     }
 
-    // ★★★ 추가: 매수 알림 DM 테스트 API ★★★
+    // 매수 알림 DM 테스트 API
     /**
      * 매수 알림 DM 테스트 발송
      */
@@ -373,7 +379,7 @@ public class NotificationController {
         return ResponseEntity.ok(response);
     }
 
-    // ★★★ 추가: 매도 알림 DM 테스트 API ★★★
+    // 매도 알림 DM 테스트 API
     /**
      * 매도 알림 DM 테스트 발송
      */
@@ -407,7 +413,7 @@ public class NotificationController {
         return ResponseEntity.ok(response);
     }
 
-    // ★★★ 추가: 손절매 알림 DM 테스트 API ★★★
+    // 손절매 알림 DM 테스트 AP
     /**
      * 손절매 알림 DM 테스트 발송
      */
@@ -438,6 +444,93 @@ public class NotificationController {
         
         response.put("success", true);
         response.put("message", "손절매 알림 테스트 DM이 발송되었습니다.");
+        return ResponseEntity.ok(response);
+    }
+
+     // 가중치 변경 테스트 이메일 발송
+    @PostMapping("/email/test-weight-change")
+    @Operation(summary = "가중치 변경 테스트 이메일", description = "AI 뉴스 분석 가중치 변경 테스트 이메일을 발송합니다.")
+    public ResponseEntity<Map<String, Object>> sendWeightChangeTestEmail(
+            @AuthenticationPrincipal String userId) {
+        
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        if (user.getEmail() == null || user.getEmail().isEmpty()) {
+            response.put("success", false);
+            response.put("message", "이메일이 등록되어 있지 않습니다.");
+            return ResponseEntity.badRequest().body(response);
+        }
+        
+        String subject = "📰 AI 뉴스 분석 결과 - KRW-BTC (테스트)";
+        String htmlContent = String.format("""
+            <h3>🔹 분석 시간: %s KST</h3>
+            <p>🔹 분석 뉴스: 5건</p>
+            <p>🔹 평균 점수: +0.65 (POSITIVE)</p>
+            <p>🔹 가중치 변경: 0.00%% → +0.33%%</p>
+            <br>
+            <h4>📊 지표 변경</h4>
+            <p>- buyThresholdPct 조정: +0.33%%</p>
+            <br>
+            <h4>📰 주요 뉴스</h4>
+            <p>1. [CoinTelegraph] Bitcoin ETF sees record inflows</p>
+            <p>2. [Bitcoin_Magazine] MicroStrategy buys more BTC</p>
+            <p>3. [Decrypt] Institutional investors increase crypto holdings</p>
+            <br>
+            <p style="color: #888;">※ 이 메일은 테스트 목적으로 발송되었습니다.</p>
+            """, java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+        
+        boolean result = emailService.sendSystemAlert(user.getEmail(), subject, htmlContent);
+        
+        response.put("success", result);
+        response.put("message", result ? "가중치 변경 테스트 이메일이 발송되었습니다." : "이메일 발송에 실패했습니다.");
+        return ResponseEntity.ok(response);
+    }
+
+    // 가중치 변경 테스트 Discord DM 발송
+    @PostMapping("/discord/test-weight-change")
+    @Operation(summary = "가중치 변경 테스트 Discord DM", description = "AI 뉴스 분석 가중치 변경 테스트 DM을 발송합니다.")
+    public ResponseEntity<Map<String, Object>> sendWeightChangeTestDiscord(
+            @AuthenticationPrincipal String userId) {
+        
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        if (user.getDiscordUserId() == null || user.getDiscordUserId().isEmpty()) {
+            response.put("success", false);
+            response.put("message", "Discord User ID가 등록되어 있지 않습니다.");
+            return ResponseEntity.badRequest().body(response);
+        }
+        
+        if (!discordBotService.isEnabled()) {
+            response.put("success", false);
+            response.put("message", "Discord Bot이 비활성화 상태입니다.");
+            return ResponseEntity.badRequest().body(response);
+        }
+        
+        String subject = "📰 AI 뉴스 분석 결과 - KRW-BTC (테스트)";
+        StringBuilder message = new StringBuilder();
+        message.append(String.format("🔹 분석 시간: %s KST\n", 
+                java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))));
+        message.append("🔹 분석 뉴스: 5건\n");
+        message.append("🔹 평균 점수: +0.65 (POSITIVE)\n");
+        message.append("🔹 가중치 변경: 0.00% → +0.33%\n");
+        message.append("\n📊 지표 변경\n");
+        message.append("- buyThresholdPct 조정: +0.33%\n");
+        message.append("\n📰 주요 뉴스\n");
+        message.append("1. [CoinTelegraph] Bitcoin ETF sees record inflows\n");
+        message.append("2. [Bitcoin_Magazine] MicroStrategy buys more BTC\n");
+        message.append("3. [Decrypt] Institutional investors increase crypto holdings\n");
+        message.append("\n※ 이 메시지는 테스트 목적으로 발송되었습니다.");
+        
+        boolean result = discordBotService.sendSystemAlertDM(user.getDiscordUserId(), subject, message.toString());
+        
+        response.put("success", result);
+        response.put("message", result ? "가중치 변경 테스트 DM이 발송되었습니다." : "Discord DM 발송에 실패했습니다.");
         return ResponseEntity.ok(response);
     }
 }

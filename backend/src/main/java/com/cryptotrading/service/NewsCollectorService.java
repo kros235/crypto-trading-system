@@ -6,6 +6,8 @@ import com.cryptotrading.entity.CoinNews;
 import com.cryptotrading.repository.CoinNewsRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;     
+import org.springframework.data.domain.Pageable; 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.w3c.dom.Document;
@@ -238,6 +240,57 @@ public class NewsCollectorService {
         int deleted = coinNewsRepository.deleteOldNews(threshold);
         log.info("오래된 뉴스 {} 건 삭제됨", deleted);
         return deleted;
+    }
+
+    /**
+     * 뉴스 검색 (페이징, 필터링)
+     */
+    public Page<CoinNewsDTO> searchNews(String coinSymbol, String keyword, Pageable pageable) {
+        Page<CoinNews> newsPage;
+        
+        if (coinSymbol != null && !coinSymbol.isEmpty() && keyword != null && !keyword.isEmpty()) {
+            // 코인 + 키워드 검색
+            newsPage = coinNewsRepository.findByCoinSymbolAndTitleContainingIgnoreCase(
+                    coinSymbol, keyword, pageable);
+        } else if (coinSymbol != null && !coinSymbol.isEmpty()) {
+            // 코인만 필터링
+            newsPage = coinNewsRepository.findByCoinSymbol(coinSymbol, pageable);
+        } else if (keyword != null && !keyword.isEmpty()) {
+            // 키워드만 검색
+            newsPage = coinNewsRepository.findByTitleContainingIgnoreCase(keyword, pageable);
+        } else {
+            // 전체 조회
+            newsPage = coinNewsRepository.findAll(pageable);
+        }
+        
+        return newsPage.map(this::convertToDTO);
+    }
+    
+    /**
+     * ⭐ [추가] 뉴스 ID로 조회
+     */
+    public CoinNewsDTO getNewsById(Long newsId) {
+        return coinNewsRepository.findById(newsId)
+                .map(this::convertToDTO)
+                .orElse(null);
+    }
+    
+    /**
+     * Entity → DTO 변환
+     */
+    private CoinNewsDTO convertToDTO(CoinNews entity) {
+        return CoinNewsDTO.builder()
+                .id(entity.getId())
+                .coinSymbol(entity.getCoinSymbol())
+                .title(entity.getTitle())
+                .summary(entity.getSummary())
+                .source(entity.getSource())
+                .sourceUrl(entity.getSourceUrl())
+                .publishedAt(entity.getPublishedAt())
+                .collectedAt(entity.getCollectedAt())
+                .analyzed(entity.getAnalyzed())
+                .sentimentScore(entity.getSentimentScore())
+                .build();
     }
     
     // === 유틸리티 메서드 ===

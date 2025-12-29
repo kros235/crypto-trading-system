@@ -25,13 +25,14 @@ public class SignalDetectorService {
 
     private final TechnicalIndicatorService indicatorService;
     private final TransactionRepository transactionRepository;
+    private final NewsAnalysisService newsAnalysisService;
     
     private static final int SCALE = 8;
 
     /**
-     * 매수 신호 감지
+     * 매수 신호 감지 + AI 가중치 반영
      */
-    public TradingSignalDTO detectBuySignal(String market, TradingSetting setting) {
+    public TradingSignalDTO detectBuySignal(String market, TradingSetting setting, String userId) {
         log.debug("매수 신호 감지 시작: {}", market);
         
         IndicatorResultDTO indicators = indicatorService.calculateIndicators(
@@ -55,12 +56,35 @@ public class SignalDetectorService {
         // 조건 1: 이동평균선 기준 하락률 체크
         BigDecimal ma = getMAByPeriod(indicators, setting.getBasePeriod());
         BigDecimal dropRate = calculateDropRate(indicators.getCurrentPrice(), ma);
-        BigDecimal threshold = setting.getBuyThresholdPct();  // 음수값 (예: -5)
+        BigDecimal baseThreshold = setting.getBuyThresholdPct();  // 음수값 (예: -5)
+        
+        // ⭐⭐⭐ [추가] AI 가중치 적용 ⭐⭐⭐
+        BigDecimal aiWeight = BigDecimal.ZERO;
+        if (setting.getUseAiAnalysis() != null && setting.getUseAiAnalysis()) {
+            try {
+                aiWeight = newsAnalysisService.getWeightAdjustment(userId, market);
+                log.debug("AI 가중치 적용 - 코인: {}, 가중치: {}%", market, aiWeight);
+            } catch (Exception e) {
+                log.warn("AI 가중치 조회 실패 (기본값 0% 사용): {}", e.getMessage());
+            }
+        }
+        
+        // 최종 매수 기준값 = 기본값 + AI 가중치
+        // 예: -5% + 0.5% = -4.5% (호재 시 매수 조건 완화)
+        // 예: -5% + (-0.5%) = -5.5% (악재 시 매수 조건 강화)
+        BigDecimal threshold = baseThreshold.add(aiWeight);
+        // ⭐⭐⭐ [추가 끝] ⭐⭐⭐
         
         if (dropRate.compareTo(threshold) <= 0) {
             conditionsMet++;
-            reasons.add(String.format("MA%d 대비 %.2f%% 하락 (기준: %.2f%%)", 
-                    setting.getBasePeriod(), dropRate, threshold));
+            // ⭐ [수정] AI 가중치 정보 추가
+            String reasonMsg = String.format("MA%d 대비 %.2f%% 하락 (기준: %.2f%%", 
+                    setting.getBasePeriod(), dropRate, threshold);
+            if (aiWeight.compareTo(BigDecimal.ZERO) != 0) {
+                reasonMsg += String.format(", AI가중치: %+.1f%%", aiWeight);
+            }
+            reasonMsg += ")";
+            reasons.add(reasonMsg);
         }
         
         // 조건 2: RSI 과매도 신호
@@ -107,6 +131,13 @@ public class SignalDetectorService {
         }
         
         return createHoldSignal(market, "매수 조건 미충족");
+    }
+
+    /**
+     * ⭐ [추가] 기존 호환성 유지용 오버로드 (userId 없이 호출 시)
+     */
+    public TradingSignalDTO detectBuySignal(String market, TradingSetting setting) {
+        return detectBuySignal(market, setting, null);
     }
 
     /**

@@ -18,6 +18,11 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.cryptotrading.dto.news.NewsAnalysisResultDTO;
 import com.cryptotrading.service.NewsAnalysisService;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+
 @RestController
 @RequestMapping("/api/news")
 @RequiredArgsConstructor
@@ -115,6 +120,54 @@ public class NewsController {
                 "weightAdjustment", weight,
                 "weightPercent", weight.doubleValue() + "%"
         )));
+    }
+
+     /**
+     * 뉴스 목록 조회 (페이징, 필터링, 검색)
+     */
+    @GetMapping("/list")
+    @Operation(summary = "뉴스 목록 조회", description = "페이징, 필터링, 검색을 지원하는 뉴스 목록 조회")
+    public ResponseEntity<ApiResponse<Page<CoinNewsDTO>>> getNewsList(
+            @RequestParam(required = false) String coinSymbol,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "publishedAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        
+        log.info("뉴스 목록 조회 - coin: {}, keyword: {}, page: {}, size: {}", 
+                coinSymbol, keyword, page, size);
+        
+        Sort sort = sortDir.equalsIgnoreCase("asc") 
+                ? Sort.by(sortBy).ascending() 
+                : Sort.by(sortBy).descending();
+        
+        Pageable pageable = PageRequest.of(page, size, sort);
+        
+        Page<CoinNewsDTO> result = newsCollectorService.searchNews(coinSymbol, keyword, pageable);
+        
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
+    
+    /**
+     * ⭐ [추가] 뉴스 상세 조회
+     */
+    @GetMapping("/{newsId}")
+    @Operation(summary = "뉴스 상세 조회", description = "특정 뉴스의 상세 정보를 조회합니다.")
+    public ResponseEntity<ApiResponse<CoinNewsDTO>> getNewsDetail(@PathVariable Long newsId) {
+        
+        CoinNewsDTO news = newsCollectorService.getNewsById(newsId);
+        
+        if (news == null) {
+            return ResponseEntity.ok(ApiResponse.error(
+                ApiResponse.ErrorResponse.builder()
+                    .code("NEWS_NOT_FOUND")
+                    .message("뉴스를 찾을 수 없습니다.")
+                    .build()
+            ));
+        }
+        
+        return ResponseEntity.ok(ApiResponse.success(news));
     }
     
     /**

@@ -24,6 +24,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import com.cryptotrading.entity.User;
+import com.cryptotrading.repository.UserRepository;
+import java.time.format.DateTimeFormatter;
+
+import com.cryptotrading.service.DiscordBotService;
+import com.cryptotrading.service.EmailService;
+
 /**
  * 뉴스 분석 서비스
  * Day 25: AI 뉴스 분석 - Gemini API 연동 (2025-12-29)
@@ -38,6 +45,10 @@ public class NewsAnalysisService {
     private final CoinNewsRepository coinNewsRepository;
     private final CoinNewsAnalysisRepository coinNewsAnalysisRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private final DiscordBotService discordBotService;
+    private final EmailService emailService;
+    private final UserRepository userRepository;
     
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
     
@@ -125,6 +136,12 @@ public class NewsAnalysisService {
         CoinNewsAnalysis.Sentiment sentimentEnum = averageScore > 0.2 ? CoinNewsAnalysis.Sentiment.POSITIVE : 
                           (averageScore < -0.2 ? CoinNewsAnalysis.Sentiment.NEGATIVE : CoinNewsAnalysis.Sentiment.NEUTRAL);
         double weightAdjustment = averageScore * 0.5; // -0.5% ~ +0.5%
+
+        // 기존 가중치 조회 (알림용) - 저장 전에 조회
+        BigDecimal oldWeight = existingAnalysis.isPresent() 
+                ? existingAnalysis.get().getWeightAdjustment() 
+                : BigDecimal.ZERO;
+        BigDecimal newWeight = BigDecimal.valueOf(weightAdjustment).setScale(4, RoundingMode.HALF_UP);
         
         CoinNewsAnalysis analysis = existingAnalysis.orElse(new CoinNewsAnalysis());
         analysis.setUserId(userId);
@@ -133,7 +150,7 @@ public class NewsAnalysisService {
         analysis.setNewsCount(allCount);
         analysis.setAverageScore(BigDecimal.valueOf(averageScore).setScale(2, RoundingMode.HALF_UP));
         analysis.setSentiment(sentimentEnum);
-        analysis.setWeightAdjustment(BigDecimal.valueOf(weightAdjustment).setScale(4, RoundingMode.HALF_UP));
+        analysis.setWeightAdjustment(newWeight);
         analysis.setSummary(String.format("%d건 분석 완료 (신규 %d건)", allCount, analyzedCount));
         analysis.setAnalyzedAt(LocalDateTime.now());
         
@@ -141,18 +158,23 @@ public class NewsAnalysisService {
         
         log.info("✅ 뉴스 분석 완료 - 신규 {}건 분석, 전체 {}건, 평균점수: {}, 감성: {}", 
                 analyzedCount, allCount, String.format("%.2f", averageScore), sentimentEnum);
-        
-        // 9. DTO 반환
-        return NewsAnalysisResultDTO.builder()
+
+        // 9. DTO 생성 (알림 발송 전에 먼저 생성)
+        NewsAnalysisResultDTO resultDTO = NewsAnalysisResultDTO.builder()
                 .coinSymbol(coinSymbol)
                 .newsCount(allCount)
                 .averageScore(BigDecimal.valueOf(averageScore).setScale(2, RoundingMode.HALF_UP))
-                .weightAdjustment(BigDecimal.valueOf(weightAdjustment).setScale(4, RoundingMode.HALF_UP))
+                .weightAdjustment(newWeight)
                 .sentiment(sentimentEnum.name())
                 .summary(analysis.getSummary())
                 .analyzedNewsList(analyzedNewsList)
                 .analyzedAt(LocalDateTime.now(KST))
                 .build();
+
+        // 결과 저장 후 알림 발송 - DTO 생성 후 호출
+        sendWeightChangeNotification(userId, coinSymbol, oldWeight, newWeight, resultDTO);
+        
+        return resultDTO;
     }
     
     /**
@@ -353,5 +375,67 @@ public class NewsAnalysisService {
      */
     public String getApiStatus() {
         return geminiApiService.getStatus();
+    }
+
+     /**
+     * 가중치 변경 알림 발송
+     */
+    private void sendWeightChangeNotification(String userId, String coinSymbol, 
+            BigDecimal oldWeight, BigDecimal newWeight, NewsAnalysisResultDTO result) {
+        
+        // 가중치가 변경되지 않았으면 알림 안 보냄
+        if (oldWeight.compareTo(newWeight) == 0) {
+            return;
+        }
+        
+        try {
+            User user = userRepository.findById(userId).orElse(null);
+            if (user == null) return;
+            
+            String title = String.format("📰 AI 뉴스 분석 결과 - %s", coinSymbol);
+            
+            StringBuilder message = new StringBuilder();
+            message.append(String.format("🔹 분석 시간: %s KST\n", 
+                    LocalDateTime.now(KST).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))));
+            message.append(String.format("🔹 분석 뉴스: %d건\n", result.getNewsCount()));
+            message.append(String.format("🔹 평균 점수: %.1f (%s)\n", 
+                    result.getAverageScore(), result.getSentiment()));
+            message.append(String.format("🔹 가중치 변경: %.1f%% → %.1f%%\n", oldWeight, newWeight));
+            message.append("\n📊 지표 변경\n");
+            message.append(String.format("- buyThresholdPct 조정: %+.1f%%\n", newWeight));
+            
+            if (result.getAnalyzedNewsList() != null && !result.getAnalyzedNewsList().isEmpty()) {
+                message.append("\n📰 주요 뉴스\n");
+                int count = 0;
+                for (var news : result.getAnalyzedNewsList()) {
+                    if (count >= 3) break; // 최대 3개만
+                    message.append(String.format("%d. [%s] %s\n", 
+                            ++count, news.getSource(), 
+                            truncateTitle(news.getTitle(), 50)));
+                }
+            }
+            
+            // discordBotService 직접 사용
+            if (user.getDiscordUserId() != null && !user.getDiscordUserId().isEmpty()) {
+                discordBotService.sendSystemAlertDM(user.getDiscordUserId(), title, message.toString());
+            }
+
+            
+            // emailService 직접 사용
+            if (user.getEmail() != null && !user.getEmail().isEmpty()) {
+                String htmlContent = message.toString().replace("\n", "<br>");
+                emailService.sendSystemAlert(user.getEmail(), title, htmlContent);
+            }
+            
+            log.info("✅ 가중치 변경 알림 발송 완료 - userId: {}, coin: {}", userId, coinSymbol);
+            
+        } catch (Exception e) {
+            log.error("가중치 변경 알림 발송 실패: {}", e.getMessage());
+        }
+    }
+    
+    private String truncateTitle(String title, int maxLength) {
+        if (title == null) return "";
+        return title.length() > maxLength ? title.substring(0, maxLength) + "..." : title;
     }
 }

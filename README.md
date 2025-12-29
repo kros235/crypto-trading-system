@@ -1578,56 +1578,71 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 - ✅ 일일 리포트 손익 상세 폰트 크기 - 브라우저
 - ✅ 일일 리포트 코인별 현황 테이블 폰트 크기 - 브라우저
 
-README.md 파일의 현재 내용을 확인했습니다. Day 24 작업 완료를 반영하기 위해 수정이 필요한 부분을 정리해 드립니다.
+---
 
-📝 README.md 수정 내용
-1️⃣ 현재 진행 상황 섹션 (상단)
-📍 위치: ## 📊 현재 진행 상황 섹션
-기존 내용:
-markdown## 📊 현재 진행 상황
-- **전체 진척도**: 약 92%
-- **Phase 1 (핵심 기능)**: 100% 완료 ✅
-- **Phase 2 (고도화)**: 100% 완료 ✅
-- **Phase 3 (안정화)**: 65% 진행 중 🔄
-- **Phase 4 (운영 준비)**: 30% 진행 중 🔄
-⬇️ 수정 후: (변경 부분 강조)
-markdown## 📊 현재 진행 상황
-- **전체 진척도**: 약 **94%**
-- **Phase 1 (핵심 기능)**: 100% 완료 ✅
-- **Phase 2 (고도화)**: 100% 완료 ✅
-- **Phase 3 (안정화)**: **70%** 진행 중 🔄
-- **Phase 4 (운영 준비)**: **40%** 진행 중 🔄
+### ✅ Day 24 (2025-12-29) - AI 뉴스 분석 기반 구축
+**완료 항목:**
+- DB 스키마 추가
+  - coin_news: 수집된 뉴스 저장 테이블
+  - coin_news_analysis: 뉴스 분석 결과 테이블
+  - 인덱스: coin_symbol, published_at, user_id, analysis_date
+- Entity/DTO 생성
+  - CoinNews Entity: 뉴스 데이터 엔티티
+  - CoinNewsAnalysis Entity: 분석 결과 엔티티 (Sentiment enum 포함)
+  - CoinNewsDTO, CoinNewsAnalysisDTO, RssNewsItem DTO
+- Repository 구현
+  - CoinNewsRepository: 당일 뉴스 조회, 중복 체크, 7일 초과 삭제
+  - CoinNewsAnalysisRepository: 사용자별 분석 결과 관리, 가중치 초기화
+- 뉴스 수집 서비스 (NewsCollectorService)
+  - RSS Feed 파서 구현
+  - CoinTelegraph: ✅ 정상 동작 (30건 수신)
+  - CoinDesk: ⚠️ RSS 형식 변경으로 파싱 불가 (제외)
+  - 코인 키워드 매칭 (BTC, ETH 등 10개 코인)
+  - KST 기준 당일 뉴스만 필터링
+  - 중복 뉴스 제거 (제목 + 출처 기준)
+- 뉴스 API (NewsController)
+  - POST /api/news/collect: 수동 뉴스 수집 (관리자)
+  - GET /api/news/today/{symbol}: 당일 뉴스 조회
+  - DELETE /api/news/cleanup: 7일 초과 데이터 삭제 (관리자)
 
-2️⃣ Day 24 일정 표 업데이트
-📍 위치: #### Day 24: AI 뉴스 분석 (1) - 기반 구축 섹션
-기존 내용:
-markdown#### Day 24: AI 뉴스 분석 (1) - 기반 구축
-| 시간 | 작업 | 상세 |
-|------|------|------|
-| 오전 | DB 스키마 추가 | coin_news_analysis, coin_news 테이블 |
-| 오전 | Entity/DTO 생성 | CoinNewsAnalysis, CoinNews 엔티티 |
-| 오후 | 뉴스 수집 서비스 | RSS Feed 파서 (CoinDesk, CoinTelegraph, Reuters) |
-| 오후 | 당일 뉴스 필터링 | KST 기준 당일 발행 뉴스만 수집 |
-⬇️ 수정 후: (전체 교체)
-markdown#### ✅ Day 24: AI 뉴스 분석 (1) - 기반 구축 (2025-12-29 완료)
-| 시간 | 작업 | 상세 | 상태 |
-|------|------|------|------|
-| 오전 | DB 스키마 추가 | coin_news, coin_news_analysis 테이블 | ✅ 완료 |
-| 오전 | Entity/DTO 생성 | CoinNews, CoinNewsAnalysis 엔티티 | ✅ 완료 |
-| 오후 | 뉴스 수집 서비스 | RSS Feed 파서 (CoinTelegraph) | ✅ 완료 |
-| 오후 | 당일 뉴스 필터링 | KST 기준 당일 발행 뉴스만 수집 | ✅ 완료 |
+**생성된 파일:**
+- `entity/CoinNews.java` - 뉴스 엔티티
+- `entity/CoinNewsAnalysis.java` - 분석 결과 엔티티
+- `dto/news/CoinNewsDTO.java` - 뉴스 DTO
+- `dto/news/CoinNewsAnalysisDTO.java` - 분석 결과 DTO
+- `dto/news/RssNewsItem.java` - RSS 아이템 DTO
+- `repository/CoinNewsRepository.java` - 뉴스 Repository
+- `repository/CoinNewsAnalysisRepository.java` - 분석 Repository
+- `service/NewsCollectorService.java` - 뉴스 수집 서비스
+- `controller/NewsController.java` - 뉴스 API
 
-3️⃣ 일정 요약 테이블 업데이트
-📍 위치: ### 📊 일정 요약 섹션
-기존 내용:
-markdown| 24 | AI 뉴스 분석 - 기반 구축 | 🟢 선택 |
-⬇️ 수정 후:
-markdown| 24 | ✅ AI 뉴스 분석 - 기반 구축 | ✅ 완료 |
+**수정된 파일:**
+- `docker/mysql/init.sql` - coin_news, coin_news_analysis 테이블 추가
+- `application.yml` - news.collection 설정 추가
+- `SecurityConfig.java` - /api/news/today/** permitAll 추가
 
-4️⃣ Day 24 완료 기록 추가 (가장 중요!)
-📍 위치: ### ✅ Day 23 (2025-12-26) 완료 기록 아래에 추가
-Day 23 완료 기록이 끝나는 부분 (--- 구분선) 바로 다음에 아래 내용을 추가:
+**API 엔드포인트:**
+| Method | Endpoint | 인증 | 설명 |
+|--------|----------|------|------|
+| POST | /api/news/collect | 🔐 Admin | 뉴스 수동 수집 |
+| GET | /api/news/today/{symbol} | ❌ | 당일 뉴스 조회 |
+| DELETE | /api/news/cleanup | 🔐 Admin | 오래된 뉴스 삭제 |
 
+**테스트 완료:**
+- ✅ 테이블 생성 확인 (coin_news, coin_news_analysis) - MySQL
+- ✅ 뉴스 수동 수집 (BTC 8건, ETH 2건 = 총 10건) - Postman
+- ✅ 당일 뉴스 조회 - Postman
+- ✅ 중복 수집 방지 (두 번째 수집 시 0건) - Postman
+- ✅ CoinTelegraph RSS 파싱 (30건 수신) - 로그 확인
+
+**알려진 이슈:**
+- CoinDesk RSS: 형식 변경으로 파싱 불가 (CoinTelegraph만 사용)
+- Docker 로그 한글 인코딩: 깨짐 (기능에 영향 없음)
+
+**수집된 뉴스 예시:**
+- "Bitfinex whales go long BTC for 2026" (CoinTelegraph)
+- "Bitcoin helps USD's reserve status: Coinbase CEO" (CoinTelegraph)
+- "Trend Research lifts ETH holdings to $1.8B" (CoinTelegraph)
 
 ---
 

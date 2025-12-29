@@ -49,7 +49,7 @@ public class SecurityConfig {
                 // 공개 엔드포인트
                 .requestMatchers("/api/health", "/api/health/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
-	  .requestMatchers("/api/upbit/test/**").permitAll() // ← 추가
+	  .requestMatchers("/api/upbit/test/**").permitAll() 
 	  // 코인 정보 조회는 인증 필요 없음
 	  .requestMatchers("/api/coins/active").permitAll()
 	  .requestMatchers("/api/coins/*/price").permitAll()
@@ -82,6 +82,8 @@ public class SecurityConfig {
 
 	  .requestMatchers("/api/admin/**").hasRole("ADMIN")
 	  .requestMatchers("/api/notifications/email/**").authenticated()
+
+                .requestMatchers("/api/news/today/**").permitAll()  // 뉴스 조회는 공개
 
                 // 나머지는 인증 필요
                 .anyRequest().authenticated()

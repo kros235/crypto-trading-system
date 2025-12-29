@@ -1578,16 +1578,67 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 - ✅ 일일 리포트 손익 상세 폰트 크기 - 브라우저
 - ✅ 일일 리포트 코인별 현황 테이블 폰트 크기 - 브라우저
 
----
+README.md 파일의 현재 내용을 확인했습니다. Day 24 작업 완료를 반영하기 위해 수정이 필요한 부분을 정리해 드립니다.
 
-
-
-## 📊 현재 진행 상황
+📝 README.md 수정 내용
+1️⃣ 현재 진행 상황 섹션 (상단)
+📍 위치: ## 📊 현재 진행 상황 섹션
+기존 내용:
+markdown## 📊 현재 진행 상황
 - **전체 진척도**: 약 92%
 - **Phase 1 (핵심 기능)**: 100% 완료 ✅
 - **Phase 2 (고도화)**: 100% 완료 ✅
 - **Phase 3 (안정화)**: 65% 진행 중 🔄
 - **Phase 4 (운영 준비)**: 30% 진행 중 🔄
+⬇️ 수정 후: (변경 부분 강조)
+markdown## 📊 현재 진행 상황
+- **전체 진척도**: 약 **94%**
+- **Phase 1 (핵심 기능)**: 100% 완료 ✅
+- **Phase 2 (고도화)**: 100% 완료 ✅
+- **Phase 3 (안정화)**: **70%** 진행 중 🔄
+- **Phase 4 (운영 준비)**: **40%** 진행 중 🔄
+
+2️⃣ Day 24 일정 표 업데이트
+📍 위치: #### Day 24: AI 뉴스 분석 (1) - 기반 구축 섹션
+기존 내용:
+markdown#### Day 24: AI 뉴스 분석 (1) - 기반 구축
+| 시간 | 작업 | 상세 |
+|------|------|------|
+| 오전 | DB 스키마 추가 | coin_news_analysis, coin_news 테이블 |
+| 오전 | Entity/DTO 생성 | CoinNewsAnalysis, CoinNews 엔티티 |
+| 오후 | 뉴스 수집 서비스 | RSS Feed 파서 (CoinDesk, CoinTelegraph, Reuters) |
+| 오후 | 당일 뉴스 필터링 | KST 기준 당일 발행 뉴스만 수집 |
+⬇️ 수정 후: (전체 교체)
+markdown#### ✅ Day 24: AI 뉴스 분석 (1) - 기반 구축 (2025-12-29 완료)
+| 시간 | 작업 | 상세 | 상태 |
+|------|------|------|------|
+| 오전 | DB 스키마 추가 | coin_news, coin_news_analysis 테이블 | ✅ 완료 |
+| 오전 | Entity/DTO 생성 | CoinNews, CoinNewsAnalysis 엔티티 | ✅ 완료 |
+| 오후 | 뉴스 수집 서비스 | RSS Feed 파서 (CoinTelegraph) | ✅ 완료 |
+| 오후 | 당일 뉴스 필터링 | KST 기준 당일 발행 뉴스만 수집 | ✅ 완료 |
+
+3️⃣ 일정 요약 테이블 업데이트
+📍 위치: ### 📊 일정 요약 섹션
+기존 내용:
+markdown| 24 | AI 뉴스 분석 - 기반 구축 | 🟢 선택 |
+⬇️ 수정 후:
+markdown| 24 | ✅ AI 뉴스 분석 - 기반 구축 | ✅ 완료 |
+
+4️⃣ Day 24 완료 기록 추가 (가장 중요!)
+📍 위치: ### ✅ Day 23 (2025-12-26) 완료 기록 아래에 추가
+Day 23 완료 기록이 끝나는 부분 (--- 구분선) 바로 다음에 아래 내용을 추가:
+
+
+---
+
+
+
+## 📊 현재 진행 상황
+- **전체 진척도**: 약 **94%**
+- **Phase 1 (핵심 기능)**: 100% 완료 ✅
+- **Phase 2 (고도화)**: 100% 완료 ✅
+- **Phase 3 (안정화)**: **70%** 진행 중 🔄
+- **Phase 4 (운영 준비)**: **40%** 진행 중 🔄
 
 ---
 
@@ -1642,13 +1693,13 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 
 ---
 
-#### Day 24: AI 뉴스 분석 (1) - 기반 구축
-| 시간 | 작업 | 상세 |
-|------|------|------|
-| 오전 | DB 스키마 추가 | coin_news_analysis, coin_news 테이블 |
-| 오전 | Entity/DTO 생성 | CoinNewsAnalysis, CoinNews 엔티티 |
-| 오후 | 뉴스 수집 서비스 | RSS Feed 파서 (CoinDesk, CoinTelegraph, Reuters) |
-| 오후 | 당일 뉴스 필터링 | KST 기준 당일 발행 뉴스만 수집 |
+#### ✅ Day 24: AI 뉴스 분석 (1) - 기반 구축 (2025-12-29 완료)
+| 시간 | 작업 | 상세 | 상태 |
+|------|------|------|------|
+| 오전 | DB 스키마 추가 | coin_news, coin_news_analysis 테이블 | ✅ 완료 |
+| 오전 | Entity/DTO 생성 | CoinNews, CoinNewsAnalysis 엔티티 | ✅ 완료 |
+| 오후 | 뉴스 수집 서비스 | RSS Feed 파서 (CoinTelegraph) | ✅ 완료 |
+| 오후 | 당일 뉴스 필터링 | KST 기준 당일 발행 뉴스만 수집 | ✅ 완료 |
 
 ---
 
@@ -1701,7 +1752,7 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 | 21 | ✅ DB 백업, 로그 로테이션, 헬스체크, 시간대 설정 | ✅ 완료 |
 | 22 | ✅ 환경변수 보안, API 재시도, 운영 Docker Compose | ✅ 완료 |
 | 23 | ✅ 모니터링 대시보드, 슬로우 쿼리, 서버 알림 | ✅ 완료 |
-| 24 | AI 뉴스 분석 - 기반 구축 | 🟢 선택 |
+| 24 | ✅ AI 뉴스 분석 - 기반 구축 | ✅ 완료 |
 | 25 | AI 뉴스 분석 - Gemini API 연동 | 🟢 선택 |
 | 26 | AI 뉴스 분석 - 지표 연동 | 🟢 선택 |
 | 27 | 2FA, IP 제한, 보안 점검, 테스트 | 🟢 선택 |
@@ -1986,26 +2037,25 @@ docker-compose down
 ---
 
 ## 📁 프로젝트 구조
-
 ```
 crypto-trading-system/
 ├── scripts/                      # 운영 스크립트
-│   ├── backup-db.ps1      # Windows DB 백업
-│   ├── backup-db.sh        # Linux/Mac DB 백업
-│   ├── restore-db.ps1       # DB 복원
+│   ├── backup-db.ps1             # Windows DB 백업
+│   ├── backup-db.sh              # Linux/Mac DB 백업
+│   ├── restore-db.ps1            # DB 복원
 │   ├── init-ssl.sh               # SSL 인증서 발급 스크립트
 │   ├── archive-transactions.ps1  # ⭐ Day 23: Windows 거래 아카이빙
 │   └── archive-transactions.sh   # ⭐ Day 23: Linux 거래 아카이빙
-├── backups/                    # 백업 저장소
-│   └── mysql/                 # MySQL 백업 파일
+├── backups/                      # 백업 저장소
+│   └── mysql/                    # MySQL 백업 파일
 ├── .env.example                  # 환경변수 템플릿
-├── .env.development            # 개발 환경 설정 (Git 제외)
+├── .env.development              # 개발 환경 설정 (Git 제외)
 ├── .env.production               # 운영 환경 설정 (Git 제외)
-├── docker-compose.yml        # 개발용 Docker Compose
-├── docker-compose.prod.yml # 운영용 Docker Compose
-├── backend/                    # Spring Boot 백엔드
+├── docker-compose.yml            # 개발용 Docker Compose
+├── docker-compose.prod.yml       # ⭐ Day 22: 운영용 Docker Compose
+├── backend/                      # Spring Boot 백엔드
 │   ├── src/main/java/com/cryptotrading/
-│   │   ├── controller/        # REST API 컨트롤러
+│   │   ├── controller/           # REST API 컨트롤러
 │   │   │   ├── AuthController.java
 │   │   │   ├── UserController.java
 │   │   │   ├── CoinController.java
@@ -2014,8 +2064,9 @@ crypto-trading-system/
 │   │   │   ├── BotController.java
 │   │   │   ├── NotificationController.java 
 │   │   │   ├── BacktestController.java    
-│   │   │   └── AdminController.java   
-│   │   ├── service/           # 비즈니스 로직
+│   │   │   ├── AdminController.java
+│   │   │   └── NewsController.java               # ⭐ Day 24: 뉴스 API
+│   │   ├── service/              # 비즈니스 로직
 │   │   │   ├── CacheService.java
 │   │   │   ├── TechnicalIndicatorService.java
 │   │   │   ├── SignalDetectorService.java
@@ -2027,26 +2078,24 @@ crypto-trading-system/
 │   │   │   ├── EmailService.java     
 │   │   │   ├── AdminService.java
 │   │   │   ├── DiscordBotService.java        
-│   │   │   ├── LoginAttemptService.java      		# ⭐ Day 20: 로그인 시도 제한
-│   │   │   ├── MonitoringService.java         		# ⭐ Day 23: 시스템 메트릭 수집
-│   │   │   ├── MonitoringAlertService.java      	# Day 23: 이상징후 감지
-│   │   │   ├── AdminAlertNotificationService.java  	# ⭐ Day 23: Admin 멀티채널 알림 (신규)
-│   │   │   ├── NotificationService.java         		# ⭐ Day 23: sendSystemNotificationSync() 추가
-│   │   │   ├── DiscordBotService.java           		# ⭐ Day 23: sendSystemAlertDM() 추가
-│   │   │   └── EmailService.java                		# ⭐ Day 23: sendSystemAlert() 추가
-│   │   ├── config/            			# 설정 클래스
+│   │   │   ├── LoginAttemptService.java          # ⭐ Day 20: 로그인 시도 제한
+│   │   │   ├── MonitoringService.java            # ⭐ Day 23: 시스템 메트릭 수집
+│   │   │   ├── MonitoringAlertService.java       # ⭐ Day 23: 이상징후 감지
+│   │   │   ├── AdminAlertNotificationService.java # ⭐ Day 23: Admin 멀티채널 알림
+│   │   │   └── NewsCollectorService.java         # ⭐ Day 24: 뉴스 수집 서비스
+│   │   ├── config/               # 설정 클래스
 │   │   │   ├── SecurityConfig.java
 │   │   │   ├── NotificationConfig.java
-│   │   │   ├── SwaggerConfig.java                 	# ⭐ Day 20: Swagger/OpenAPI
-│   │   │   ├── StartupNotificationConfig.java   	# ⭐ Day 23: 서버 시작/종료 알림
-│   │   │   └── security/      			# Security 핸들러
+│   │   │   ├── SwaggerConfig.java                # ⭐ Day 20: Swagger/OpenAPI
+│   │   │   ├── StartupNotificationConfig.java    # ⭐ Day 23: 서버 시작/종료 알림
+│   │   │   └── security/         # Security 핸들러
 │   │   │       ├── CustomAuthenticationEntryPoint.java
 │   │   │       └── CustomAccessDeniedHandler.java
-│   │   ├── filter/            				# 필터
+│   │   ├── filter/               # 필터
 │   │   │   ├── JwtAuthenticationFilter.java
 │   │   │   ├── RateLimitFilter.java
-│   │   │   └── RequestLoggingFilter.java     		# 응답 시간 로깅
-│   │   ├── exception/         			# 예외 처리
+│   │   │   └── RequestLoggingFilter.java         # 응답 시간 로깅
+│   │   ├── exception/            # 예외 처리
 │   │   │   ├── GlobalExceptionHandler.java
 │   │   │   ├── ErrorCode.java             
 │   │   │   ├── BusinessException.java      
@@ -2055,47 +2104,60 @@ crypto-trading-system/
 │   │   │   ├── UnauthorizedException.java 
 │   │   │   ├── UpbitApiException.java     
 │   │   │   └── TradingException.java       
-│   │   ├── scheduler/         			# 스케줄러
+│   │   ├── scheduler/            # 스케줄러
 │   │   │   └── TradingScheduler.java
-│   │   ├── repository/        			# 데이터 접근 계층
-│   │   │      └── UserRepository.java              	# ⭐ Day 23: findByRoleAndIsActive() 추가
-│   │   ├── entity/            			# JPA 엔티티
-│   │   ├── dto/               			# 데이터 전송 객체
-│   │   │   ├── common/        			# 공통 DTO
+│   │   ├── repository/           # 데이터 접근 계층
+│   │   │   ├── UserRepository.java               # ⭐ Day 23: findByRoleAndIsActive() 추가
+│   │   │   ├── TradingSettingRepository.java
+│   │   │   ├── TransactionRepository.java
+│   │   │   ├── CoinInfoRepository.java
+│   │   │   ├── CoinNewsRepository.java           # ⭐ Day 24: 뉴스 Repository
+│   │   │   └── CoinNewsAnalysisRepository.java   # ⭐ Day 24: 분석 Repository
+│   │   ├── entity/               # JPA 엔티티
+│   │   │   ├── User.java
+│   │   │   ├── TradingSetting.java
+│   │   │   ├── Transaction.java
+│   │   │   ├── CoinInfo.java
+│   │   │   ├── CoinNews.java                     # ⭐ Day 24: 뉴스 엔티티
+│   │   │   └── CoinNewsAnalysis.java             # ⭐ Day 24: 분석 결과 엔티티
+│   │   ├── dto/                  # 데이터 전송 객체
+│   │   │   ├── common/           # 공통 DTO
 │   │   │   │   ├── ApiResponse.java
 │   │   │   │   └── PageResponse.java
-│   │   │   ├── indicator/     # 기술적 지표 DTO
-│   │   │   ├── bot/           # 봇 관련 DTO
-│   │   │   ├── upbit/         # 업비트 API DTO
-│   │   │   ├── notification/  # 알림 DTO
-│   │   │   ├── backtest/      # 백테스트 DTO
-│   │   │   └── admin/         # 관리자 DTO
-│   │   │       ├── SystemStatsDTO.java
-│   │   │       ├── AdminUserDTO.java
-│   │   │       └── MonitoringDTO.java        # ⭐ Day 23: 모니터링 DTO
-│   │   ├── filter/            # 필터
-│   │   │   └── JwtAuthenticationFilter.java
-│   │   └── util/              # 유틸리티
+│   │   │   ├── indicator/        # 기술적 지표 DTO
+│   │   │   ├── bot/              # 봇 관련 DTO
+│   │   │   ├── upbit/            # 업비트 API DTO
+│   │   │   ├── notification/     # 알림 DTO
+│   │   │   ├── backtest/         # 백테스트 DTO
+│   │   │   ├── admin/            # 관리자 DTO
+│   │   │   │   ├── SystemStatsDTO.java
+│   │   │   │   ├── AdminUserDTO.java
+│   │   │   │   └── MonitoringDTO.java            # ⭐ Day 23: 모니터링 DTO
+│   │   │   └── news/             # ⭐ Day 24: 뉴스 DTO
+│   │   │       ├── CoinNewsDTO.java              # ⭐ Day 24: 뉴스 DTO
+│   │   │       ├── CoinNewsAnalysisDTO.java      # ⭐ Day 24: 분석 결과 DTO
+│   │   │       └── RssNewsItem.java              # ⭐ Day 24: RSS 아이템 DTO
+│   │   └── util/                 # 유틸리티
 │   │       ├── JwtUtil.java
 │   │       └── EncryptionUtil.java
 │   └── src/main/resources/
-│   │    ├── application.yml
-│   │    ├── logback-spring.xml     # 로그 설정
-│   │    └── templates/email/       # 이메일 템플릿
-│   └── Dockerfile                       # curl 설치
+│       ├── application.yml
+│       ├── logback-spring.xml    # 로그 설정
+│       └── templates/email/      # 이메일 템플릿
+│   └── Dockerfile                # curl 설치
 │
-├── frontend/                   # Vue.js 프론트엔드
+├── frontend/                     # Vue.js 프론트엔드
 │   ├── src/
-│   │   ├── api/               # API 클라이언트
+│   │   ├── api/                  # API 클라이언트
 │   │   │   └── index.ts
-│   │   ├── components/        # 공통 컴포넌트
+│   │   ├── components/           # 공통 컴포넌트
 │   │   │   ├── TheHeader.vue
 │   │   │   ├── TheSidebar.vue
-│   │   │   └── GlobalSnackbar.vue    # ⭐ 추가
-│   │   ├── composables/       # ⭐ 추가: Composition API 유틸
+│   │   │   └── GlobalSnackbar.vue
+│   │   ├── composables/          # Composition API 유틸
 │   │   │   ├── useErrorHandler.ts
 │   │   │   └── useSnackbar.ts
-│   │   ├── views/             # 페이지 컴포넌트
+│   │   ├── views/                # 페이지 컴포넌트
 │   │   │   ├── LoginView.vue
 │   │   │   ├── SignupView.vue
 │   │   │   ├── DashboardView.vue
@@ -2107,15 +2169,15 @@ crypto-trading-system/
 │   │   │   ├── DailyReportView.vue
 │   │   │   ├── BacktestView.vue
 │   │   │   └── AdminDashboardView.vue
-│   │   ├── stores/            # Pinia 상태 관리
+│   │   ├── stores/               # Pinia 상태 관리
 │   │   │   ├── auth.ts
 │   │   │   └── coin.ts
-│   │   ├── types/             # TypeScript 타입
+│   │   ├── types/                # TypeScript 타입
 │   │   │   ├── index.ts
 │   │   │   ├── bot.ts
 │   │   │   ├── backtest.ts
-│   │   │   └── error.ts       # ⭐ 추가
-│   │   ├── router/            # Vue Router
+│   │   │   └── error.ts
+│   │   ├── router/               # Vue Router
 │   │   │   └── index.ts
 │   │   ├── App.vue
 │   │   └── main.ts
@@ -2123,6 +2185,10 @@ crypto-trading-system/
 │   ├── nginx.ssl.conf            # HTTPS용 Nginx 설정 템플릿
 │   ├── index.html
 │   └── vite.config.ts
+│
+├── docker/                       # Docker 설정
+│   └── mysql/
+│       └── init.sql              # DB 초기화 (coin_news, coin_news_analysis 포함)
 │
 ├── docker-compose.yml            # 개발용 (헬스체크, 재시작)
 ├── docker-compose.prod.yml       # ⭐ Day 22: 운영용 (리소스 제한)

@@ -170,3 +170,44 @@ CREATE INDEX IF NOT EXISTS idx_transactions_coin_status
 -- trading_settings 테이블 인덱스
 CREATE INDEX IF NOT EXISTS idx_trading_settings_user 
     ON trading_settings(user_id);
+
+-- ============================================
+-- Day 24: AI 뉴스 분석 테이블 (2025-12-29 추가)
+-- ============================================
+
+-- 뉴스 테이블 (수집된 뉴스 저장)
+CREATE TABLE IF NOT EXISTS coin_news (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    coin_symbol VARCHAR(20) NOT NULL COMMENT '코인 심볼 (KRW-BTC 등)',
+    title VARCHAR(500) NOT NULL COMMENT '뉴스 제목',
+    summary TEXT COMMENT '뉴스 요약/본문',
+    source VARCHAR(100) NOT NULL COMMENT '뉴스 출처 (CoinDesk, Reuters 등)',
+    source_url VARCHAR(1000) COMMENT '원문 URL',
+    published_at TIMESTAMP NOT NULL COMMENT '뉴스 발행 시간',
+    collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '수집 시간',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_coin_news_symbol (coin_symbol),
+    INDEX idx_coin_news_published (published_at),
+    INDEX idx_coin_news_symbol_published (coin_symbol, published_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 뉴스 분석 결과 테이블
+CREATE TABLE IF NOT EXISTS coin_news_analysis (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(50) NOT NULL COMMENT '사용자 ID',
+    coin_symbol VARCHAR(20) NOT NULL COMMENT '코인 심볼',
+    analysis_date DATE NOT NULL COMMENT '분석 일자 (KST 기준)',
+    news_count INT DEFAULT 0 COMMENT '분석된 뉴스 건수',
+    average_score DECIMAL(6,2) DEFAULT 0 COMMENT '평균 점수 (-100 ~ +100)',
+    weight_adjustment DECIMAL(4,2) DEFAULT 0 COMMENT '가중치 조정값 (-0.5, 0, +0.5)',
+    sentiment VARCHAR(20) DEFAULT 'NEUTRAL' COMMENT '종합 감성 (POSITIVE, NEGATIVE, NEUTRAL)',
+    summary TEXT COMMENT '분석 요약 (주요 뉴스 요약)',
+    analyzed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '분석 시간',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    UNIQUE KEY uk_user_coin_date (user_id, coin_symbol, analysis_date),
+    INDEX idx_analysis_user (user_id),
+    INDEX idx_analysis_date (analysis_date),
+    INDEX idx_analysis_coin (coin_symbol)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

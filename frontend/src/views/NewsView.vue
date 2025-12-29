@@ -12,14 +12,15 @@
         </v-row>
 
         <!-- 필터 및 검색 -->
-        <v-row class="mb-4">
-          <v-col cols="12" md="3">
+        <v-row class="mb-4" align="center">
+          <v-col cols="12" md="2">
             <v-select
               v-model="selectedCoin"
               :items="coinOptions"
               label="코인 필터"
               clearable
               density="comfortable"
+              hide-details
               @update:model-value="loadNews"
             />
           </v-col>
@@ -30,6 +31,7 @@
               prepend-inner-icon="mdi-magnify"
               clearable
               density="comfortable"
+              hide-details
               @keyup.enter="loadNews"
               @click:clear="clearSearch"
             />
@@ -40,20 +42,32 @@
               :items="[10, 20, 50]"
               label="페이지당 건수"
               density="comfortable"
+              hide-details
               @update:model-value="loadNews"
             />
           </v-col>
-          <v-col cols="12" md="3" class="d-flex align-center">
-            <v-btn color="primary" @click="loadNews" class="mr-2">
+          <v-col cols="12" md="4" class="d-flex justify-end">
+            <v-btn 
+              color="primary" 
+              @click="loadNews" 
+              class="mr-2"
+            >
               <v-icon start>mdi-refresh</v-icon>
               새로고침
             </v-btn>
-            <v-btn color="secondary" variant="outlined" @click="collectNews" :loading="collecting">
+            <v-btn 
+              color="secondary" 
+              variant="outlined" 
+              @click="collectNews" 
+              :loading="collecting"
+            >
               <v-icon start>mdi-download</v-icon>
               뉴스 수집
             </v-btn>
           </v-col>
         </v-row>
+
+
 
         <!-- 뉴스 목록 -->
         <v-row>

@@ -1625,7 +1625,7 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 | Method | Endpoint | 인증 | 설명 |
 |--------|----------|------|------|
 | POST | /api/news/collect | 🔐 Admin | 뉴스 수동 수집 |
-| GET | /api/news/today/{symbol} | ❌ | 당일 뉴스 조회 |
+| GET | /api/news/today/{symbol} | ❌ | 당일 뉴스 	조회 |
 | DELETE | /api/news/cleanup | 🔐 Admin | 오래된 뉴스 삭제 |
 
 **테스트 완료:**

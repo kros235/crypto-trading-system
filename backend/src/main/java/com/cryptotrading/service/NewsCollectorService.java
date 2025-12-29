@@ -31,9 +31,11 @@ public class NewsCollectorService {
     
     // RSS Feed URL 목록
     private static final Map<String, String> RSS_FEEDS = Map.of(
-        "CoinTelegraph", "https://cointelegraph.com/rss",
-        "Bitcoin_Magazine", "https://bitcoinmagazine.com/feed"
-         // CoinDesk 제거 (RSS 형식 변경으로 파싱 불가)
+    	"CoinTelegraph", "https://cointelegraph.com/rss",
+	"Bitcoin_Magazine", "https://bitcoinmagazine.com/feed",
+	"Decrypt", "https://decrypt.co/feed"  			
+	// CoinDesk 제거 (RSS 형식 변경으로 파싱 불가)
+	// Reuters 제외 (암호화폐 전용 무료 RSS 미제공)
     );
     
     // 코인 키워드 매핑 (심볼 → 검색 키워드)

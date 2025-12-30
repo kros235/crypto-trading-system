@@ -151,9 +151,9 @@ INSERT INTO coin_info (symbol, name_kr, name_en, market_cap_rank) VALUES
 ON DUPLICATE KEY UPDATE last_updated = CURRENT_TIMESTAMP;
 
 -- 기본 관리자 계정 생성 (비밀번호: admin123! - 실제 운영 시 반드시 변경)
--- BCrypt 해시값: $2a$10$... 형태로 저장됨
+-- BCrypt 해시값: Python bcrypt로 생성 (rounds=10)
 INSERT INTO users (user_id, password_hash, email, role, is_active) VALUES
-('admin', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'admin@crypto.com', 'ADMIN', TRUE)
+('admin', '$2b$10$ZoMm7C71INlM.zzPabHnDe5opTA3tGcBzOVPObOaJW5CCXRfIQoSG', 'admin@crypto.com', 'ADMIN', TRUE)
 ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP;
 
 -- 관리자 기본 거래 설정

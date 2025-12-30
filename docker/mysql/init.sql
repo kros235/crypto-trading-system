@@ -210,7 +210,7 @@ CREATE TABLE IF NOT EXISTS coin_news_analysis (
     -- ⭐⭐⭐ 주석 수정: (-100 ~ +100) → (-1.0 ~ +1.0) ⭐⭐⭐
     average_score DECIMAL(6,2) DEFAULT 0 COMMENT '평균 점수 (-1.0 ~ +1.0)',
     weight_adjustment DECIMAL(4,2) DEFAULT 0 COMMENT '가중치 조정값 (-0.5, 0, +0.5)',
-    sentiment VARCHAR(20) DEFAULT 'NEUTRAL' COMMENT '종합 감성 (POSITIVE, NEGATIVE, NEUTRAL)',
+    sentiment ENUM('POSITIVE', 'NEGATIVE', 'NEUTRAL') DEFAULT 'NEUTRAL' COMMENT '종합 감성',
     summary TEXT COMMENT '분석 요약 (주요 뉴스 요약)',
     analyzed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '분석 시간',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

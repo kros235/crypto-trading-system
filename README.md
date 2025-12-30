@@ -1786,14 +1786,126 @@ CREATE INDEX idx_coin_news_analyzed ON coin_news(analyzed, coin_symbol);
 
 ---
 
+### ✅ Day 27 (2025-12-30) - Oracle Cloud ARM64 배포
+**완료 항목:**
+- Oracle Cloud 인스턴스 생성 및 설정
+  - VM.Standard.A1.Flex (ARM64 아키텍처)
+  - 4 OCPU, 24GB RAM, Ubuntu 22.04
+  - Public IP: 158.179.161.29
+- 서버 초기 설정
+  - Docker & Docker Compose 설치
+  - UFW 방화벽 설정 (22, 80, 443, 8080 포트)
+  - Oracle Cloud 보안 목록 설정 (Ingress Rules)
+- Docker 이미지 ARM64 호환성 수정
+  - backend/Dockerfile: `eclipse-temurin:17-jdk-alpine` → `eclipse-temurin:17-jdk`
+  - backend/Dockerfile: `eclipse-temurin:17-jre-alpine` → `eclipse-temurin:17-jre`
+  - frontend/Dockerfile: `node:18-alpine` → `node:18`
+  - frontend/Dockerfile: `nginx:alpine` → `nginx:latest`
+- MySQL 설정 추가
+  - docker/mysql/conf.d/my.cnf 생성 (KST 시간대, utf8mb4 문자셋)
+  - init.sql 수정: `CREATE INDEX IF NOT EXISTS` → 주석 처리 (MySQL 8.0 호환)
+  - coin_news_analysis 테이블 sentiment 컬럼: `VARCHAR(20)` → `ENUM` 변경
+- 환경변수 보안 수정
+  - .env.production: `$` 특수문자 제거 (Docker 환경변수 파싱 오류 방지)
+  - docker-compose.prod.yml: Groq API 환경변수 추가 (GROQ_API_KEY, GROQ_API_MODEL)
+- 프론트엔드 수정
+  - TradingSettingsView.vue: AI 뉴스 분석 설명 수정 (`±2%` → `±0.5%`)
+- BCrypt 비밀번호 해시 수정
+  - Python bcrypt로 admin123! 해시 생성
+  - init.sql: admin 계정 password_hash 업데이트 (`$2b$10$...` 형식)
+
+**배포 환경:**
+| 항목 | 값 |
+|------|-----|
+| Cloud Provider | Oracle Cloud (Pay-as-you-go) |
+| Instance Type | VM.Standard.A1.Flex |
+| Architecture | ARM64 (Ampere) |
+| CPU | 4 OCPU |
+| Memory | 24GB |
+| OS | Ubuntu 22.04 LTS |
+| Public IP | 158.179.161.29 |
+
+**수정된 파일:**
+| 파일 경로 | 수정 내용 |
+|----------|----------|
+| `backend/Dockerfile` | ARM64 호환 이미지로 변경 (alpine 제거) |
+| `frontend/Dockerfile` | ARM64 호환 이미지로 변경 (alpine 제거) |
+| `docker/mysql/conf.d/my.cnf` | ⭐ **신규** - MySQL KST 시간대, utf8mb4 설정 |
+| `docker/mysql/init.sql` | INDEX 구문 주석 처리, sentiment ENUM 변경, BCrypt 해시 수정 |
+| `.env.production` | `$` 특수문자 제거한 비밀번호 |
+| `docker-compose.prod.yml` | GROQ_API_KEY, GROQ_API_MODEL 환경변수 추가 |
+| `frontend/src/views/TradingSettingsView.vue` | AI 뉴스 분석 설명 ±0.5%로 수정 |
+
+**해결한 주요 이슈:**
+1. **ARM64 이미지 미지원**
+   - 문제: `eclipse-temurin:17-jdk-alpine`이 ARM64 미지원
+   - 해결: alpine 제거한 일반 이미지로 변경
+2. **환경변수 파싱 오류**
+   - 문제: 비밀번호 내 `$` 문자가 변수로 인식됨
+   - 해결: `$` 문자 제거한 비밀번호 사용
+3. **MySQL 8.0 구문 오류**
+   - 문제: `CREATE INDEX IF NOT EXISTS` 미지원
+   - 해결: 해당 구문 주석 처리
+4. **스키마 불일치 (sentiment 컬럼)**
+   - 문제: Java Entity는 ENUM, init.sql은 VARCHAR
+   - 해결: init.sql에서 ENUM 타입으로 변경
+5. **BCrypt 해시 불일치**
+   - 문제: 기존 해시값이 admin123!와 불일치
+   - 해결: Python bcrypt로 새 해시 생성 후 적용
+6. **Groq API 환경변수 누락**
+   - 문제: docker-compose.prod.yml에 Groq 환경변수 미전달
+   - 해결: GROQ_API_KEY, GROQ_API_MODEL 환경변수 추가
+
+**배포 명령어:**
+```bash
+# 서버 접속
+ssh -i ~/.ssh/crypto-key ubuntu@158.179.161.29
+
+# 프로젝트 클론 또는 업데이트
+cd ~/crypto-trading-system
+git pull origin main
+
+# 운영 환경 실행
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+
+# 상태 확인
+docker ps
+docker logs crypto-backend-prod --tail 50
+```
+
+**서비스 접속 정보:**
+| 서비스 | URL |
+|--------|-----|
+| Frontend | http://158.179.161.29 |
+| Backend API | http://158.179.161.29:8080/api |
+| Health Check | http://158.179.161.29:8080/api/health |
+
+**로그인 계정:**
+- 아이디: `admin`
+- 비밀번호: `admin123!`
+
+**테스트 완료:**
+- ✅ 서버 SSH 접속 - 터미널
+- ✅ Docker 설치 및 실행 - 서버
+- ✅ 모든 컨테이너 healthy 상태 - 서버
+- ✅ MySQL 9개 테이블 생성 - 서버
+- ✅ Groq API 초기화 완료 - Docker 로그
+- ✅ Discord Bot 연결 완료 - Docker 로그
+- ✅ 서버 시작 알림 발송 - Discord
+- ✅ Health Check API - curl
+- ✅ 로그인 API (admin/admin123!) - curl
+- ✅ 브라우저 접속 - 브라우저
+- ✅ 브라우저 로그인 - 브라우저
+
+---
 
 
 ## 📊 현재 진행 상황
-- **전체 진척도**: 약 **98%**
+- **전체 진척도**: 약 **99%**
 - **Phase 1 (핵심 기능)**: 100% 완료 ✅
 - **Phase 2 (고도화)**: 100% 완료 ✅
 - **Phase 3 (안정화)**: 100% 완료 ✅
-- **Phase 4 (운영 준비)**: **95%** 진행 중 🔄
+- **Phase 4 (운영 준비)**: **98%** 진행 중 🔄 (Oracle Cloud 배포 완료)
 
 ---
 
@@ -1805,7 +1917,7 @@ CREATE INDEX idx_coin_news_analyzed ON coin_news(analyzed, coin_symbol);
 | Phase 2 (고도화) | Day 10~16 | ✅ 완료 |
 | Phase 3 (안정화) | Day 17~21 | ✅ 완료 |
 | Phase 4 (운영 준비) | Day 22~28 | 🔄 진행 예정 |
-| **v1.0 릴리즈** | **Day 28** | 🎯 목표 |
+| **v1.0 릴리즈** | **Day 29** | 🎯 목표 |
 
 ---
 
@@ -1881,7 +1993,18 @@ CREATE INDEX idx_coin_news_analyzed ON coin_news(analyzed, coin_symbol);
 | 오후 | 코인 뉴스 페이지 UI | 게시판 형식 뉴스 조회 (Frontend) | ✅ 완료 |
 ---
 
-#### Day 27: 추가 기능 + 보안
+#### ✅ Day 27: Oracle Cloud ARM64 배포 (2025-12-30 완료)
+| 시간 | 작업 | 상세 | 상태 |
+|------|------|------|------|
+| 오전 | Oracle Cloud 인스턴스 생성 | ARM64 4 OCPU, 24GB RAM | ✅ 완료 |
+| 오전 | 서버 초기 설정 | Docker, 방화벽, 보안 목록 | ✅ 완료 |
+| 오후 | Docker 이미지 ARM64 호환 수정 | Dockerfile alpine 제거 | ✅ 완료 |
+| 오후 | MySQL/환경변수/BCrypt 문제 해결 | 스키마 수정, 해시 재생성 | ✅ 완료 |
+| 오후 | 배포 및 테스트 | 전체 서비스 정상 작동 확인 | ✅ 완료 |
+
+---
+
+#### Day 28: 추가 기능 + 보안
 | 시간 | 작업 | 상세 |
 |------|------|------|
 | 오전 | 2FA 인증 (Optional) | Google Authenticator 연동 |
@@ -1892,7 +2015,7 @@ CREATE INDEX idx_coin_news_analyzed ON coin_news(analyzed, coin_symbol);
 
 ---
 
-#### Day 28: 운영 문서 + HTTPS + v1.0 릴리즈
+#### Day 29: 운영 문서 + HTTPS + v1.0 릴리즈
 | 시간 | 작업 | 상세 |
 |------|------|------|
 | 오전 | 운영 문서 작성 | 아키텍처 다이어그램, 배포 절차서 |
@@ -1913,8 +2036,9 @@ CREATE INDEX idx_coin_news_analyzed ON coin_news(analyzed, coin_symbol);
 | 24 | ✅ AI 뉴스 분석 - 기반 구축 | ✅ 완료 |
 | 25 | ✅ AI 뉴스 분석 - Groq API 연동 + 최적화 | ✅ 완료 |
 | 26 | ✅ AI 뉴스 분석 - 지표 연동 + 뉴스 페이지 UI | ✅ 완료 |
-| 27 | 2FA, IP 제한, 수익 분석 UI, 보안 점검, 테스트 | 🟢 선택 |
-| 28 | 운영 문서 작성, v1.0 릴리즈 | 🔴 필수 |
+| 27 | ✅ Oracle Cloud ARM64 배포, 이슈 해결 | ✅ 완료 |
+| 28 | 2FA, IP 제한, 수익 분석 UI, 보안 점검, 테스트 | 🟢 선택 |
+| 29 | 운영 문서 작성, v1.0 릴리즈 | 🔴 필수 |
 
 ---
 
@@ -2150,7 +2274,7 @@ DELETE FROM coin_news_analysis WHERE created_at < DATE_SUB(NOW(), INTERVAL 7 DAY
 
 | 작업 | 설명 | 우선순위 | 상태 |
 |------|------|----------|------|
-| HTTPS 적용 | Let's Encrypt SSL 인증서 설정 | 🔴 필수 | ⏳ Day 28 (도메인 확보 후) |
+| HTTPS 적용 | Let's Encrypt SSL 인증서 설정 | 🔴 필수 | ⏳ Day 29 (도메인 확보 후) |
 | Nginx SSL 설정 | HTTPS 리다이렉트, HSTS 헤더 | 🔴 필수 | ✅ 템플릿 준비 완료 |
 | 환경변수 보안 | 개발/운영 환경 분리 | 🟡 권장 | ✅ Day 22 완료 |
 
@@ -2430,7 +2554,7 @@ crypto-trading-system/
 │       ├── application.yml                       # ⭐ Day 25: groq API 설정 추가
 │       ├── logback-spring.xml    # 로그 설정
 │       └── templates/email/      # 이메일 템플릿
-│   └── Dockerfile                # curl 설치
+│   └── Dockerfile                # ⭐ Day 27: ARM64 호환 이미지 (alpine 제거)
 │
 ├── frontend/                     # Vue.js 프론트엔드
 │   ├── src/
@@ -2475,6 +2599,8 @@ crypto-trading-system/
 │
 ├── docker/                       # Docker 설정
 │   └── mysql/
+│       ├── conf.d/               # ⭐ Day 27: MySQL 설정
+│       │   └── my.cnf            # ⭐ KST 시간대, utf8mb4 문자셋
 │       └── init.sql              # DB 초기화 (coin_news, coin_news_analysis 포함)
 │
 ├── docker-compose.yml            # 개발용 (헬스체크, 재시작) ⭐ Day 25: GROQ 환경변수

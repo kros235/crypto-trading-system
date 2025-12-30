@@ -1786,7 +1786,7 @@ CREATE INDEX idx_coin_news_analyzed ON coin_news(analyzed, coin_symbol);
 
 ---
 
-### ✅ Day 27 (2025-12-30) - Oracle Cloud ARM64 배포
+### ✅ Day 27 (2025-12-30) - Oracle Cloud ARM64 배포 + DB 스키마 검증
 **완료 항목:**
 - Oracle Cloud 인스턴스 생성 및 설정
   - VM.Standard.A1.Flex (ARM64 아키텍처)
@@ -1813,8 +1813,24 @@ CREATE INDEX idx_coin_news_analyzed ON coin_news(analyzed, coin_symbol);
 - BCrypt 비밀번호 해시 수정
   - Python bcrypt로 admin123! 해시 생성
   - init.sql: admin 계정 password_hash 업데이트 (`$2b$10$...` 형식)
+- DB 스키마 교차검증 및 수정
+  - JPA Entity vs init.sql 불일치 항목 발견 및 수정
+  - trading_settings 테이블: 9개 컬럼 추가
+    - Day 14 기술적 지표: rsi_period, rsi_buy_threshold, rsi_sell_threshold, bb_period, bb_multiplier, volume_threshold
+    - Day 19 리스크 관리: daily_trade_limit_pct, max_position_pct, daily_stop_loss_pct
+  - transactions 테이블: highest_price 컬럼 추가 (트레일링 스톱용)
+  - coin_news 테이블: 3개 컬럼 추가 (analyzed, analyzed_at, sentiment_score)
+  - coin_news_analysis 테이블: average_score 주석 수정 (-1.0 ~ +1.0)
+  - password_reset_tokens 테이블: 신규 추가
+- docker-compose.prod.yml 환경변수 동기화
+  - GEMINI_API_KEY, GEMINI_API_ENABLED 환경변수 추가
+  - GROQ_API_KEY, GROQ_MODEL 환경변수 추가
+  - stop_grace_period: 30s 추가 (graceful shutdown)
+- docker-compose.yml vs docker-compose.prod.yml 비교 분석
+  - 의도적 차이 확인 (운영 전용 설정)
+  - 잠재적 문제 식별 (UPBIT API 키, TZ 시간대 등)
 
-**배포 환경:**
+**배포 환경**:
 | 항목 | 값 |
 |------|-----|
 | Cloud Provider | Oracle Cloud (Pay-as-you-go) |
@@ -1830,11 +1846,20 @@ CREATE INDEX idx_coin_news_analyzed ON coin_news(analyzed, coin_symbol);
 |----------|----------|
 | `backend/Dockerfile` | ARM64 호환 이미지로 변경 (alpine 제거) |
 | `frontend/Dockerfile` | ARM64 호환 이미지로 변경 (alpine 제거) |
-| `docker/mysql/conf.d/my.cnf` | ⭐ **신규** - MySQL KST 시간대, utf8mb4 설정 |
-| `docker/mysql/init.sql` | INDEX 구문 주석 처리, sentiment ENUM 변경, BCrypt 해시 수정 |
+| `docker/mysql/conf.d/my.cnf` |  MySQL KST 시간대, utf8mb4 설정 |
+| `docker/mysql/init.sql` | 누락 컬럼/테이블 추가, INDEX 주석 처리, sentiment ENUM 변경, BCrypt 해시 수정 |
 | `.env.production` | `$` 특수문자 제거한 비밀번호 |
-| `docker-compose.prod.yml` | GROQ_API_KEY, GROQ_API_MODEL 환경변수 추가 |
+| `docker-compose.prod.yml` | AI API 환경변수 추가, stop_grace_period 추가 |
 | `frontend/src/views/TradingSettingsView.vue` | AI 뉴스 분석 설명 ±0.5%로 수정 |
+
+**init.sql 수정 상세:**
+| 테이블 | 추가된 컬럼/내용 |
+|--------|-----------------|
+| trading_settings | rsi_period, rsi_buy_threshold, rsi_sell_threshold, bb_period, bb_multiplier, volume_threshold, daily_trade_limit_pct, max_position_pct, daily_stop_loss_pct (9개) |
+| transactions | highest_price (1개) |
+| coin_news | analyzed, analyzed_at, sentiment_score (3개) |
+| coin_news_analysis | average_score 주석 수정 |
+| password_reset_tokens | 테이블 신규 추가 |
 
 **해결한 주요 이슈:**
 1. **ARM64 이미지 미지원**
@@ -1855,6 +1880,9 @@ CREATE INDEX idx_coin_news_analyzed ON coin_news(analyzed, coin_symbol);
 6. **Groq API 환경변수 누락**
    - 문제: docker-compose.prod.yml에 Groq 환경변수 미전달
    - 해결: GROQ_API_KEY, GROQ_API_MODEL 환경변수 추가
+7. **JPA Entity vs init.sql 불일치**
+   - 문제: Day 14, 19, 25에 추가된 컬럼들이 init.sql에 누락
+   - 해결: 전체 교차검증 후 누락 항목 일괄 추가
 
 **배포 명령어:**
 ```bash
@@ -1896,6 +1924,8 @@ docker logs crypto-backend-prod --tail 50
 - ✅ 로그인 API (admin/admin123!) - curl
 - ✅ 브라우저 접속 - 브라우저
 - ✅ 브라우저 로그인 - 브라우저
+- ✅ init.sql 스키마 검증 완료 - 로컬
+- ✅ docker-compose.prod.yml 환경변수 동기화 - 로컬
 
 ---
 
@@ -1905,8 +1935,7 @@ docker logs crypto-backend-prod --tail 50
 - **Phase 1 (핵심 기능)**: 100% 완료 ✅
 - **Phase 2 (고도화)**: 100% 완료 ✅
 - **Phase 3 (안정화)**: 100% 완료 ✅
-- **Phase 4 (운영 준비)**: **98%** 진행 중 🔄 (Oracle Cloud 배포 완료)
-
+- **Phase 4 (운영 준비)**: **99%** 진행 중 🔄 (Oracle Cloud 배포 + DB 스키마 검증 완료)
 ---
 
 ## 🗓️ 프로젝트 일정
@@ -2036,7 +2065,7 @@ docker logs crypto-backend-prod --tail 50
 | 24 | ✅ AI 뉴스 분석 - 기반 구축 | ✅ 완료 |
 | 25 | ✅ AI 뉴스 분석 - Groq API 연동 + 최적화 | ✅ 완료 |
 | 26 | ✅ AI 뉴스 분석 - 지표 연동 + 뉴스 페이지 UI | ✅ 완료 |
-| 27 | ✅ Oracle Cloud ARM64 배포, 이슈 해결 | ✅ 완료 |
+| 27 | ✅ Oracle Cloud ARM64 배포, DB 스키마 교차검증, docker-compose 동기화, 이슈 해결 | ✅ 완료 |
 | 28 | 2FA, IP 제한, 수익 분석 UI, 보안 점검, 테스트 | 🟢 선택 |
 | 29 | 운영 문서 작성, v1.0 릴리즈 | 🔴 필수 |
 

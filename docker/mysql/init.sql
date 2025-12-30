@@ -33,6 +33,17 @@ CREATE TABLE IF NOT EXISTS trading_settings (
     use_ai_analysis BOOLEAN DEFAULT FALSE COMMENT 'AI 뉴스 분석 사용 여부',
     use_trailing_stop BOOLEAN DEFAULT FALSE COMMENT '트레일링 스톱 사용 여부',
     trailing_stop_pct DECIMAL(5,2) DEFAULT -5.00 COMMENT '트레일링 스톱 비율 (%)',
+    -- ⭐⭐⭐ Day 14 추가: 기술적 지표 설정 (6개 컬럼) ⭐⭐⭐
+    rsi_period INT DEFAULT 14 COMMENT 'RSI 기간',
+    rsi_buy_threshold INT DEFAULT 30 COMMENT 'RSI 매수 신호 임계값',
+    rsi_sell_threshold INT DEFAULT 70 COMMENT 'RSI 매도 신호 임계값',
+    bb_period INT DEFAULT 20 COMMENT '볼린저 밴드 기간',
+    bb_multiplier INT DEFAULT 2 COMMENT '볼린저 밴드 승수',
+    volume_threshold INT DEFAULT 150 COMMENT '거래량 급증 기준 (%)',
+    -- ⭐⭐⭐ Day 19 추가: 리스크 관리 설정 (3개 컬럼) ⭐⭐⭐
+    daily_trade_limit_pct INT DEFAULT 20 COMMENT '일일 거래 한도 (%)',
+    max_position_pct INT DEFAULT 25 COMMENT '종목당 최대 비중 (%)',
+    daily_stop_loss_pct INT DEFAULT -5 COMMENT '긴급 정지 손실률 (%)',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
@@ -58,6 +69,8 @@ CREATE TABLE IF NOT EXISTS transactions (
     stop_loss_price DECIMAL(15,2) NULL COMMENT '손절가',
     status ENUM('HOLDING', 'SOLD', 'CANCELLED') DEFAULT 'HOLDING',
     note TEXT COMMENT '메모',
+    -- ⭐⭐⭐ 트레일링 스톱용 컬럼 추가 ⭐⭐⭐
+    highest_price DECIMAL(20,8) NULL COMMENT '보유 기간 중 최고가 (트레일링 스톱용)',
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
     INDEX idx_user_symbol_status (user_id, coin_symbol, status),
     INDEX idx_created_at (created_at),
@@ -156,20 +169,12 @@ FLUSH PRIVILEGES;
 -- =====================================================
 -- ⭐⭐⭐ 성능 최적화 인덱스 (Day 17) ⭐⭐⭐
 -- =====================================================
+-- 참고: MySQL 8.0 초기 버전은 CREATE INDEX IF NOT EXISTS를 지원하지 않음
+-- 아래 인덱스들은 테이블 생성 시 이미 유사한 인덱스가 포함되어 있거나,
+-- 성능 최적화용으로 필요시 수동으로 추가 가능
 
--- transactions 테이블 복합 인덱스
-CREATE INDEX IF NOT EXISTS idx_transactions_user_status 
-    ON transactions(user_id, status);
-CREATE INDEX IF NOT EXISTS idx_transactions_user_created 
-    ON transactions(user_id, created_at);
-CREATE INDEX IF NOT EXISTS idx_transactions_user_sold 
-    ON transactions(user_id, sold_at);
-CREATE INDEX IF NOT EXISTS idx_transactions_coin_status 
-    ON transactions(coin_symbol, status);
-
--- trading_settings 테이블 인덱스
-CREATE INDEX IF NOT EXISTS idx_trading_settings_user 
-    ON trading_settings(user_id);
+-- transactions 테이블: idx_user_symbol_status, idx_created_at, idx_status 이미 존재
+-- trading_settings 테이블: idx_user_id 이미 존재
 
 -- ============================================
 -- Day 24: AI 뉴스 분석 테이블 (2025-12-29 추가)
@@ -186,6 +191,10 @@ CREATE TABLE IF NOT EXISTS coin_news (
     published_at TIMESTAMP NOT NULL COMMENT '뉴스 발행 시간',
     collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '수집 시간',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- ⭐⭐⭐ Day 25 추가: AI 분석 관련 컬럼 (3개) ⭐⭐⭐
+    analyzed BOOLEAN DEFAULT FALSE COMMENT '분석 완료 여부',
+    analyzed_at TIMESTAMP NULL COMMENT '분석 시간',
+    sentiment_score DECIMAL(3,2) NULL COMMENT '감성 점수 (-1.00 ~ +1.00)',
     INDEX idx_coin_news_symbol (coin_symbol),
     INDEX idx_coin_news_published (published_at),
     INDEX idx_coin_news_symbol_published (coin_symbol, published_at)
@@ -198,7 +207,8 @@ CREATE TABLE IF NOT EXISTS coin_news_analysis (
     coin_symbol VARCHAR(20) NOT NULL COMMENT '코인 심볼',
     analysis_date DATE NOT NULL COMMENT '분석 일자 (KST 기준)',
     news_count INT DEFAULT 0 COMMENT '분석된 뉴스 건수',
-    average_score DECIMAL(6,2) DEFAULT 0 COMMENT '평균 점수 (-100 ~ +100)',
+    -- ⭐⭐⭐ 주석 수정: (-100 ~ +100) → (-1.0 ~ +1.0) ⭐⭐⭐
+    average_score DECIMAL(6,2) DEFAULT 0 COMMENT '평균 점수 (-1.0 ~ +1.0)',
     weight_adjustment DECIMAL(4,2) DEFAULT 0 COMMENT '가중치 조정값 (-0.5, 0, +0.5)',
     sentiment VARCHAR(20) DEFAULT 'NEUTRAL' COMMENT '종합 감성 (POSITIVE, NEGATIVE, NEUTRAL)',
     summary TEXT COMMENT '분석 요약 (주요 뉴스 요약)',
@@ -210,4 +220,17 @@ CREATE TABLE IF NOT EXISTS coin_news_analysis (
     INDEX idx_analysis_user (user_id),
     INDEX idx_analysis_date (analysis_date),
     INDEX idx_analysis_coin (coin_symbol)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ⭐⭐⭐ 비밀번호 재설정 토큰 테이블 (신규 추가) ⭐⭐⭐
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(50) NOT NULL COMMENT '사용자 ID',
+    token VARCHAR(255) NOT NULL UNIQUE COMMENT '재설정 토큰',
+    expiry_date TIMESTAMP NOT NULL COMMENT '만료 시간',
+    used BOOLEAN DEFAULT FALSE COMMENT '사용 여부',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    INDEX idx_prt_token (token),
+    INDEX idx_prt_user_id (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

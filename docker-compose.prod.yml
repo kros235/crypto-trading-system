@@ -91,6 +91,11 @@ services:
       TZ: Asia/Seoul
       # ★★★ 운영 환경: JVM 옵션 ★★★
       JAVA_OPTS: "-Xms512m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_API_ENABLED: ${GEMINI_API_ENABLED:-false}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GROQ_MODEL: ${GROQ_MODEL}
+
     depends_on:
       mysql:
         condition: service_healthy
@@ -105,6 +110,7 @@ services:
       retries: 3
       start_period: 90s
     restart: always
+    stop_grace_period: 30s  # ⭐ 추가: 종료 시 30초 대기
     volumes:
       - backend_logs_prod:/app/logs
     deploy:

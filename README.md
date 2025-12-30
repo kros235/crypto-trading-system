@@ -1807,6 +1807,8 @@ CREATE INDEX idx_coin_news_analyzed ON coin_news(analyzed, coin_symbol);
   - coin_news_analysis 테이블 sentiment 컬럼: `VARCHAR(20)` → `ENUM` 변경
 - 환경변수 보안 수정
   - .env.production: `$` 특수문자 제거 (Docker 환경변수 파싱 오류 방지)
+  - .env.production: AES_SECRET_KEY 길이 수정 (31자 → 32자, AES-256 필수)
+  - .env.production: JWT_SECRET_KEY 길이 수정 (54자 → 64자, HS512 최적화)
   - docker-compose.prod.yml: Groq API 환경변수 추가 (GROQ_API_KEY, GROQ_API_MODEL)
 - 프론트엔드 수정
   - TradingSettingsView.vue: AI 뉴스 분석 설명 수정 (`±2%` → `±0.5%`)
@@ -1848,7 +1850,7 @@ CREATE INDEX idx_coin_news_analyzed ON coin_news(analyzed, coin_symbol);
 | `frontend/Dockerfile` | ARM64 호환 이미지로 변경 (alpine 제거) |
 | `docker/mysql/conf.d/my.cnf` |  MySQL KST 시간대, utf8mb4 설정 |
 | `docker/mysql/init.sql` | 누락 컬럼/테이블 추가, INDEX 주석 처리, sentiment ENUM 변경, BCrypt 해시 수정 |
-| `.env.production` | `$` 특수문자 제거한 비밀번호 |
+| `.env.production` | `$` 특수문자 제거, **AES_SECRET_KEY 32자**, **JWT_SECRET_KEY 64자** |
 | `docker-compose.prod.yml` | AI API 환경변수 추가, stop_grace_period 추가 |
 | `frontend/src/views/TradingSettingsView.vue` | AI 뉴스 분석 설명 ±0.5%로 수정 |
 
@@ -1883,6 +1885,12 @@ CREATE INDEX idx_coin_news_analyzed ON coin_news(analyzed, coin_symbol);
 7. **JPA Entity vs init.sql 불일치**
    - 문제: Day 14, 19, 25에 추가된 컬럼들이 init.sql에 누락
    - 해결: 전체 교차검증 후 누락 항목 일괄 추가
+8. **AES_SECRET_KEY 길이 불일치**
+   - 문제: 31자로 설정되어 API 키 암호화 실패 (400 Bad Request)
+   - 해결: 32자로 수정 (AES-256 필수 조건)
+9. **JWT_SECRET_KEY 길이 불일치**
+   - 문제: 54자로 설정되어 HS512 최적화 미달
+   - 해결: 64자로 수정 (512비트 최적)
 
 **배포 명령어:**
 ```bash
@@ -1926,6 +1934,7 @@ docker logs crypto-backend-prod --tail 50
 - ✅ 브라우저 로그인 - 브라우저
 - ✅ init.sql 스키마 검증 완료 - 로컬
 - ✅ docker-compose.prod.yml 환경변수 동기화 - 로컬
+- ✅ API 키 저장 정상 동작 (AES 암호화) - 브라우저
 
 ---
 

@@ -23,15 +23,14 @@
           <v-col cols="12" md="9">
             <v-card elevation="2" class="fill-height">
               <v-card-text class="pa-3">
+                <!-- ★★★ 1행: 사용자 정보 + 4개 통계 카드 ★★★ -->
                 <v-row dense align="center">
-                  <!-- ★★★ 수정: 사용자 정보 - 관리자/API 좌우 배치 ★★★ -->
                   <v-col cols="12" sm="4">
                     <div class="d-flex align-center">
                       <v-avatar color="indigo" size="44" class="mr-3">
                         <v-icon color="white" size="24">mdi-account</v-icon>
                       </v-avatar>
                       <div>
-                        <!-- ★★★ admin 글자 옆에 관리자/API 등록됨 좌우 배치 ★★★ -->
                         <div class="d-flex align-center">
                           <span class="text-h6 font-weight-bold mr-2">{{ authStore.user?.userId }}</span>
                           <v-chip :color="authStore.user?.role === 'ADMIN' ? 'red-darken-2' : 'indigo'" size="x-small" variant="flat" class="mr-1">
@@ -41,17 +40,17 @@
                             {{ authStore.user?.hasApiKey ? '업비트 API 키 등록됨' : 'API 미등록' }}
                           </v-chip>
                         </div>
-                        <!-- ★★★ 수정: 디스코드 ID - 로봇 아이콘으로 변경 ★★★ -->
                         <div v-if="authStore.user?.discordUserId" class="text-caption text-grey-darken-1 mt-1">
                           <v-icon size="12" class="mr-1">mdi-robot</v-icon>{{ authStore.user.discordUserId }}
                         </div>
                         <div class="text-caption text-grey-darken-1" :class="{ 'mt-1': !authStore.user?.discordUserId }">
                           <v-icon size="12" class="mr-1">mdi-email-outline</v-icon>{{ authStore.user?.email }}
                         </div>
-                        <!-- ★★★ 투자기간 검정 글씨 강조 ★★★ -->
+                        <!-- ★★★ 수정: 마지막 로그인 2줄 표시 ★★★ -->
                         <div class="text-caption text-grey-darken-4 font-weight-bold mt-1">
-                          <v-icon size="12" class="mr-1">mdi-calendar</v-icon>
-                          투자기간: {{ investmentPeriod }}
+                          <v-icon size="12" class="mr-1">mdi-clock-outline</v-icon>
+                          마지막 로그인:
+                          <div class="ml-4">{{ formatLastLogin(authStore.user?.lastLogin) }}</div>
                         </div>
                       </div>
                     </div>
@@ -85,6 +84,22 @@
                       <div class="text-subtitle-1 font-weight-bold">{{ dashboardStats.todaySellCount }}건</div>
                       <div class="text-caption">{{ formatCurrency(dashboardStats.todaySellAmount) }}</div>
                     </v-card>
+                  </v-col>
+                </v-row>
+                <!-- ★★★ 2행: 투자기간(좌) + 시스템 상태(우) - 마지막 로그인과 같은 높이 ★★★ -->
+                <v-row dense>
+                  <v-col cols="12" sm="4">
+                    <!-- 빈 공간 -->
+                  </v-col>
+                  <v-col cols="12" sm="8" class="d-flex justify-space-between align-center" style="margin-top: -20px;">
+                    <div class="text-caption text-grey-darken-4 font-weight-bold">
+                      <v-icon size="12" class="mr-1">mdi-calendar</v-icon>
+                      투자기간: {{ investmentPeriod }}
+                    </div>
+                    <div class="text-caption text-grey-darken-4 font-weight-bold">
+                      <v-icon size="12" class="mr-1">mdi-server</v-icon>
+                      시스템 상태: <span class="text-teal-darken-2">정상</span>
+                    </div>
                   </v-col>
                 </v-row>
               </v-card-text>
@@ -1276,6 +1291,19 @@ const formatDate = (dateStr: string) => {
   if (!dateStr) return '-'
   const d = new Date(dateStr)
   return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+}
+
+// ★★★ 추가: 마지막 로그인 포맷 함수 ★★★
+const formatLastLogin = (dateStr: string | null | undefined) => {
+  if (!dateStr) return '-'
+  const d = new Date(dateStr)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const hours = String(d.getHours()).padStart(2, '0')
+  const minutes = String(d.getMinutes()).padStart(2, '0')
+  const seconds = String(d.getSeconds()).padStart(2, '0')
+  return `${year}. ${month}. ${day}. 오전 ${hours}:${minutes}:${seconds}`
 }
 
 // ★★★ [수정] 봇 수행 시간 포맷 함수 - 다양한 형식 처리 ★★★

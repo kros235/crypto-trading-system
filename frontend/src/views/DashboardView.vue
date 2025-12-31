@@ -542,8 +542,19 @@
                         />
                       </template>
                       
-                      <!-- 거래 데이터 없을 때 -->
+                      <!-- 거래 데이터 없을 때 - 백테스팅 스타일 -->
                       <template v-else>
+                        <!-- 영역 채우기 (현재 자산 수평선) -->
+                        <rect 
+                          :x="svgPadding" 
+                          :y="svgHeightBacktest / 2 - 2"
+                          :width="svgWidth - svgPadding * 2"
+                          :height="4"
+                          fill="url(#dashboardAreaGradient)"
+                          opacity="0.3"
+                        />
+                        
+                        <!-- 초기 자산 기준선 (주황색 점선) -->
                         <line 
                           :x1="svgPadding" 
                           :y1="svgHeightBacktest / 2" 
@@ -553,18 +564,32 @@
                           stroke-width="2" 
                           stroke-dasharray="6,4"
                         />
+                        
+                        <!-- 현재 자산 라인 (파란색 실선) -->
                         <line 
                           :x1="svgPadding" 
                           :y1="svgHeightBacktest / 2" 
                           :x2="svgWidth - svgPadding" 
                           :y2="svgHeightBacktest / 2" 
-                          stroke="#4CAF50" 
-                          stroke-width="2"
+                          stroke="#1976D2" 
+                          stroke-width="2.5"
                         />
+  
+                        <!-- 시작점 -->
                         <circle 
-                          :cx="svgWidth / 2" 
+                          :cx="svgPadding" 
                           :cy="svgHeightBacktest / 2" 
                           r="6" 
+                          fill="#1976D2" 
+                          stroke="white" 
+                          stroke-width="2"
+                        />
+                        
+                        <!-- 현재점 -->
+                        <circle 
+                          :cx="svgWidth - svgPadding" 
+                          :cy="svgHeightBacktest / 2" 
+                          r="8" 
                           fill="#4CAF50" 
                           stroke="white" 
                           stroke-width="2"
@@ -572,17 +597,24 @@
                       </template>
                     </svg>
                     
-                    <!-- 기준선 라벨 (백테스팅 스타일) -->
-                    <div v-if="assetHistory.length > 0" class="chart-labels-backtest">
-                      <span class="chart-label label-max" :style="{ top: getLabelPositionBacktest(maxBalanceBacktest) + '%' }">
-                        최고: {{ formatCurrency(maxBalanceBacktest) }}
-                      </span>
-                      <span class="chart-label label-initial" :style="{ top: getLabelPositionBacktest(initialAsset) + '%' }">
-                        초기: {{ formatCurrency(initialAsset) }}
-                      </span>
-                      <span class="chart-label label-min" :style="{ top: getLabelPositionBacktest(minBalanceBacktest) + '%' }">
-                        최저: {{ formatCurrency(minBalanceBacktest) }}
-                      </span>
+                    <!-- 기준선 라벨 (백테스팅 스타일) - 항상 표시 -->
+                    <div class="chart-labels-backtest">
+                      <template v-if="assetHistory.length > 0">
+                        <span class="chart-label label-max" :style="{ top: getLabelPositionBacktest(maxBalanceBacktest) + '%' }">
+                          최고: {{ formatCurrency(maxBalanceBacktest) }}
+                        </span>
+                        <span class="chart-label label-initial" :style="{ top: getLabelPositionBacktest(initialAsset) + '%' }">
+                          초기: {{ formatCurrency(initialAsset) }}
+                        </span>
+                        <span class="chart-label label-min" :style="{ top: getLabelPositionBacktest(minBalanceBacktest) + '%' }">
+                          최저: {{ formatCurrency(minBalanceBacktest) }}
+                        </span>
+                      </template>
+                      <template v-else>
+                        <span class="chart-label label-initial" style="top: 50%;">
+                          현재: {{ formatCurrency(upbitAccount.totalAsset || initialAsset) }}
+                        </span>
+                      </template>
                     </div>
                     
                     <!-- 툴팁 (백테스팅 스타일) -->
@@ -605,10 +637,14 @@
                     <span>{{ assetHistory[assetHistory.length - 1]?.date || '' }}</span>
                   </div>
                   
-                  <!-- 거래 없을 때 안내 -->
-                  <div v-if="assetHistory.length === 0 && upbitAccount.totalAsset > 0" class="text-center text-caption text-grey mt-2">
-                    <v-icon size="14" class="mr-1">mdi-information-outline</v-icon>
-                    거래 내역이 없습니다. 현재 총 자산: {{ formatCurrency(upbitAccount.totalAsset) }}
+                  <!-- 차트 하단 날짜 표시 -->
+                  <div class="chart-dates d-flex justify-space-between mt-2 px-4">
+                    <span class="text-caption text-grey-darken-1">
+                      {{ assetHistory.length > 0 ? chartStartDate : '시작일' }}
+                    </span>
+                    <span class="text-caption text-grey-darken-1">
+                      {{ assetHistory.length > 0 ? chartEndDate : '오늘' }}
+                    </span>
                   </div>
                 </div>
                 
@@ -1524,7 +1560,47 @@ const fetchRecentTransactions = async () => {
     console.error('최근 거래 조회 실패:', e)
   }
 }
-const fetchAssetHistory = async () => { assetHistory.value = []; initialAsset.value = tradingSettings.value?.dailyLimitAmount || 1000000 }
+const fetchAssetHistory = async () => {
+  try {
+    // 초기 자산 설정
+    initialAsset.value = tradingSettings.value?.dailyLimitAmount || upbitAccount.value.totalAsset || 1000000
+    
+    // 거래 이력이 있으면 날짜별로 그룹화하여 자산 변동 추이 생성
+    if (recentTransactions.value.length > 0) {
+      const sortedTxs = [...recentTransactions.value].sort((a, b) => 
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      )
+      
+      // 날짜별 그룹화
+      const dailyMap = new Map<string, { balance: number, profitRate: number }>()
+      let runningBalance = initialAsset.value
+      
+      sortedTxs.forEach(tx => {
+        const dateKey = new Date(tx.soldAt || tx.createdAt).toISOString().split('T')[0]
+        
+        if (tx.status === 'SOLD' && tx.profitLoss) {
+          runningBalance += tx.profitLoss
+        }
+        
+        const profitRate = ((runningBalance - initialAsset.value) / initialAsset.value) * 100
+        dailyMap.set(dateKey, { balance: runningBalance, profitRate })
+      })
+      
+      // Map을 배열로 변환
+      assetHistory.value = Array.from(dailyMap.entries()).map(([date, data]) => ({
+        date,
+        balance: data.balance,
+        profitRate: data.profitRate
+      }))
+    } else {
+      // 거래 이력이 없으면 빈 배열 (현재 자산만 표시)
+      assetHistory.value = []
+    }
+  } catch (e) {
+    console.error('자산 이력 생성 실패:', e)
+    assetHistory.value = []
+  }
+}
 const generateSystemAlerts = () => { const a: any[] = []; if (!authStore.user?.hasApiKey) a.push({ type: 'warning', message: 'API 키가 미등록 상태입니다' }); if (!tradingSettings.value) a.push({ type: 'warning', message: '거래 설정을 완료해주세요' }); const n = new Date(); if (n.getHours() === 9 && n.getMinutes() < 10) a.push({ type: 'info', message: '업비트 점검 시간 (09:00~09:10)' }); if (botStatus.value.emergencyStop) a.push({ type: 'error', message: '긴급 정지 발동됨' }); systemAlerts.value = a }
 const refreshAll = async () => { isRefreshing.value = true; try { await Promise.all([fetchDashboardStats(), fetchUpbitAccount(), fetchBotStatus(), fetchTradingSettings()]); await Promise.all([fetchIndicators(), fetchHoldings(), fetchRecentTransactions()]); generateSystemAlerts(); showSnackbar('새로고침 완료', 'success') } finally { isRefreshing.value = false } }
 
@@ -1924,5 +2000,21 @@ onUnmounted(() => {
 .help-content strong {
   color: #1565C0;
   font-weight: 600;
+}
+
+.chart-dates {
+  font-size: 12px;
+}
+
+.chart-label.label-initial {
+  color: #FF9800;
+}
+
+.chart-label.label-max {
+  color: #4CAF50;
+}
+
+.chart-label.label-min {
+  color: #F44336;
 }
 </style>

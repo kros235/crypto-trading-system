@@ -335,6 +335,11 @@
               {{ formatDate(item.joinDate) }}
             </template>
 
+            <!-- 마지막 로그인 -->
+            <template v-slot:item.lastLogin="{ item }">
+              {{ formatDateTime(item.lastLogin) }}
+            </template>
+
             <!-- 액션 -->
             <template v-slot:item.actions="{ item }">
               <v-btn
@@ -595,6 +600,7 @@ const headers = [
   { title: '거래 수', key: 'totalTransactions' },
   { title: '보유 건수', key: 'holdingCount' },
   { title: '가입일', key: 'joinDate' },
+  { title: '마지막 로그인', key: 'lastLogin' },
   { title: '액션', key: 'actions', sortable: false }
 ]
 
@@ -615,6 +621,11 @@ const formatKRW = (value: number) => {
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '-'
   return new Date(dateStr).toLocaleDateString('ko-KR')
+}
+
+const formatDateTime = (dateStr: string) => {
+  if (!dateStr) return '-'
+  return new Date(dateStr).toLocaleString('ko-KR')
 }
 
 const fetchStats = async () => {
@@ -669,11 +680,6 @@ const formatBytes = (bytes: number) => {
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-}
-
-const formatDateTime = (dateStr: string) => {
-  if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleString('ko-KR')
 }
 
 const getHeapColor = (percent: number) => {

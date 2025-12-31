@@ -623,9 +623,25 @@ const formatDate = (dateStr: string) => {
   return new Date(dateStr).toLocaleDateString('ko-KR')
 }
 
+// ★★★ 수정: 마지막 로그인 시간 (UTC → KST 변환) ★★★
 const formatDateTime = (dateStr: string) => {
   if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleString('ko-KR')
+  
+  // UTC 시간을 KST로 변환 (+9시간)
+  const utcDate = new Date(dateStr)
+  const kstDate = new Date(utcDate.getTime() + (9 * 60 * 60 * 1000))
+  
+  const year = kstDate.getFullYear()
+  const month = String(kstDate.getMonth() + 1).padStart(2, '0')
+  const day = String(kstDate.getDate()).padStart(2, '0')
+  const hours = kstDate.getHours()
+  const minutes = String(kstDate.getMinutes()).padStart(2, '0')
+  const seconds = String(kstDate.getSeconds()).padStart(2, '0')
+  
+  const ampm = hours < 12 ? '오전' : '오후'
+  const displayHours = String(hours % 12 || 12).padStart(2, '0')
+  
+  return `${year}. ${month}. ${day}. ${ampm} ${displayHours}:${minutes}:${seconds}`
 }
 
 const fetchStats = async () => {

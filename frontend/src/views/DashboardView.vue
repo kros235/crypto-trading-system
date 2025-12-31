@@ -405,7 +405,7 @@
         <v-row class="mt-3 mb-4" dense>
           <v-col cols="12" md="4">
             <v-card class="fill-height" elevation="2">
-              <v-card-title class="py-2 px-4 bg-indigo-darken-1 text-white">
+              <v-card-title class="py-2 px-4 bg-indigo-darken-1 text-white" style="min-height: 48px;">
                 <v-icon class="mr-2" size="20">mdi-podium</v-icon>
                 <span class="text-body-1">코인별 성과</span>
               </v-card-title>
@@ -436,7 +436,7 @@
           <!-- ★★★ 수정: 최근 거래 가로 배치 ★★★ -->
           <v-col cols="12" md="4">
             <v-card class="fill-height" elevation="2">
-              <v-card-title class="py-2 px-4 bg-indigo-darken-1 text-white d-flex align-center">
+              <v-card-title class="py-2 px-4 bg-indigo-darken-1 text-white d-flex align-center" style="min-height: 48px;">
                 <v-icon class="mr-2" size="20">mdi-history</v-icon>
                 <span class="text-body-1">최근 거래</span>
                 <v-spacer />
@@ -472,7 +472,7 @@
           <v-col cols="12" md="4">
             <v-card class="fill-height" elevation="2">
               <!-- ★★★ 수정: 시스템 알림 빨간색 배경 ★★★ -->
-              <v-card-title class="py-2 px-4 bg-red-darken-1 text-white">
+              <v-card-title class="py-2 px-4 bg-red-darken-1 text-white" style="min-height: 48px;">
                 <v-icon class="mr-2" size="20">mdi-bell</v-icon>
                 <span class="text-body-1">시스템 알림</span>
               </v-card-title>
@@ -702,7 +702,7 @@ const calculateInvestmentPeriod = (firstTradeDate: string | null) => {
   }
 }
 
-const fetchDashboardStats = async () => { try { const r = await transactionApi.getDashboardStats(); dashboardStats.value = r.data } catch (e) { console.error(e) } }
+const fetchDashboardStats = async () => { try { const r = await transactionApi.getStats(); dashboardStats.value = r.data } catch (e) { console.error(e) } }
 const fetchUpbitAccount = async () => {
   if (!authStore.user?.hasApiKey) return
   loadingAccount.value = true

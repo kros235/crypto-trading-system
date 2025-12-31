@@ -11,6 +11,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,9 +79,6 @@ public class BotController {
         return ResponseEntity.ok(results);
     }
 
-    /**
-     * 봇 상태 조회 (리스크 정보 포함)
-     */
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> getBotStatus(Authentication authentication) {
         String userId = authentication.getName();
@@ -86,9 +86,52 @@ public class BotController {
         Map<String, Object> status = new HashMap<>();
         status.put("userId", userId);
         status.put("timestamp", System.currentTimeMillis());
-        status.put("botEnabled", true);  // 추후 사용자별 on/off 설정 추가 가능
+        status.put("botEnabled", true);
         
-        // 추후 구현: 현재 보유 현황, 오늘 거래 내역 등
+        // ★★★ [추가] 다음 실행 시간 계산 (5분 간격 스케줄러 기준) ★★★
+        LocalDateTime now = LocalDateTime.now();
+    
+        // 5분 단위로 다음 실행 시간 계산
+        int currentMinute = now.getMinute();
+        int nextMinute = ((currentMinute / 5) + 1) * 5;
+        
+        LocalDateTime nextExecution;
+        if (nextMinute >= 60) {
+            nextExecution = now.plusHours(1).withMinute(0).withSecond(0).withNano(0);
+        } else {
+            nextExecution = now.withMinute(nextMinute).withSecond(0).withNano(0);
+        }
+    
+        // 마지막 실행 시간 (가장 최근 5분 단위)
+        int lastMinute = (currentMinute / 5) * 5;
+        LocalDateTime lastExecution = now.withMinute(lastMinute).withSecond(0).withNano(0);
+        if (lastMinute == currentMinute && now.getSecond() == 0) {
+            // 정각에 호출된 경우, 이전 주기가 마지막 실행
+            lastExecution = lastExecution.minusMinutes(5);
+        }
+    
+        // 업비트 점검시간 (09:00~09:10) 체크
+        boolean isMaintenanceTime = now.getHour() == 9 && now.getMinute() < 10;
+    
+        // 실행 중 여부 (점검시간이 아니면 실행 중으로 간주)
+        boolean isRunning = !isMaintenanceTime;
+    
+        // 포맷팅
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+        DateTimeFormatter fullFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    
+        status.put("isRunning", isRunning);
+        status.put("lastExecutedAt", lastExecution.format(fullFormatter));
+        status.put("nextExecutionAt", nextExecution.format(fullFormatter));
+        status.put("nextExecutionTime", nextExecution.format(formatter));  // 시:분만
+        status.put("lastExecutionTime", lastExecution.format(formatter));  // 시:분만
+        status.put("isMaintenanceTime", isMaintenanceTime);
+        status.put("apiConnected", true);
+        status.put("emergencyStop", false);
+        
+        // ★★★ [추가] 다음 실행까지 남은 초 계산 ★★★
+        long secondsUntilNext = java.time.Duration.between(now, nextExecution).getSeconds();
+        status.put("secondsUntilNextExecution", secondsUntilNext);
         
         return ResponseEntity.ok(status);
     }

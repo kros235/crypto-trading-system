@@ -98,19 +98,30 @@
                 <v-icon class="mr-2" size="20">mdi-robot</v-icon>
                 <span class="text-body-2">자동매매</span>
                 <v-spacer />
-                <!-- ★★★ 수정: 대기중 색상 변경 (매수조건과 동일하게) ★★★ -->
+                <!-- ★★★ [수정] 로봇 아이콘 삭제, 칩만 표시 ★★★ -->
                 <v-chip :color="botStatus.isRunning ? 'teal' : 'blue-grey-darken-1'" size="x-small" variant="flat">
                   {{ botStatus.isRunning ? '작동중' : '대기중' }}
                 </v-chip>
               </v-card-title>
               <v-card-text class="pa-3">
-                <div class="text-body-2 text-grey-darken-3 mb-1"><strong>마지막:</strong> {{ botStatus.lastExecuted || '-' }}</div>
-                <div class="text-body-2 text-grey-darken-3"><strong>다음:</strong> {{ botStatus.nextExecution || '-' }}</div>
+                <div class="d-flex justify-space-between align-center text-body-2 text-grey-darken-3 mb-1">
+                  <span>마지막 봇 수행 시간</span>
+                  <span class="font-weight-medium">{{ formatBotTimeDisplay(botStatus.lastExecuted || botStatus.lastExecutionTime) }}</span>
+                </div>
+                <div class="d-flex justify-space-between align-center text-body-2 text-grey-darken-3">
+                  <span>다음 봇 수행 시간</span>
+                  <span class="font-weight-medium">{{ formatBotTimeDisplay(botStatus.nextExecution || botStatus.nextExecutionTime) }}</span>
+                </div>
+                <!-- ★★★ [수정] 실시간 카운트다운 ★★★ -->
+                <div v-if="countdownSeconds > 0" class="text-caption text-teal-darken-2 text-right mt-1 font-weight-medium">
+                  ({{ Math.floor(countdownSeconds / 60) }}분 {{ countdownSeconds % 60 }}초 후)
+                </div>
                 <v-chip v-if="botStatus.emergencyStop" color="red" size="x-small" variant="flat" class="mt-1">🚨 긴급정지</v-chip>
+                <v-chip v-if="botStatus.isMaintenanceTime" color="orange" size="x-small" variant="flat" class="mt-1">🔧 점검시간</v-chip>
               </v-card-text>
             </v-card>
           </v-col>
-        </v-row>
+        </v-row>  
 
         <!-- ========== 섹션 2: 업비트 계좌 현황 ========== -->
         <v-row class="mt-3" dense>
@@ -178,13 +189,17 @@
               <v-card-text v-if="tradingSettings" class="pa-3">
                 <div class="mb-2">
                   <span class="text-caption text-grey-darken-1">거래 코인</span>
-                  <div class="text-body-2 text-grey-darken-4 font-weight-medium">{{ tradingSettings.coinSymbols?.map(s => s.replace('KRW-', '')).join(', ') || '-' }}</div>
+                  <div class="text-body-2 text-grey-darken-4 font-weight-medium">
+                    {{ tradingSettings.coinSymbols?.map(s => s.replace('KRW-', '')).join(', ') || '-' }}
+                  </div>
                 </div>
                 <div class="mb-2">
                   <span class="text-caption text-grey-darken-1">매수 조건</span>
-                  <div class="text-body-2 text-grey-darken-4 font-weight-medium">MA{{ tradingSettings.basePeriod }} {{ tradingSettings.buyThresholdPct }}% 이하</div>
+                  <div class="text-body-2 text-grey-darken-4 font-weight-medium">
+                    MA{{ tradingSettings.basePeriod }} 대비 {{ tradingSettings.buyThresholdPct }}% 이하
+                  </div>
                 </div>
-                <div>
+                <div class="mb-2">
                   <span class="text-caption text-grey-darken-1">매도 조건</span>
                   <div class="text-body-2 font-weight-medium">
                     <span class="text-teal-darken-2">익절 +{{ tradingSettings.sellTargetPct }}%</span>
@@ -192,7 +207,21 @@
                     <span class="text-red-darken-2">손절 {{ tradingSettings.stopLossPct }}%</span>
                   </div>
                 </div>
-                <v-btn size="small" color="indigo" variant="text" class="mt-2 px-0" @click="$router.push('/trading-settings')">설정 변경 →</v-btn>
+                <div class="mb-2">
+                  <span class="text-caption text-grey-darken-1">종목당 최대 보유</span>
+                  <div class="text-body-2 text-grey-darken-4 font-weight-medium">{{ tradingSettings.maxHoldingsPerCoin || 3 }}건</div>
+                </div>
+                <div class="mb-2">
+                  <span class="text-caption text-grey-darken-1">일일 투자 한도</span>
+                  <div class="text-body-2 text-grey-darken-4 font-weight-medium">{{ formatCurrency(tradingSettings.dailyLimitAmount) }}</div>
+                </div>
+                <div class="mb-2">
+                  <span class="text-caption text-grey-darken-1">AI 뉴스 분석</span>
+                  <v-chip :color="tradingSettings.useAiAnalysis ? 'teal' : 'grey'" size="x-small" variant="flat" class="ml-2">
+                    {{ tradingSettings.useAiAnalysis ? '사용' : '미사용' }}
+                  </v-chip>
+                </div>
+                <v-btn size="small" color="indigo" variant="text" class="mt-1 px-0" @click="$router.push('/trading-settings')">설정 변경 →</v-btn>
               </v-card-text>
               <v-card-text v-else class="pa-3 d-flex align-center justify-center" style="min-height: 120px;">
                 <!-- ★★★ 수정: 설정 필요 문구 제거, 버튼 강조 및 중앙 배치 ★★★ -->
@@ -233,9 +262,18 @@
                 <div class="mt-2">
                   <span class="text-caption text-grey-darken-1">종목별 보유</span>
                   <div class="mt-1">
-                    <v-chip v-for="(count, symbol) in holdingsPerCoin" :key="symbol" size="x-small" variant="outlined" class="mr-1 mb-1">
-                      {{ symbol }}: {{ count }}/{{ tradingSettings?.maxHoldingsPerCoin || 3 }}
-                    </v-chip>
+                    <v-chip-group>
+                      <v-chip 
+                        v-for="(count, symbol) in holdingsPerCoin" 
+                        :key="symbol" 
+                        size="small" 
+                        variant="outlined"
+                        :color="count >= (tradingSettings?.maxHoldingsPerCoin || 3) ? 'red' : 'teal'"
+                      >
+                        <strong class="mr-1">{{ symbol }}</strong>
+                        {{ count }}/{{ tradingSettings?.maxHoldingsPerCoin || 3 }}
+                      </v-chip>
+                    </v-chip-group>
                     <span v-if="Object.keys(holdingsPerCoin).length === 0" class="text-caption text-grey-darken-2">없음</span>
                   </div>
                 </div>
@@ -246,7 +284,7 @@
           <!-- ★★★ 수정: 매수 조건 카드 재구성 - 더 알기 쉽게 ★★★ -->
           <v-col cols="12" md="4">
             <v-card class="fill-height" elevation="2">
-              <v-card-title class="py-2 px-4 bg-indigo-darken-1 text-white d-flex align-center">
+              <v-card-title class="py-2 px-4 bg-teal-darken-2 text-white d-flex align-center">
                 <v-icon class="mr-2" size="20">mdi-target</v-icon>
                 <span class="text-body-1">매수 조건</span>
                 <v-spacer />
@@ -254,51 +292,92 @@
                   <v-icon size="18">mdi-refresh</v-icon>
                 </v-btn>
               </v-card-title>
-              <v-card-text class="pa-3">
-                <!-- ★★★ 롤백: 기존 매수 기준 설명 ★★★ -->
-                <div v-if="tradingSettings && coinIndicators.length > 0" class="mb-3 pa-2 bg-indigo-lighten-5 rounded">
-                  <div class="text-caption text-indigo-darken-2 font-weight-medium">
-                    📌 MA{{ tradingSettings?.basePeriod || 20 }} 대비 {{ tradingSettings?.buyThresholdPct || -6 }}% 이하일 때 매수
-                  </div>
-                </div>
-                <div v-if="coinIndicators.length > 0" class="indicator-list">
-                  <div v-for="ind in coinIndicators.slice(0, 4)" :key="ind.symbol" class="py-2 border-b">
-                    <!-- ★★★ 수정: 코인명 | 현재가→목표가 | 대기 한줄 표시 ★★★ -->
-                    <div class="d-flex align-center justify-space-between mb-1">
-                      <span class="text-body-2 text-grey-darken-4 font-weight-bold" style="min-width: 45px;">{{ ind.symbol.replace('KRW-', '') }}</span>
-                      <span class="text-caption text-grey-darken-2 flex-grow-1 text-center">{{ formatCompactPrice(ind.currentPrice) }} → <span class="text-indigo-darken-1 font-weight-medium">{{ formatCompactPrice(ind.buyPrice) }}</span></span>
-                      <v-chip 
-                        :color="ind.canBuy ? 'teal' : 'blue-grey-darken-1'" 
-                        size="x-small" 
-                        variant="flat"
-                        class="font-weight-medium"
-                      >
-                        {{ ind.canBuy ? '✓ 매수' : '대기' }}
-                      </v-chip>
+              <v-card-text class="pa-2">
+                <!-- ★★★ [추가] 매수 조건 설명 (AI 가중치 반영) ★★★ -->
+                <v-alert 
+                  v-if="tradingSettings" 
+                  type="info" 
+                  variant="tonal" 
+                  density="compact" 
+                  class="mb-2 text-caption"
+                  :icon="false"
+                >
+                  <v-icon size="14" class="mr-1">mdi-information</v-icon>
+                  <template v-if="tradingSettings.useAiAnalysis">
+                    MA{{ tradingSettings.basePeriod || 20 }} {{ tradingSettings.buyThresholdPct }}% 이하 매수 (AI ±0.5% 조정)
+                  </template>
+                  <template v-else>
+                    MA{{ tradingSettings.basePeriod || 20 }} 대비 {{ tradingSettings.buyThresholdPct }}% 이하일 때 매수
+                  </template>
+                </v-alert>
+      
+                <v-list density="compact" class="pa-0">
+                  <v-list-item 
+                    v-for="coin in coinIndicators" 
+                    :key="coin.symbol" 
+                    class="px-2 py-1"
+                    style="min-height: 48px;"
+                  >
+                    <div class="d-flex align-center justify-space-between w-100">
+                      <div class="flex-grow-1">
+                        <div class="d-flex align-center">
+                          <span class="text-body-2 font-weight-medium text-grey-darken-4">
+                            {{ coin.symbol.replace('KRW-', '') }}
+                          </span>
+                          <!-- ★★★ [추가] AI 가중치 적용 코인 표시 ★★★ -->
+                          <v-chip 
+                            v-if="coin.aiWeight && coin.aiWeight !== 0" 
+                            size="x-small" 
+                            :color="coin.aiWeight > 0 ? 'teal' : 'red'" 
+                            variant="outlined"
+                            class="ml-1"
+                          >
+                            AI {{ coin.aiWeight > 0 ? '+' : '' }}{{ coin.aiWeight.toFixed(1) }}%
+                          </v-chip>
+                        </div>
+                        <!-- ★★★ [수정] 가격 정보에 설명 추가 ★★★ -->
+                        <div class="text-caption text-grey-darken-1">
+                          <span class="font-weight-medium">현재가:</span> {{ formatCompactPrice(coin.currentPrice) }} 
+                          <v-icon size="12" class="mx-1">mdi-arrow-right</v-icon>
+                          <span class="font-weight-medium">매수가:</span> {{ formatCompactPrice(coin.buyPrice) }}
+                          <!-- ★★★ [추가] AI 가중치 적용된 매수가도 표시 ★★★ -->
+                          <template v-if="coin.aiAdjustedBuyPrice && coin.aiAdjustedBuyPrice !== coin.buyPrice">
+                            <span class="text-teal-darken-2">(AI: {{ formatCompactPrice(coin.aiAdjustedBuyPrice) }})</span>
+                          </template>
+                        </div>
+                        <div class="text-caption" :class="coin.canBuy ? 'text-teal-darken-2' : 'text-grey'">
+                          현재 이격도 {{ coin.dropRate?.toFixed(2) || '0.00' }}% 
+                          <span v-if="!coin.canBuy">({{ Math.abs(coin.remainingDrop || 0).toFixed(1) }}% 더 하락 필요)</span>
+                          <span v-else class="font-weight-bold">(매수 조건 충족!)</span>
+                        </div>
+                      </div>
+                      <div class="d-flex align-center">
+                        <!-- ★★★ [수정] 상세 지표 보기 칩 스타일 ★★★ -->
+                        <v-chip 
+                          size="x-small" 
+                          variant="outlined"
+                          color="indigo"
+                          class="mr-1"
+                          style="cursor: pointer;"
+                          @click="openIndicatorDetail(coin)"
+                        >
+                          상세 지표 보기
+                        </v-chip>
+                        <v-chip 
+                          :color="coin.canBuy ? 'teal' : 'blue-grey-darken-1'" 
+                          size="x-small" 
+                          variant="flat"
+                        >
+                          {{ coin.canBuy ? '매수가능' : '대기' }}
+                        </v-chip>
+                      </div>
                     </div>
-                    <div class="d-flex align-center mb-1">
-                      <v-progress-linear
-                        :model-value="Math.min(100, Math.max(0, ((ind.dropRate - (tradingSettings?.buyThresholdPct || -6)) / Math.abs(tradingSettings?.buyThresholdPct || -6)) * 100 + 100))"
-                        :color="ind.canBuy ? 'teal' : 'indigo-lighten-2'"
-                        height="6"
-                        rounded
-                        class="flex-grow-1"
-                      />
-                    </div>
-                    <div class="d-flex justify-space-between text-caption">
-                      <span class="text-grey-darken-2">현재 이격도</span>
-                      <span :class="ind.canBuy ? 'text-teal-darken-2 font-weight-bold' : 'text-grey-darken-3'">
-                        {{ ind.dropRate?.toFixed(2) }}%
-                        <span v-if="!ind.canBuy" class="text-blue-grey-darken-1">({{ Math.abs(ind.remainingDrop)?.toFixed(1) }}% 더 하락 필요)</span>
-                      </span>
-                    </div>
-                  </div>
-                  <v-btn v-if="coinIndicators.length > 4" size="small" variant="text" color="indigo" class="mt-1 px-0" @click="showAllIndicators = true">
-                    +{{ coinIndicators.length - 4 }}개 더보기
-                  </v-btn>
-                </div>
-                <div v-else class="text-center text-grey-darken-2 py-2">
-                  <div class="text-body-2">거래 설정에서 코인을 선택하세요</div>
+                  </v-list-item>
+                </v-list>
+      
+                <div v-if="!coinIndicators.length" class="text-center py-4 text-grey">
+                  <v-icon size="32" class="mb-2">mdi-chart-timeline-variant</v-icon>
+                  <div class="text-caption">거래 설정을 먼저 완료해주세요</div>
                 </div>
               </v-card-text>
             </v-card>
@@ -369,32 +448,153 @@
                   <v-icon size="16">mdi-calendar-range</v-icon>
                 </v-btn>
               </v-card-title>
-              <v-card-text class="pa-3">
-                <div v-if="assetHistory.length > 0" class="chart-container">
-                  <div class="chart-wrapper" @mousemove="handleChartHover" @mouseleave="hoveredIndex = -1">
-                    <svg class="custom-chart" :viewBox="`0 0 ${svgWidth} ${svgHeight}`" preserveAspectRatio="none">
+                <v-card-text class="pa-3">
+                <!-- ★★★ [수정] 백테스팅 스타일 자산 변동 추이 차트 ★★★ -->
+                <div v-if="assetHistory.length > 0 || upbitAccount.totalAsset > 0" class="chart-container">
+                  <div 
+                    class="chart-wrapper-backtest"
+                    @mousemove="handleChartHover"
+                    @mouseleave="hoveredIndex = -1"
+                  >
+                    <svg 
+                      class="custom-chart"
+                      :viewBox="`0 0 ${svgWidth} ${svgHeightBacktest}`"
+                      preserveAspectRatio="none"
+                    >
+                      <!-- 그라데이션 정의 -->
                       <defs>
                         <linearGradient id="dashboardAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" style="stop-color:#5C6BC0;stop-opacity:0.5" />
-                          <stop offset="100%" style="stop-color:#5C6BC0;stop-opacity:0.1" />
+                          <stop offset="0%" style="stop-color:#42A5F5;stop-opacity:0.6" />
+                          <stop offset="100%" style="stop-color:#42A5F5;stop-opacity:0.1" />
                         </linearGradient>
                       </defs>
-                      <path :d="areaPath" fill="url(#dashboardAreaGradient)" />
-                      <line :x1="svgPadding" :y1="getYPosition(initialAsset)" :x2="svgWidth - svgPadding" :y2="getYPosition(initialAsset)" stroke="#FFA726" stroke-width="2" stroke-dasharray="5,3" />
-                      <path :d="linePath" fill="none" stroke="#3F51B5" stroke-width="2.5" />
-                      <circle v-for="(point, index) in chartPoints" :key="index" :cx="point.x" :cy="point.y" :r="hoveredIndex === index ? 7 : 4" :fill="getPointColor(point.balance)" stroke="white" stroke-width="2" class="chart-point" />
+                      
+                      <!-- 거래 데이터가 있을 때 -->
+                      <template v-if="assetHistory.length > 0">
+                        <!-- 영역 채우기 -->
+                        <path :d="areaPathBacktest" fill="url(#dashboardAreaGradient)" />
+                        
+                        <!-- 기준선들 -->
+                        <line 
+                          :x1="svgPadding" 
+                          :y1="getYPositionBacktest(initialAsset)" 
+                          :x2="svgWidth - svgPadding" 
+                          :y2="getYPositionBacktest(initialAsset)"
+                          stroke="#FF9800" 
+                          stroke-width="2" 
+                          stroke-dasharray="6,4"
+                        />
+                        <line 
+                          :x1="svgPadding" 
+                          :y1="getYPositionBacktest(maxBalanceBacktest)" 
+                          :x2="svgWidth - svgPadding" 
+                          :y2="getYPositionBacktest(maxBalanceBacktest)"
+                          stroke="#4CAF50" 
+                          stroke-width="2" 
+                          stroke-dasharray="6,4"
+                        />
+                        <line 
+                          :x1="svgPadding" 
+                          :y1="getYPositionBacktest(minBalanceBacktest)" 
+                          :x2="svgWidth - svgPadding" 
+                          :y2="getYPositionBacktest(minBalanceBacktest)"
+                          stroke="#F44336" 
+                          stroke-width="2" 
+                          stroke-dasharray="6,4"
+                        />
+                        
+                        <!-- 라인 차트 -->
+                        <path :d="linePathBacktest" fill="none" stroke="#1976D2" stroke-width="2.5" />
+                        
+                        <!-- 데이터 포인트 -->
+                        <circle
+                          v-for="(point, index) in chartPointsBacktest"
+                          :key="index"
+                          :cx="point.x"
+                          :cy="point.y"
+                          :r="hoveredIndex === index ? 8 : 4"
+                          :fill="getPointColorBacktest(point.balance)"
+                          stroke="white"
+                          stroke-width="2"
+                          class="chart-point"
+                        />
+                      </template>
+                      
+                      <!-- 거래 데이터 없을 때 -->
+                      <template v-else>
+                        <line 
+                          :x1="svgPadding" 
+                          :y1="svgHeightBacktest / 2" 
+                          :x2="svgWidth - svgPadding" 
+                          :y2="svgHeightBacktest / 2"
+                          stroke="#FF9800" 
+                          stroke-width="2" 
+                          stroke-dasharray="6,4"
+                        />
+                        <line 
+                          :x1="svgPadding" 
+                          :y1="svgHeightBacktest / 2" 
+                          :x2="svgWidth - svgPadding" 
+                          :y2="svgHeightBacktest / 2" 
+                          stroke="#4CAF50" 
+                          stroke-width="2"
+                        />
+                        <circle 
+                          :cx="svgWidth / 2" 
+                          :cy="svgHeightBacktest / 2" 
+                          r="6" 
+                          fill="#4CAF50" 
+                          stroke="white" 
+                          stroke-width="2"
+                        />
+                      </template>
                     </svg>
-                    <div v-if="hoveredIndex >= 0 && hoveredData" class="chart-tooltip" :style="{ left: tooltipX + 'px' }">
+                    
+                    <!-- 기준선 라벨 (백테스팅 스타일) -->
+                    <div v-if="assetHistory.length > 0" class="chart-labels-backtest">
+                      <span class="chart-label label-max" :style="{ top: getLabelPositionBacktest(maxBalanceBacktest) + '%' }">
+                        최고: {{ formatCurrency(maxBalanceBacktest) }}
+                      </span>
+                      <span class="chart-label label-initial" :style="{ top: getLabelPositionBacktest(initialAsset) + '%' }">
+                        초기: {{ formatCurrency(initialAsset) }}
+                      </span>
+                      <span class="chart-label label-min" :style="{ top: getLabelPositionBacktest(minBalanceBacktest) + '%' }">
+                        최저: {{ formatCurrency(minBalanceBacktest) }}
+                      </span>
+                    </div>
+                    
+                    <!-- 툴팁 (백테스팅 스타일) -->
+                    <div 
+                      v-if="hoveredIndex >= 0 && hoveredData && assetHistory.length > 0"
+                      class="chart-tooltip-backtest"
+                      :style="{ left: tooltipX + 'px' }"
+                    >
                       <div class="font-weight-bold">{{ hoveredData.date }}</div>
-                      <div>{{ formatCurrency(hoveredData.balance) }}</div>
-                      <div :class="hoveredData.profitRate >= 0 ? 'text-teal' : 'text-red'">{{ hoveredData.profitRate >= 0 ? '+' : '' }}{{ hoveredData.profitRate.toFixed(2) }}%</div>
+                      <div>자산: {{ formatCurrency(hoveredData.balance) }}</div>
+                      <div :class="hoveredData.profitRate >= 0 ? 'text-success' : 'text-error'">
+                        수익률: {{ hoveredData.profitRate >= 0 ? '+' : '' }}{{ hoveredData.profitRate.toFixed(2) }}%
+                      </div>
                     </div>
                   </div>
+                  
+                  <!-- 날짜 라벨 -->
+                  <div v-if="assetHistory.length > 0" class="d-flex justify-space-between text-caption text-grey mt-2">
+                    <span>{{ assetHistory[0]?.date || '' }}</span>
+                    <span>{{ assetHistory[assetHistory.length - 1]?.date || '' }}</span>
+                  </div>
+                  
+                  <!-- 거래 없을 때 안내 -->
+                  <div v-if="assetHistory.length === 0 && upbitAccount.totalAsset > 0" class="text-center text-caption text-grey mt-2">
+                    <v-icon size="14" class="mr-1">mdi-information-outline</v-icon>
+                    거래 내역이 없습니다. 현재 총 자산: {{ formatCurrency(upbitAccount.totalAsset) }}
+                  </div>
                 </div>
+                
+                <!-- 자산 정보 없음 -->
                 <div v-else class="text-center py-6 text-grey-darken-2">
                   <v-icon size="48" class="mb-2" color="grey">mdi-chart-line-variant</v-icon>
-                  <div class="text-body-1">거래 내역이 없습니다</div>
-                  <div class="text-caption">자동매매가 시작되면 차트가 표시됩니다</div>
+                  <div class="text-body-1">자산 정보가 없습니다</div>
+                  <div class="text-caption">업비트 API 키를 등록하고 거래 설정을 완료해주세요</div>
                 </div>
               </v-card-text>
             </v-card>
@@ -481,7 +681,7 @@
                 <v-alert v-for="(alert, index) in systemAlerts" :key="index" :type="alert.type" variant="tonal" density="compact" class="mb-2" style="color: #424242 !important;">
                   <span class="font-weight-medium">{{ alert.message }}</span>
                 </v-alert>
-                <div v-if="systemAlerts.length === 0" class="text-center py-4 text-grey-darken-2">
+                <div v-if="systemAlerts.length === 0" class="d-flex flex-column align-center justify-center text-grey-darken-2" style="min-height: 120px;">
                   <v-icon size="28" class="mb-1">mdi-check-circle-outline</v-icon>
                   <div class="text-body-2">알림 없음</div>
                 </div>
@@ -555,9 +755,139 @@
             </v-card-actions>
           </v-card>
         </v-dialog>
-
         <v-snackbar v-model="snackbar.show" :color="snackbar.color" :timeout="3000">{{ snackbar.message }}</v-snackbar>
-      </v-container>
+      </v-container>      <v-dialog v-model="showIndicatorDetailDialog" max-width="700">
+        <v-card>
+          <v-card-title class="bg-teal-darken-2 text-white d-flex align-center">
+            <v-icon class="mr-2">mdi-chart-box</v-icon>
+            {{ selectedCoinDetail?.symbol?.replace('KRW-', '') || '' }} 매수 조건 상세
+            <v-spacer />
+            <v-btn icon variant="text" color="white" @click="showIndicatorDetailDialog = false">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </v-card-title>
+          <v-card-text class="pa-4" v-if="selectedCoinDetail">
+            <v-table density="compact">
+              <thead>
+                <tr>
+                  <th class="text-left" style="min-width: 140px;">항목</th>
+                  <th class="text-right" style="min-width: 100px;">설정값</th>
+                  <th class="text-right" style="min-width: 120px;">현재값</th>
+                  <th class="text-center" style="min-width: 60px;">상태</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- MA 기준 하락률 -->
+                <tr>
+                  <td class="text-no-wrap">
+                    <v-icon size="16" class="mr-1">mdi-trending-down</v-icon>
+                    MA{{ tradingSettings?.basePeriod || 20 }} 하락률
+                  </td>
+                  <td class="text-right font-weight-medium text-no-wrap">{{ tradingSettings?.buyThresholdPct || -6 }}% 이하</td>
+                  <td class="text-right text-no-wrap" :class="selectedCoinDetail.dropRate <= (tradingSettings?.buyThresholdPct || -6) ? 'text-teal font-weight-bold' : ''">
+                    {{ selectedCoinDetail.dropRate?.toFixed(2) }}%
+                  </td>
+                  <td class="text-center">
+                    <v-icon :color="selectedCoinDetail.dropRate <= (tradingSettings?.buyThresholdPct || -6) ? 'teal' : 'grey'" size="20">
+                      {{ selectedCoinDetail.dropRate <= (tradingSettings?.buyThresholdPct || -6) ? 'mdi-check-circle' : 'mdi-circle-outline' }}
+                    </v-icon>
+                  </td>
+                </tr>
+                
+                <!-- AI 가중치 (사용 시) -->
+                <tr v-if="tradingSettings?.useAiAnalysis">
+                  <td class="text-no-wrap">
+                    <v-icon size="16" class="mr-1">mdi-robot</v-icon>
+                    AI 뉴스 가중치
+                  </td>
+                  <td class="text-right font-weight-medium text-no-wrap">±0.5%</td>
+                  <td class="text-right text-no-wrap" :class="selectedCoinDetail.aiWeight > 0 ? 'text-teal' : selectedCoinDetail.aiWeight < 0 ? 'text-red' : ''">
+                    {{ selectedCoinDetail.aiWeight ? (selectedCoinDetail.aiWeight > 0 ? '+' : '') + selectedCoinDetail.aiWeight.toFixed(2) + '%' : '0%' }}
+                  </td>
+                  <td class="text-center">
+                    <v-chip size="x-small" :color="selectedCoinDetail.aiWeight > 0 ? 'teal' : selectedCoinDetail.aiWeight < 0 ? 'red' : 'grey'" variant="flat">
+                      {{ selectedCoinDetail.aiWeight > 0 ? '호재' : selectedCoinDetail.aiWeight < 0 ? '악재' : '중립' }}
+                    </v-chip>
+                  </td>
+                </tr>
+                
+                <!-- 최종 매수 기준 -->
+                <tr v-if="tradingSettings?.useAiAnalysis && selectedCoinDetail.aiWeight">
+                  <td class="text-no-wrap">
+                    <v-icon size="16" class="mr-1">mdi-target</v-icon>
+                    최종 매수 기준
+                  </td>
+                  <td class="text-right font-weight-medium text-teal text-no-wrap">
+                    {{ ((tradingSettings?.buyThresholdPct || -6) + (selectedCoinDetail.aiWeight || 0)).toFixed(2) }}% 이하
+                  </td>
+                  <td class="text-right">-</td>
+                  <td class="text-center">-</td>
+                </tr>
+                
+                <!-- 현재가 -->
+                <tr>
+                  <td class="text-no-wrap">
+                    <v-icon size="16" class="mr-1">mdi-cash</v-icon>
+                    현재가
+                  </td>
+                  <td class="text-right">-</td>
+                  <td class="text-right font-weight-bold text-no-wrap">{{ formatCurrency(selectedCoinDetail.currentPrice) }}</td>
+                  <td class="text-center">-</td>
+                </tr>
+                
+                <!-- MA20 -->
+                <tr>
+                  <td class="text-no-wrap">
+                    <v-icon size="16" class="mr-1">mdi-chart-line</v-icon>
+                    MA{{ tradingSettings?.basePeriod || 20 }}
+                  </td>
+                  <td class="text-right">-</td>
+                  <td class="text-right text-no-wrap">{{ formatCurrency(selectedCoinDetail.ma20) }}</td>
+                  <td class="text-center">-</td>
+                </tr>
+                
+                <!-- 목표 매수가 -->
+                <tr>
+                  <td class="text-no-wrap">
+                    <v-icon size="16" class="mr-1">mdi-arrow-down-bold</v-icon>
+                    목표 매수가
+                  </td>
+                  <td class="text-right">-</td>
+                  <td class="text-right font-weight-bold text-indigo text-no-wrap">
+                    {{ formatCurrency(selectedCoinDetail.aiAdjustedBuyPrice || selectedCoinDetail.buyPrice) }}
+                  </td>
+                  <td class="text-center">-</td>
+                </tr>
+                
+                <!-- 남은 하락폭 -->
+                <tr>
+                  <td class="text-no-wrap">
+                    <v-icon size="16" class="mr-1">mdi-delta</v-icon>
+                    남은 하락폭
+                  </td>
+                  <td class="text-right">-</td>
+                  <td class="text-right text-no-wrap" :class="selectedCoinDetail.canBuy ? 'text-teal font-weight-bold' : 'text-orange'">
+                    {{ selectedCoinDetail.canBuy ? '조건 충족!' : Math.abs(selectedCoinDetail.remainingDrop || 0).toFixed(2) + '%' }}
+                  </td>
+                  <td class="text-center">
+                    <v-icon :color="selectedCoinDetail.canBuy ? 'teal' : 'orange'" size="20">
+                      {{ selectedCoinDetail.canBuy ? 'mdi-check-circle' : 'mdi-clock-outline' }}
+                    </v-icon>
+                  </td>
+                </tr>
+              </tbody>
+            </v-table>
+            
+            <!-- 추가 정보 -->
+            <v-divider class="my-3" />
+            <div class="text-caption text-grey">
+              <v-icon size="14" class="mr-1">mdi-information-outline</v-icon>
+              매수 조건: MA{{ tradingSettings?.basePeriod || 20 }} 대비 {{ tradingSettings?.buyThresholdPct || -6 }}% 
+              {{ tradingSettings?.useAiAnalysis ? '+ AI 가중치' : '' }} 이하 하락 시 매수 신호 발생
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-dialog>
     </v-main>
   </v-app>
 </template>
@@ -567,7 +897,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import TheHeader from '@/components/TheHeader.vue'
 import TheSidebar from '@/components/TheSidebar.vue'
 import { useAuthStore } from '@/stores/auth'
-import { coinApi, transactionApi, tradingApi, botApi } from '@/api'
+import api, { coinApi, transactionApi, tradingApi, botApi } from '@/api'
 
 const authStore = useAuthStore()
 const sidebarRef = ref()
@@ -577,9 +907,29 @@ const loadingIndicators = ref(false)
 const isRefreshing = ref(false)
 const showAllIndicators = ref(false)
 
+// ★★★ [추가] 상세 보기 다이얼로그 관련 변수 ★★★
+const showIndicatorDetailDialog = ref(false)
+const selectedCoinDetail = ref<any>(null)
+
+// ★★★ [추가] AI 가중치 총합 (표시용) ★★★
+const totalAiWeight = ref(0)
+
+// ★★★ [추가] 봇 상태 자동 새로고침 타이머 ★★★
+const botStatusTimer = ref<number | null>(null)
+
+// ★★★ [추가] 상세 보기 팝업 열기 함수 ★★★
+const openIndicatorDetail = (coin: any) => {
+  selectedCoinDetail.value = coin
+  showIndicatorDetailDialog.value = true
+}
+
 // ★★★ 신규: 실시간 시간 표시 ★★★
 const currentTime = ref('')
 let timeInterval: number | null = null
+
+// ★★★ [추가] 실시간 카운트다운 ★★★
+const countdownSeconds = ref(0)
+let countdownInterval: number | null = null
 
 const updateCurrentTime = () => {
   const now = new Date()
@@ -603,7 +953,16 @@ const investmentPeriod = ref('0일')
 
 const dashboardStats = ref({ totalProfitLoss: 0, totalProfitLossPct: 0, totalEvaluation: 0, totalInvestment: 0, todayBuyCount: 0, todayBuyAmount: 0, todaySellCount: 0, todaySellAmount: 0 })
 const upbitAccount = ref({ krwBalance: 0, coinEvaluation: 0, totalAsset: 0, holdings: [] as any[] })
-const botStatus = ref({ isRunning: false, lastExecuted: '', nextExecution: '', apiConnected: false, emergencyStop: false })
+// botStatus ref 초기값에 새 필드 추가
+const botStatus = ref({
+  isRunning: false,
+  lastExecuted: '',
+  nextExecution: '',
+  apiConnected: false,
+  emergencyStop: false,
+  isMaintenanceTime: false,    
+  secondsUntilNext: 0          
+})
 const tradingSettings = ref<any>(null)
 const dailyLimit = ref({ totalLimit: 0, usedAmount: 0, remainingAmount: 0, usedPercent: 0 })
 const holdingsPerCoin = ref<Record<string, number>>({})
@@ -636,6 +995,127 @@ const areaPath = computed(() => {
 })
 const hoveredData = computed(() => hoveredIndex.value >= 0 ? assetHistory.value[hoveredIndex.value] : null)
 
+// ★★★ [추가] 백테스팅 스타일 차트용 computed ★★★
+const chartHeight = 280
+const maxBalanceChart = computed(() => assetHistory.value.length ? Math.max(...assetHistory.value.map(d => d.balance), initialAsset.value) : initialAsset.value)
+const minBalanceChart = computed(() => assetHistory.value.length ? Math.min(...assetHistory.value.map(d => d.balance), initialAsset.value) : initialAsset.value)
+
+const getYPositionChart = (balance: number) => {
+  const range = maxBalanceChart.value - minBalanceChart.value || 1
+  return svgPadding + ((maxBalanceChart.value - balance) / range) * (chartHeight - svgPadding * 2)
+}
+
+const chartPointsEnhanced = computed(() => {
+  if (!assetHistory.value.length) return []
+  const total = assetHistory.value.length
+  return assetHistory.value.map((d, index) => ({
+    x: svgPadding + (index / (total - 1 || 1)) * (svgWidth - svgPadding * 2),
+    y: getYPositionChart(d.balance),
+    balance: d.balance
+  }))
+})
+
+const linePathChart = computed(() => {
+  if (!chartPointsEnhanced.value.length) return ''
+  return chartPointsEnhanced.value.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
+})
+
+const areaPathChart = computed(() => {
+  if (!chartPointsEnhanced.value.length) return ''
+  const points = chartPointsEnhanced.value
+  return `M ${points[0].x} ${chartHeight - svgPadding} L ${points.map(p => `${p.x} ${p.y}`).join(' L ')} L ${points[points.length - 1].x} ${chartHeight - svgPadding} Z`
+})
+
+const chartStartDate = computed(() => {
+  if (!assetHistory.value.length) return ''
+  return assetHistory.value[0]?.date || ''
+})
+
+const chartEndDate = computed(() => {
+  if (!assetHistory.value.length) return ''
+  return assetHistory.value[assetHistory.value.length - 1]?.date || ''
+})
+
+
+
+
+
+
+
+
+
+
+// ★★★ [추가 시작] 백테스팅 스타일 차트용 상수 및 computed ★★★
+// ★★★ [추가] 백테스팅 스타일 차트용 상수 및 computed ★★★
+const svgHeightBacktest = 350
+
+const maxBalanceBacktest = computed(() => {
+  if (!assetHistory.value.length) return initialAsset.value
+  return Math.max(...assetHistory.value.map(d => d.balance), initialAsset.value)
+})
+
+const minBalanceBacktest = computed(() => {
+  if (!assetHistory.value.length) return initialAsset.value
+  return Math.min(...assetHistory.value.map(d => d.balance), initialAsset.value)
+})
+
+const getYPositionBacktest = (balance: number) => {
+  const max = maxBalanceBacktest.value
+  const min = minBalanceBacktest.value
+  const range = max - min || 1
+  return svgPadding + ((max - balance) / range) * (svgHeightBacktest - svgPadding * 2)
+}
+
+const chartPointsBacktest = computed(() => {
+  if (!assetHistory.value.length) return []
+  const total = assetHistory.value.length
+  return assetHistory.value.map((d, index) => ({
+    x: svgPadding + (index / (total - 1 || 1)) * (svgWidth - svgPadding * 2),
+    y: getYPositionBacktest(d.balance),
+    balance: d.balance
+  }))
+})
+
+const linePathBacktest = computed(() => {
+  if (!chartPointsBacktest.value.length) return ''
+  return chartPointsBacktest.value
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`)
+    .join(' ')
+})
+
+const areaPathBacktest = computed(() => {
+  if (!chartPointsBacktest.value.length) return ''
+  const points = chartPointsBacktest.value
+  const firstX = points[0].x
+  const lastX = points[points.length - 1].x
+  const bottomY = svgHeightBacktest - svgPadding
+  
+  return `M ${firstX} ${bottomY} L ${points.map(p => `${p.x} ${p.y}`).join(' L ')} L ${lastX} ${bottomY} Z`
+})
+
+const getLabelPositionBacktest = (balance: number) => {
+  const max = maxBalanceBacktest.value
+  const min = minBalanceBacktest.value
+  const range = max - min || 1
+  const paddingPercent = (svgPadding / svgHeightBacktest) * 100
+  const usableHeight = 100 - paddingPercent * 2
+  return paddingPercent + ((max - balance) / range) * usableHeight
+}
+
+const getPointColorBacktest = (balance: number) => {
+  if (balance > initialAsset.value * 1.01) return '#4CAF50'
+  if (balance < initialAsset.value * 0.99) return '#F44336'
+  return '#1976D2'
+}
+
+
+
+
+
+
+
+
+
 const formatCurrency = (value: number) => {
   if (value === undefined || value === null) return '₩0'
   return '₩' + value.toLocaleString('ko-KR', { maximumFractionDigits: 0 })
@@ -656,6 +1136,59 @@ const formatDate = (dateStr: string) => {
   const d = new Date(dateStr)
   return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
 }
+
+// ★★★ [수정] 봇 수행 시간 포맷 함수 - 다양한 형식 처리 ★★★
+const formatBotTimeDisplay = (dateStr: string | null | undefined) => {
+  if (!dateStr || dateStr === '-') return '-'
+  
+  // 이미 HH:mm 형식인 경우 (예: "05:50")
+  if (/^\d{2}:\d{2}$/.test(dateStr)) {
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = String(today.getMonth() + 1).padStart(2, '0')
+    const day = String(today.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day} ${dateStr}`
+  }
+  
+  // ISO 형식 또는 전체 날짜 형식인 경우
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return dateStr  // 파싱 실패 시 원본 반환
+    
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    const hours = String(d.getHours()).padStart(2, '0')
+    const minutes = String(d.getMinutes()).padStart(2, '0')
+    return `${year}-${month}-${day} ${hours}:${minutes}`
+  } catch {
+    return dateStr
+  }
+}
+
+// ★★★ [추가] 카운트다운 시작 함수 ★★★
+const startCountdown = (seconds: number) => {
+  countdownSeconds.value = seconds
+  
+  if (countdownInterval) {
+    clearInterval(countdownInterval)
+  }
+  
+  countdownInterval = window.setInterval(() => {
+    if (countdownSeconds.value > 0) {
+      countdownSeconds.value--
+    } else {
+      if (countdownInterval) {
+        clearInterval(countdownInterval)
+        countdownInterval = null
+      }
+      // 카운트다운 종료 시 봇 상태 새로고침
+      fetchBotStatus()
+      fetchIndicators()
+    }
+  }, 1000)
+}
+
 const getYPosition = (balance: number) => {
   const range = maxBalance.value - minBalance.value || 1
   return svgPadding + ((maxBalance.value - balance) / range) * (svgHeight - svgPadding * 2)
@@ -730,8 +1263,38 @@ const fetchUpbitAccount = async () => {
   } catch (e) { console.error(e) }
   finally { loadingAccount.value = false }
 }
-const fetchBotStatus = async () => { try { const r = await botApi.getStatus(); botStatus.value = { isRunning: r.data?.isRunning || false, lastExecuted: r.data?.lastExecutedAt || '', nextExecution: r.data?.nextExecutionAt || '', apiConnected: r.data?.apiConnected ?? true, emergencyStop: r.data?.emergencyStop || false } } catch (e) { console.error(e); botStatus.value.apiConnected = false } }
+
+
+const fetchBotStatus = async () => {
+  try {
+    const r = await botApi.getStatus()
+    botStatus.value = {
+      isRunning: r.data?.isRunning || false,
+      lastExecuted: r.data?.lastExecutionTime || r.data?.lastExecutedAt || '',
+      nextExecution: r.data?.nextExecutionTime || r.data?.nextExecutionAt || '',
+      apiConnected: r.data?.apiConnected ?? true,
+      emergencyStop: r.data?.emergencyStop || false,
+      isMaintenanceTime: r.data?.isMaintenanceTime || false,
+      secondsUntilNext: r.data?.secondsUntilNextExecution || 0
+    }
+    
+    // ★★★ [추가] 카운트다운 시작 ★★★
+    const seconds = r.data?.secondsUntilNextExecution || 0
+    if (seconds > 0) {
+      startCountdown(seconds)
+    }
+    
+    // 기존 타이머 로직 제거 또는 주석 처리
+    // if (botStatusTimer.value) { ... }
+    
+  } catch (e) {
+    console.error(e)
+    botStatus.value.apiConnected = false
+  }
+}
+
 const fetchTradingSettings = async () => { try { const r = await tradingApi.getSettings(); tradingSettings.value = r.data; if (tradingSettings.value) { const tl = tradingSettings.value.dailyLimitAmount || 0; const ua = dashboardStats.value.todayBuyAmount || 0; dailyLimit.value = { totalLimit: tl, usedAmount: ua, remainingAmount: Math.max(0, tl - ua), usedPercent: tl > 0 ? (ua / tl) * 100 : 0 } } } catch (e) { console.error(e); tradingSettings.value = null } }
+
 const fetchIndicators = async () => {
   if (!tradingSettings.value?.coinSymbols?.length) return
   loadingIndicators.value = true
@@ -739,30 +1302,80 @@ const fetchIndicators = async () => {
     const r = await botApi.getIndicators(tradingSettings.value.coinSymbols)
     const indicators = r.data || []
     const bt = tradingSettings.value.buyThresholdPct || -3
-    // ★★★ 수정: 이격도 프론트엔드에서 직접 계산 (백엔드 maDropRate 미제공 문제 해결) ★★★
+    
+    // ★★★ [추가] AI 가중치 조회 (사용자가 AI 분석 사용 시) ★★★
+    let aiWeights: Record<string, number> = {}
+    if (tradingSettings.value.useAiAnalysis) {
+      try {
+        for (const symbol of tradingSettings.value.coinSymbols) {
+          const weightRes = await api.get(`/news/analysis/weight/${symbol}`)
+          if (weightRes.data?.data?.weightAdjustment) {
+            aiWeights[symbol] = parseFloat(weightRes.data.data.weightAdjustment)
+          }
+        }
+        // 총 가중치 평균 계산
+        const weights = Object.values(aiWeights)
+        totalAiWeight.value = weights.length > 0 ? weights.reduce((a, b) => a + b, 0) / weights.length : 0
+      } catch (err) {
+        console.warn('AI 가중치 조회 실패:', err)
+      }
+    }
+    
     coinIndicators.value = indicators.map((ind: any) => {
       const cp = ind.currentPrice || 0
       const ma = ind.ma20 || 0
-      // 이격도 = (현재가 - MA20) / MA20 * 100
       const dr = ma > 0 ? ((cp - ma) / ma) * 100 : 0
+      const symbol = ind.market || ind.symbol
+      
+      // ★★★ [추가] AI 가중치 적용 ★★★
+      const aiWeight = aiWeights[symbol] || 0
+      const adjustedThreshold = bt + aiWeight  // 예: -6 + 0.3 = -5.7 (호재 시 완화)
+      const aiAdjustedBuyPrice = ma * (1 + adjustedThreshold / 100)
+      
       return {
-        symbol: ind.market || ind.symbol,
+        symbol: symbol,
         currentPrice: cp,
         ma20: ma,
-        buyPrice: ma * (1 + bt / 100),
+        buyPrice: ma * (1 + bt / 100),  // 기본 매수가
+        aiAdjustedBuyPrice: aiAdjustedBuyPrice,  // AI 적용 매수가
         dropRate: dr,
-        canBuy: dr <= bt,
-        remainingDrop: bt - dr
+        canBuy: dr <= adjustedThreshold,  // AI 가중치 적용된 기준으로 판단
+        remainingDrop: adjustedThreshold - dr,
+        aiWeight: aiWeight  // ★★★ [추가] AI 가중치 저장 ★★★
       }
     })
-  } catch (e) { console.error(e) }
-  finally { loadingIndicators.value = false }
+  } catch (e) {
+    console.error(e)
+  } finally {
+    loadingIndicators.value = false
+  }
 }
+
+
 const fetchHoldings = async () => { try { const r = await transactionApi.getHoldings(); const h = r.data || []; const pc: Record<string, number> = {}; let up = 0, ti = 0; h.forEach((hh: any) => { const s = hh.coinSymbol?.replace('KRW-', '') || 'X'; pc[s] = (pc[s] || 0) + 1; up += hh.profitLoss || 0; ti += hh.totalAmount || 0 }); holdingsPerCoin.value = pc; profitSummary.value.unrealizedProfit = up; profitSummary.value.unrealizedProfitPct = ti > 0 ? (up / ti) * 100 : 0 } catch (e) { console.error(e) } }
 const fetchRecentTransactions = async () => {
   try {
-    const r = await transactionApi.getAll({ page: 0, size: 10 }); 
-    recentTransactions.value = r.data?.content || []
+    // ★★★ [수정] 모든 거래 (매수+매도) 조회 - 최신순 정렬 ★★★
+    const r = await transactionApi.getAll({ page: 0, size: 20, sort: 'createdAt,desc' }); 
+    // ★★★ [수정] HOLDING(매수)과 SOLD(매도 완료) 모두 포함 ★★★
+    const allTransactions = r.data?.content || []
+    
+    // 매도 완료된 거래도 함께 표시하기 위해 SOLD 상태 거래도 조회
+    const soldRes = await transactionApi.search({ status: 'SOLD', page: 0, size: 10 })
+    const soldTransactions = soldRes.data?.content || []
+    
+    // 두 목록 합쳐서 최신순 정렬 후 상위 10개
+    const combined = [...allTransactions, ...soldTransactions]
+    const uniqueMap = new Map()
+    combined.forEach(tx => {
+      if (!uniqueMap.has(tx.id)) {
+        uniqueMap.set(tx.id, tx)
+      }
+    })
+    const uniqueList = Array.from(uniqueMap.values())
+    uniqueList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    
+    recentTransactions.value = uniqueList.slice(0, 10)
     
     // 투자기간 계산을 위한 첫 거래일 확인
     if (recentTransactions.value.length > 0) {
@@ -803,6 +1416,14 @@ onMounted(async () => {
 })
 onUnmounted(() => { 
   stopAutoRefresh()
+  if (botStatusTimer.value) {
+    clearTimeout(botStatusTimer.value)
+  }
+  // ★★★ [추가] 카운트다운 인터벌 정리 ★★★
+  if (countdownInterval) {
+    clearInterval(countdownInterval)
+    countdownInterval = null
+  }
   if (timeInterval) { clearInterval(timeInterval); timeInterval = null }
 })
 </script>
@@ -839,5 +1460,117 @@ onUnmounted(() => {
   background-color: white !important;
   color: #3949AB !important;
   font-weight: bold !important;
+}
+
+.chart-labels {
+  position: absolute;
+  right: 8px;
+  top: 0;
+  bottom: 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.chart-label-max {
+  color: #4CAF50;
+  font-size: 11px;
+  background: rgba(255,255,255,0.9);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.chart-label-init {
+  color: #FFA726;
+  font-size: 11px;
+  background: rgba(255,255,255,0.9);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.chart-label-min {
+  color: #EF5350;
+  font-size: 11px;
+  background: rgba(255,255,255,0.9);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.chart-tooltip-enhanced {
+  position: absolute;
+  top: 10px;
+  transform: translateX(-50%);
+  background: rgba(38,50,56,0.95);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.chart-wrapper-backtest {
+  position: relative;
+  cursor: crosshair;
+  height: 350px;
+}
+
+.chart-labels-backtest {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  pointer-events: none;
+}
+
+.chart-label {
+  position: absolute;
+  right: 5px;
+  font-size: 11px;
+  padding: 2px 6px;
+  background: white;
+  border-radius: 3px;
+  font-weight: 500;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.label-max {
+  color: #4CAF50;
+}
+
+.label-initial {
+  color: #FF9800;
+}
+
+.label-min {
+  color: #F44336;
+}
+
+.chart-tooltip-backtest {
+  position: absolute;
+  top: 10px;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 10;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.text-success {
+  color: #4CAF50 !important;
+  font-weight: bold;
+}
+
+.text-error {
+  color: #F44336 !important;
+  font-weight: bold;
 }
 </style>

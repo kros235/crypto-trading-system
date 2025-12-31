@@ -282,11 +282,6 @@
                   prominent
                 >
                   <div class="d-flex align-center">
-                    <v-icon
-                      :icon="authStore.user?.hasApiKey ? 'mdi-check-circle' : 'mdi-alert-circle'"
-                      size="large"
-                      class="mr-3"
-                    />
                     <div>
                       <div class="text-h6">
                         {{ authStore.user?.hasApiKey ? 'API 키가 등록되어 있습니다' : 'API 키가 등록되지 않았습니다' }}

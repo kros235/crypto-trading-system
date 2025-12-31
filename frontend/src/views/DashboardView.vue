@@ -97,6 +97,9 @@
               <v-card-title class="py-2 px-3 bg-indigo-darken-2 text-white d-flex align-center">
                 <v-icon class="mr-2" size="20">mdi-robot</v-icon>
                 <span class="text-body-2">자동매매</span>
+                <v-btn icon size="x-small" variant="text" color="white" @click.stop="openHelp('botStatus')" class="ml-1">
+                  <v-icon size="14">mdi-help-circle-outline</v-icon>
+                </v-btn>
                 <v-spacer />
                 <!-- ★★★ [수정] 로봇 아이콘 삭제, 칩만 표시 ★★★ -->
                 <v-chip :color="botStatus.isRunning ? 'teal' : 'blue-grey-darken-1'" size="x-small" variant="flat">
@@ -130,6 +133,9 @@
               <v-card-title class="py-2 px-4 bg-amber-darken-2 text-white d-flex align-center">
                 <v-icon class="mr-2" size="20">mdi-bank</v-icon>
                 <span class="text-body-1">업비트 실제 잔고</span>
+                <v-btn icon size="x-small" variant="text" color="white" @click.stop="openHelp('upbitBalance')" class="ml-1">
+                  <v-icon size="14">mdi-help-circle-outline</v-icon>
+                </v-btn>
                 <v-spacer />
                 <v-btn icon size="x-small" variant="text" color="white" @click="fetchUpbitAccount" :loading="loadingAccount">
                   <v-icon size="18">mdi-refresh</v-icon>
@@ -182,9 +188,12 @@
         <v-row class="mt-3" dense>
           <v-col cols="12" md="4">
             <v-card class="fill-height" elevation="2">
-              <v-card-title class="py-2 px-4 bg-indigo-darken-1 text-white">
+              <v-card-title class="py-2 px-4 bg-indigo-darken-2 text-white d-flex align-center">
                 <v-icon class="mr-2" size="20">mdi-cog</v-icon>
                 <span class="text-body-1">거래 설정</span>
+                <v-btn icon size="x-small" variant="text" color="white" @click.stop="openHelp('tradingSettings')" class="ml-1">
+                  <v-icon size="14">mdi-help-circle-outline</v-icon>
+                </v-btn>
               </v-card-title>
               <v-card-text v-if="tradingSettings" class="pa-3">
                 <div class="mb-2">
@@ -223,21 +232,25 @@
                 </div>
                 <v-btn size="small" color="indigo" variant="text" class="mt-1 px-0" @click="$router.push('/trading-settings')">설정 변경 →</v-btn>
               </v-card-text>
-              <v-card-text v-else class="pa-3 d-flex align-center justify-center" style="min-height: 120px;">
-                <!-- ★★★ 수정: 설정 필요 문구 제거, 버튼 강조 및 중앙 배치 ★★★ -->
-                <v-btn size="large" color="indigo-darken-1" variant="flat" @click="$router.push('/trading-settings')">
-                  <v-icon start>mdi-cog</v-icon>
-                  설정하기
-                </v-btn>
+              <v-card-text v-else class="pa-0 fill-height">
+                <div class="d-flex align-center justify-center" style="height: 220px;">
+                  <v-btn size="large" color="indigo-darken-1" variant="flat" @click="$router.push('/trading-settings')">
+                    <v-icon start>mdi-cog</v-icon>
+                    설정하기
+                  </v-btn>
+                </div>
               </v-card-text>
             </v-card>
           </v-col>
 
           <v-col cols="12" md="4">
             <v-card class="fill-height" elevation="2">
-              <v-card-title class="py-2 px-4 bg-indigo-darken-1 text-white">
-                <v-icon class="mr-2" size="20">mdi-chart-donut</v-icon>
+              <v-card-title class="py-2 px-4 bg-orange-darken-2 text-white d-flex align-center">
+                <v-icon class="mr-2" size="20">mdi-clock-outline</v-icon>
                 <span class="text-body-1">일일 한도</span>
+                <v-btn icon size="x-small" variant="text" color="white" @click.stop="openHelp('dailyLimit')" class="ml-1">
+                  <v-icon size="14">mdi-help-circle-outline</v-icon>
+                </v-btn>
               </v-card-title>
               <v-card-text class="pa-3">
                 <div class="d-flex justify-space-between mb-1">
@@ -287,6 +300,9 @@
               <v-card-title class="py-2 px-4 bg-teal-darken-2 text-white d-flex align-center">
                 <v-icon class="mr-2" size="20">mdi-target</v-icon>
                 <span class="text-body-1">매수 조건</span>
+                <v-btn icon size="x-small" variant="text" color="white" @click.stop="openHelp('buyCondition')" class="ml-1">
+                  <v-icon size="14">mdi-help-circle-outline</v-icon>
+                </v-btn>
                 <v-spacer />
                 <v-btn icon size="x-small" variant="text" color="white" @click="fetchIndicators" :loading="loadingIndicators">
                   <v-icon size="18">mdi-refresh</v-icon>
@@ -304,7 +320,7 @@
                 >
                   <v-icon size="14" class="mr-1">mdi-information</v-icon>
                   <template v-if="tradingSettings.useAiAnalysis">
-                    MA{{ tradingSettings.basePeriod || 20 }} {{ tradingSettings.buyThresholdPct }}% 이하 매수 (AI ±0.5% 조정)
+                    MA{{ tradingSettings.basePeriod || 20 }} {{ tradingSettings.buyThresholdPct }}% 이하 매수 (AI 뉴스 기반 ±0.5% 조정)
                   </template>
                   <template v-else>
                     MA{{ tradingSettings.basePeriod || 20 }} 대비 {{ tradingSettings.buyThresholdPct }}% 이하일 때 매수
@@ -375,7 +391,7 @@
                   </v-list-item>
                 </v-list>
       
-                <div v-if="!coinIndicators.length" class="text-center py-4 text-grey">
+                <div v-if="!coinIndicators.length" class="d-flex flex-column align-center justify-center text-grey" style="height: 100%; min-height: 180px;">
                   <v-icon size="32" class="mb-2">mdi-chart-timeline-variant</v-icon>
                   <div class="text-caption">거래 설정을 먼저 완료해주세요</div>
                 </div>
@@ -388,9 +404,12 @@
         <v-row class="mt-3" dense>
           <v-col cols="12">
             <v-card elevation="2">
-              <v-card-title class="py-2 px-4 bg-teal-darken-2 text-white">
+              <v-card-title class="py-2 px-4 bg-teal-darken-2 text-white d-flex align-center">
                 <v-icon class="mr-2" size="20">mdi-cash-multiple</v-icon>
                 <span class="text-body-1">수익 현황</span>
+                <v-btn icon size="x-small" variant="text" color="white" @click.stop="openHelp('profitSummary')" class="ml-1">
+                  <v-icon size="14">mdi-help-circle-outline</v-icon>
+                </v-btn>
               </v-card-title>
               <v-card-text class="pa-3">
                 <v-row dense>
@@ -436,6 +455,9 @@
               <v-card-title class="py-2 px-4 bg-indigo-darken-2 text-white d-flex align-center">
                 <v-icon class="mr-2" size="20">mdi-chart-line</v-icon>
                 <span class="text-body-1">자산 변동 추이</span>
+                <v-btn icon size="x-small" variant="text" color="white" @click.stop="openHelp('assetChart')" class="ml-1">
+                  <v-icon size="14">mdi-help-circle-outline</v-icon>
+                </v-btn>
                 <v-spacer />
                 <!-- ★★★ 수정: 기간 버튼 대비 강화 + 사용자 지정 기간 추가 ★★★ -->
                 <v-btn-toggle v-model="chartPeriod" density="compact" mandatory variant="outlined" size="small" class="chart-period-toggle">
@@ -608,6 +630,9 @@
               <v-card-title class="py-2 px-4 bg-indigo-darken-1 text-white" style="min-height: 48px;">
                 <v-icon class="mr-2" size="20">mdi-podium</v-icon>
                 <span class="text-body-1">코인별 성과</span>
+                <v-btn icon size="x-small" variant="text" color="white" @click.stop="openHelp('coinPerformance')" class="ml-1">
+                  <v-icon size="14">mdi-help-circle-outline</v-icon>
+                </v-btn>
               </v-card-title>
               <v-card-text class="pa-2">
                 <v-list v-if="coinPerformance.length > 0" density="compact">
@@ -639,6 +664,9 @@
               <v-card-title class="py-2 px-4 bg-indigo-darken-1 text-white d-flex align-center" style="min-height: 48px;">
                 <v-icon class="mr-2" size="20">mdi-history</v-icon>
                 <span class="text-body-1">최근 거래</span>
+                <v-btn icon size="x-small" variant="text" color="white" @click.stop="openHelp('recentTransactions')" class="ml-1">
+                  <v-icon size="14">mdi-help-circle-outline</v-icon>
+                </v-btn>
                 <v-spacer />
                 <v-btn size="x-small" variant="text" color="white" @click="$router.push('/transactions')">전체 →</v-btn>
               </v-card-title>
@@ -646,21 +674,68 @@
                 <v-list v-if="recentTransactions.length > 0" density="compact">
                   <v-list-item v-for="tx in recentTransactions.slice(0, 5)" :key="tx.id" class="px-2 py-1">
                     <div class="d-flex align-center justify-space-between w-100">
-                      <!-- 코인명 -->
-                      <div class="d-flex align-center" style="min-width: 70px;">
-                        <v-avatar :color="tx.type === 'BUY' ? 'indigo' : 'amber-darken-2'" size="24" class="mr-1">
-                          <v-icon size="14" color="white">{{ tx.type === 'BUY' ? 'mdi-arrow-down' : 'mdi-arrow-up' }}</v-icon>
+                      <!-- ★★★ [수정] 코인명 + 매수/매도 아이콘 구분 - 간격 확대 ★★★ -->
+                      <div class="d-flex align-center" style="min-width: 85px;">
+                        <v-avatar 
+                          :color="tx.status === 'SOLD' ? 'amber-darken-2' : 'indigo'" 
+                          size="24" 
+                          class="mr-3"
+                        >
+                          <v-icon size="14" color="white">
+                            {{ tx.status === 'SOLD' ? 'mdi-arrow-up' : 'mdi-arrow-down' }}
+                          </v-icon>
                         </v-avatar>
-                        <span class="text-body-2 font-weight-medium text-grey-darken-4">{{ tx.coinSymbol?.replace('KRW-', '') }}</span>
+                        <span class="text-body-2 font-weight-medium text-grey-darken-4">
+                          {{ tx.coinSymbol?.replace('KRW-', '') }}
+                        </span>
                       </div>
-                      <!-- 가격 및 날짜 (가로 배치) -->
-                      <div class="text-caption text-grey-darken-2 flex-grow-1 px-2 text-center">
-                        {{ formatCurrency(tx.totalAmount) }} · {{ formatDate(tx.createdAt) }}
+                      <!-- ★★★ [수정] 가격/날짜 + 수익 2줄 배치 ★★★ -->
+                      <div class="flex-grow-1 px-2" style="text-align: center;">
+                        <div class="text-caption text-grey-darken-2">
+                          {{ formatCurrency(tx.totalAmount) }} · {{ formatDate(tx.createdAt) }}
+                        </div>
+                        <div 
+                          v-if="tx.status === 'SOLD' && tx.profitLoss != null" 
+                          :class="tx.profitLoss >= 0 ? 'text-teal-darken-2' : 'text-red-darken-2'" 
+                          class="text-caption font-weight-medium"
+                        >
+                          {{ tx.profitLoss >= 0 ? '+' : '' }}{{ formatCurrency(tx.profitLoss) }}
+                        </div>
                       </div>
-                      <!-- 매수/매도 -->
-                      <v-chip :color="tx.type === 'BUY' ? 'indigo' : 'amber-darken-2'" size="x-small" variant="flat">
-                        {{ tx.type === 'BUY' ? '매수' : '매도' }}
-                      </v-chip>
+                      <!-- ★★★ [수정] 상태 칩 - 매도완료/매수+보유중 구분 ★★★ -->
+                      <div class="d-flex align-center justify-end" style="min-width: 110px;">
+                        <!-- 매도 완료: 매도완료만 표시 -->
+                        <template v-if="tx.status === 'SOLD'">
+                          <v-chip 
+                            color="orange" 
+                            size="x-small" 
+                            variant="flat"
+                            style="width: 60px; justify-content: center;"
+                          >
+                            매도완료
+                          </v-chip>
+                        </template>
+                        <!-- 보유중: 매수 + 보유중 표시 -->
+                        <template v-else>
+                          <v-chip 
+                            color="indigo" 
+                            size="x-small" 
+                            variant="flat"
+                            style="width: 40px; justify-content: center;"
+                          >
+                            매수
+                          </v-chip>
+                          <v-chip 
+                            color="teal" 
+                            size="x-small" 
+                            variant="outlined"
+                            class="ml-1"
+                            style="width: 56px; justify-content: center;"
+                          >
+                            보유중
+                          </v-chip>
+                        </template>
+                      </div>
                     </div>
                   </v-list-item>
                 </v-list>
@@ -672,9 +747,12 @@
           <v-col cols="12" md="4">
             <v-card class="fill-height" elevation="2">
               <!-- ★★★ 수정: 시스템 알림 빨간색 배경 ★★★ -->
-              <v-card-title class="py-2 px-4 bg-red-darken-1 text-white" style="min-height: 48px;">
-                <v-icon class="mr-2" size="20">mdi-bell</v-icon>
+              <v-card-title class="py-2 px-4 bg-red-darken-2 text-white d-flex align-center">
+                <v-icon class="mr-2" size="20">mdi-bell-alert</v-icon>
                 <span class="text-body-1">시스템 알림</span>
+                <v-btn icon size="x-small" variant="text" color="white" @click.stop="openHelp('systemAlert')" class="ml-1">
+                  <v-icon size="14">mdi-help-circle-outline</v-icon>
+                </v-btn>
               </v-card-title>
               <v-card-text class="pa-3">
                 <!-- ★★★ 수정: 알림 텍스트 검정색 강제 적용 ★★★ -->
@@ -889,6 +967,26 @@
         </v-card>
       </v-dialog>
     </v-main>
+    <!-- ★★★ [추가] 카드 도움말 다이얼로그 ★★★ -->
+    <v-dialog v-model="showHelpDialog" max-width="700">
+      <v-card>
+        <v-card-title class="bg-indigo-darken-2 text-white d-flex align-center">
+          <v-icon class="mr-2">mdi-help-circle</v-icon>
+          {{ currentHelp.title }}
+          <v-spacer />
+          <v-btn icon variant="text" color="white" @click="showHelpDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+        <v-card-text class="pa-4">
+          <div v-html="currentHelp.content" class="help-content"></div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn color="primary" variant="flat" @click="showHelpDialog = false">확인</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-app>
 </template>
 
@@ -906,6 +1004,10 @@ const loadingAccount = ref(false)
 const loadingIndicators = ref(false)
 const isRefreshing = ref(false)
 const showAllIndicators = ref(false)
+
+// ★★★ [추가] 카드 도움말 시스템 ★★★
+const showHelpDialog = ref(false)
+const currentHelp = ref({ title: '', content: '' })
 
 // ★★★ [추가] 상세 보기 다이얼로그 관련 변수 ★★★
 const showIndicatorDetailDialog = ref(false)
@@ -1355,46 +1457,72 @@ const fetchIndicators = async () => {
 const fetchHoldings = async () => { try { const r = await transactionApi.getHoldings(); const h = r.data || []; const pc: Record<string, number> = {}; let up = 0, ti = 0; h.forEach((hh: any) => { const s = hh.coinSymbol?.replace('KRW-', '') || 'X'; pc[s] = (pc[s] || 0) + 1; up += hh.profitLoss || 0; ti += hh.totalAmount || 0 }); holdingsPerCoin.value = pc; profitSummary.value.unrealizedProfit = up; profitSummary.value.unrealizedProfitPct = ti > 0 ? (up / ti) * 100 : 0 } catch (e) { console.error(e) } }
 const fetchRecentTransactions = async () => {
   try {
-    // ★★★ [수정] 모든 거래 (매수+매도) 조회 - 최신순 정렬 ★★★
-    const r = await transactionApi.getAll({ page: 0, size: 20, sort: 'createdAt,desc' }); 
-    // ★★★ [수정] HOLDING(매수)과 SOLD(매도 완료) 모두 포함 ★★★
-    const allTransactions = r.data?.content || []
+    // ★★★ [수정] 모든 거래 조회 - HOLDING + SOLD 모두 포함 ★★★
+    // 1. 전체 거래 조회 (최신순)
+    const allRes = await transactionApi.getAll({ page: 0, size: 50, sort: 'createdAt,desc' })
+    const allTransactions = allRes.data?.content || []
     
-    // 매도 완료된 거래도 함께 표시하기 위해 SOLD 상태 거래도 조회
-    const soldRes = await transactionApi.search({ status: 'SOLD', page: 0, size: 10 })
+    // 2. 매도 완료된 거래 별도 조회 (혹시 누락된 경우 대비)
+    const soldRes = await transactionApi.search({ status: 'SOLD', page: 0, size: 20 })
     const soldTransactions = soldRes.data?.content || []
     
-    // 두 목록 합쳐서 최신순 정렬 후 상위 10개
+    // 3. 두 목록 합치고 중복 제거
     const combined = [...allTransactions, ...soldTransactions]
     const uniqueMap = new Map()
     combined.forEach(tx => {
-      if (!uniqueMap.has(tx.id)) {
-        uniqueMap.set(tx.id, tx)
+      // id 또는 transactionId로 중복 체크
+      const key = tx.id || tx.transactionId
+      if (key && !uniqueMap.has(key)) {
+        uniqueMap.set(key, tx)
       }
     })
-    const uniqueList = Array.from(uniqueMap.values())
-    uniqueList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     
+    // 4. 최신순 정렬 (createdAt 또는 soldAt 기준)
+    const uniqueList = Array.from(uniqueMap.values())
+    uniqueList.sort((a, b) => {
+      const dateA = new Date(a.soldAt || a.createdAt).getTime()
+      const dateB = new Date(b.soldAt || b.createdAt).getTime()
+      return dateB - dateA  // 최신순
+    })
+    
+    // 5. 상위 10개만 표시
     recentTransactions.value = uniqueList.slice(0, 10)
     
-    // 투자기간 계산을 위한 첫 거래일 확인
-    if (recentTransactions.value.length > 0) {
-      const allTx = await transactionApi.getAll({ page: 0, size: 1000 })
-      const sorted = (allTx.data?.content || []).sort((a: any, b: any) => 
+    // 투자기간 계산
+    if (uniqueList.length > 0) {
+      const sortedByOldest = [...uniqueList].sort((a, b) => 
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       )
-      if (sorted.length > 0) {
-        calculateInvestmentPeriod(sorted[0].createdAt)
+      if (sortedByOldest.length > 0) {
+        calculateInvestmentPeriod(sortedByOldest[0].createdAt)
       }
     }
     
-    const ar = await transactionApi.search({ status: 'SOLD' }); const st = ar.data?.content || []
-    profitSummary.value.realizedProfit = st.reduce((s: number, t: any) => s + (t.profitLoss || 0), 0)
+    // 실현 수익 계산 (매도 완료된 거래만)
+    const soldOnly = uniqueList.filter(tx => tx.status === 'SOLD')
+    profitSummary.value.realizedProfit = soldOnly.reduce((sum: number, tx: any) => sum + (tx.profitLoss || 0), 0)
     profitSummary.value.totalProfit = profitSummary.value.unrealizedProfit + profitSummary.value.realizedProfit
-    const pm = new Map<string, any>()
-    st.forEach((t: any) => { const s = t.coinSymbol?.replace('KRW-', '') || 'X'; if (!pm.has(s)) pm.set(s, { symbol: s, tradeCount: 0, profit: 0, totalAmount: 0 }); const p = pm.get(s); p.tradeCount++; p.profit += t.profitLoss || 0; p.totalAmount += t.totalAmount || 0 })
-    coinPerformance.value = Array.from(pm.values()).map(p => ({ ...p, profitRate: p.totalAmount > 0 ? (p.profit / p.totalAmount) * 100 : 0 }))
-  } catch (e) { console.error(e) }
+    
+    // 코인별 성과 계산
+    const perfMap = new Map<string, any>()
+    soldOnly.forEach((tx: any) => {
+      const symbol = tx.coinSymbol?.replace('KRW-', '') || 'X'
+      if (!perfMap.has(symbol)) {
+        perfMap.set(symbol, { symbol, tradeCount: 0, profit: 0, totalAmount: 0 })
+      }
+      const perf = perfMap.get(symbol)
+      perf.tradeCount++
+      perf.profit += tx.profitLoss || 0
+      perf.totalAmount += tx.totalAmount || 0
+    })
+    coinPerformance.value = Array.from(perfMap.values()).map(p => ({
+      ...p,
+      profitRate: p.totalAmount > 0 ? (p.profit / p.totalAmount) * 100 : 0
+    }))
+    
+  } catch (e) {
+    console.error('최근 거래 조회 실패:', e)
+  }
 }
 const fetchAssetHistory = async () => { assetHistory.value = []; initialAsset.value = tradingSettings.value?.dailyLimitAmount || 1000000 }
 const generateSystemAlerts = () => { const a: any[] = []; if (!authStore.user?.hasApiKey) a.push({ type: 'warning', message: 'API 키가 미등록 상태입니다' }); if (!tradingSettings.value) a.push({ type: 'warning', message: '거래 설정을 완료해주세요' }); const n = new Date(); if (n.getHours() === 9 && n.getMinutes() < 10) a.push({ type: 'info', message: '업비트 점검 시간 (09:00~09:10)' }); if (botStatus.value.emergencyStop) a.push({ type: 'error', message: '긴급 정지 발동됨' }); systemAlerts.value = a }
@@ -1403,6 +1531,170 @@ const refreshAll = async () => { isRefreshing.value = true; try { await Promise.
 let refreshInterval: number | null = null
 const startAutoRefresh = () => { refreshInterval = window.setInterval(() => { fetchDashboardStats(); fetchUpbitAccount(); fetchBotStatus() }, 60000) }
 const stopAutoRefresh = () => { if (refreshInterval) { clearInterval(refreshInterval); refreshInterval = null } }
+
+// 카드별 도움말 내용
+const cardHelps = {
+  userStats: {
+    title: '👤 사용자 정보 + 통계',
+    content: `
+      <p class="help-intro">사용자 계정 정보와 투자 현황 통계를 한눈에 보여줍니다.</p>
+      <div style="height: 16px;"></div>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>총 손익</strong><br/>
+        <span class="help-desc">현재 보유 중인 코인의 평가 손익 + 매도 완료된 실현 손익의 합계입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>총 평가액</strong><br/>
+        <span class="help-desc">보유 코인의 현재 시세 기준 평가 금액입니다. 원금은 매수 당시 투자한 금액입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>오늘 매수/매도</strong><br/>
+        <span class="help-desc">오늘 하루 동안 봇이 자동으로 체결한 매수/매도 건수와 금액입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>투자기간</strong><br/>
+        <span class="help-desc">첫 거래일부터 현재까지의 기간입니다.</span></p>
+    `
+  },
+  botStatus: {
+    title: '🤖 자동매매 봇 상태',
+    content: `
+      <p class="help-intro">자동매매 봇의 현재 상태와 실행 스케줄을 보여줍니다.</p>
+      <div style="height: 16px;"></div>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>작동중</strong><br/>
+        <span class="help-desc">봇이 5분마다 매수/매도 조건을 자동으로 검사하고 있습니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>대기중</strong><br/>
+        <span class="help-desc">봇이 일시 정지 상태입니다. 거래 설정이 없거나 점검 시간일 수 있습니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>마지막/다음 봇 수행 시간</strong><br/>
+        <span class="help-desc">봇의 가장 최근 실행 시간과 다음 예정 시간입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>긴급정지</strong><br/>
+        <span class="help-desc">당일 손실이 일정 수준 이상이면 자동으로 거래가 중단됩니다.</span></p>
+    `
+  },
+  upbitBalance: {
+    title: '🏦 업비트 실제 잔고',
+    content: `
+      <p class="help-intro">업비트 계좌의 실제 자산 현황을 실시간으로 조회합니다.</p>
+      <div style="height: 16px;"></div>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>KRW 잔고</strong><br/>
+        <span class="help-desc">업비트 계좌의 원화 보유량입니다. 매수 대기 자금으로 사용됩니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>코인 평가액</strong><br/>
+        <span class="help-desc">보유 중인 모든 코인의 현재 시세 기준 평가 금액 합계입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>총 자산</strong><br/>
+        <span class="help-desc">KRW 잔고 + 코인 평가액의 합계입니다.</span></p>
+      <p class="help-note">※ 업비트 API 키가 등록되어 있어야 조회됩니다.</p>
+    `
+  },
+  tradingSettings: {
+    title: '⚙️ 거래 설정 요약',
+    content: `
+      <p class="help-intro">현재 설정된 자동매매 조건을 요약하여 보여줍니다.</p>
+      <div style="height: 16px;"></div>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>거래 코인</strong><br/>
+        <span class="help-desc">자동매매 대상으로 설정된 코인 목록입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>매수 조건</strong><br/>
+        <span class="help-desc">이동평균선(MA) 대비 하락률과 목표 수익률 설정입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>매도 조건</strong><br/>
+        <span class="help-desc">목표 수익률 도달 시 자동 매도, 손절매 기준입니다.</span></p>
+      <p class="help-note">설정이 없으면 [설정하기] 버튼을 눌러 거래 조건을 설정해주세요.</p>
+    `
+  },
+  dailyLimit: {
+    title: '📊 일일 한도',
+    content: `
+      <p class="help-intro">오늘 하루 동안의 거래 한도 사용 현황을 보여줍니다.</p>
+      <div style="height: 16px;"></div>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>한도</strong><br/>
+        <span class="help-desc">하루 동안 사용할 수 있는 최대 거래 금액입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>사용</strong><br/>
+        <span class="help-desc">오늘 이미 매수에 사용한 금액입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>남은 한도</strong><br/>
+        <span class="help-desc">오늘 남은 거래 가능 금액입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>종목별 보유</strong><br/>
+        <span class="help-desc">각 코인별 현재 보유 건수입니다. 최대 보유 건수에 도달하면 추가 매수가 제한됩니다.</span></p>
+    `
+  },
+  buyCondition: {
+    title: '🎯 매수 조건',
+    content: `
+      <p class="help-intro">각 코인별 매수 조건 충족 여부를 실시간으로 모니터링합니다.</p>
+      <div style="height: 16px;"></div>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>현재가 → 목표가</strong><br/>
+        <span class="help-desc">현재 시세와 매수 목표가를 보여줍니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>이격도</strong><br/>
+        <span class="help-desc">현재가가 이동평균선(MA) 대비 얼마나 떨어져 있는지 나타냅니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>대기</strong><br/>
+        <span class="help-desc">아직 매수 조건에 도달하지 않은 상태입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>매수 가능</strong><br/>
+        <span class="help-desc">이격도가 설정된 하락률 이하로 내려가면 매수 신호가 발생합니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>AI 가중치</strong><br/>
+        <span class="help-desc">AI 뉴스 분석 사용 시 호재/악재에 따라 ±0.5% 범위에서 매수 조건이 조정됩니다.</span></p>
+    `
+  },
+  profitSummary: {
+    title: '💰 수익 현황',
+    content: `
+      <p class="help-intro">전체 투자 수익을 미실현/실현으로 구분하여 보여줍니다.</p>
+      <div style="height: 16px;"></div>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>평가 수익 (미실현)</strong><br/>
+        <span class="help-desc">현재 보유 중인 코인의 매수가 대비 평가 손익입니다. 매도 전까지는 확정되지 않은 수익입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>실현 수익 (확정)</strong><br/>
+        <span class="help-desc">매도 완료된 거래의 실제 손익 합계입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>누적 총 수익</strong><br/>
+        <span class="help-desc">평가 수익 + 실현 수익의 합계입니다.</span></p>
+    `
+  },
+  assetChart: {
+    title: '📈 자산 변동 추이',
+    content: `
+      <p class="help-intro">기간별 총 자산의 변동 추이를 차트로 보여줍니다.</p>
+      <div style="height: 16px;"></div>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>7일/이번달/올해/전체</strong><br/>
+        <span class="help-desc">원하는 기간을 선택하여 조회할 수 있습니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>차트 호버</strong><br/>
+        <span class="help-desc">차트의 점을 호버하면 해당 일자의 자산과 수익률을 확인할 수 있습니다.</span></p>
+    `
+  },
+  coinPerformance: {
+    title: '🏆 코인별 성과',
+    content: `
+      <p class="help-intro">매도 완료된 거래 기준으로 코인별 성과를 보여줍니다.</p>
+      <div style="height: 16px;"></div>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>거래 횟수</strong><br/>
+        <span class="help-desc">해당 코인의 총 매도 완료 건수입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>손익</strong><br/>
+        <span class="help-desc">해당 코인에서 발생한 실현 손익 합계입니다.</span></p>
+    `
+  },
+  recentTransactions: {
+    title: '📋 최근 거래',
+    content: `
+      <p class="help-intro">가장 최근에 발생한 거래 내역을 보여줍니다.</p>
+      <div style="height: 16px;"></div>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>매수</strong><br/>
+        <span class="help-desc">봇이 자동으로 코인을 매수한 내역입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>매도</strong><br/>
+        <span class="help-desc">목표 수익률 도달 또는 손절매로 매도된 내역입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>보유중</strong><br/>
+        <span class="help-desc">아직 매도되지 않고 보유 중인 상태입니다.</span></p>
+      <p class="help-note">[전체 →] 버튼을 누르면 거래 내역 페이지로 이동합니다.</p>
+    `
+  },
+  systemAlert: {
+    title: '🚨 시스템 알림',
+    content: `
+      <p class="help-intro">시스템 상태 및 필요한 조치사항을 알려줍니다.</p>
+      <div style="height: 16px;"></div>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>API 키 미등록</strong><br/>
+        <span class="help-desc">업비트 API 키를 등록해야 자동매매가 가능합니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>거래 설정 필요</strong><br/>
+        <span class="help-desc">자동매매 조건을 설정해야 봇이 작동합니다.</span></p>
+      <p class="help-note">알림이 없으면 시스템이 정상 상태입니다.</p>
+    `
+  }
+}
+
+// 도움말 다이얼로그 열기 함수
+const openHelp = (helpKey: string) => {
+  const help = cardHelps[helpKey as keyof typeof cardHelps]
+  if (help) {
+    currentHelp.value = help
+    showHelpDialog.value = true
+  }
+}
 
 onMounted(async () => { 
   // 실시간 시간 업데이트 시작
@@ -1572,5 +1864,65 @@ onUnmounted(() => {
 .text-error {
   color: #F44336 !important;
   font-weight: bold;
+}
+
+.help-content p {
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+.help-content p:last-child {
+  margin-bottom: 0;
+}
+.help-content strong {
+  color: #1565C0;
+}
+
+/* ★★★ [추가] 도움말 콘텐츠 스타일 개선 ★★★ */
+.help-content .help-intro {
+  margin-bottom: 28px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  color: #424242;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.help-content .help-item {
+  margin-bottom: 16px;
+  padding-left: 8px;
+}
+
+.help-content .help-bullet {
+  color: #1565C0;
+  font-weight: bold;
+  margin-right: 6px;
+}
+
+.help-content .help-desc {
+  display: block;
+  padding-left: 20px;
+  margin-top: 4px;
+  color: #616161;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.help-content .help-note {
+  margin-top: 16px;
+  padding: 10px 12px;
+  background-color: #FFF8E1;
+  border-left: 3px solid #FFA000;
+  border-radius: 4px;
+  color: #5D4037;
+  font-size: 13px;
+}
+
+.help-content p:last-child {
+  margin-bottom: 0;
+}
+
+.help-content strong {
+  color: #1565C0;
+  font-weight: 600;
 }
 </style>

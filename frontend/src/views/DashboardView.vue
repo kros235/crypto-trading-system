@@ -689,7 +689,7 @@
                     </div>
                   </v-list-item>
                 </v-list>
-                <div v-else class="text-center py-4 text-grey-darken-2 text-body-2">매도 완료된 거래가 없습니다</div>
+                <div v-else class="d-flex align-center justify-center text-grey-darken-2 text-body-2" style="height: 100%; min-height: 150px;">매도 완료된 거래가 없습니다</div>
               </v-card-text>
             </v-card>
           </v-col>
@@ -704,7 +704,7 @@
                   <v-icon size="14">mdi-help-circle-outline</v-icon>
                 </v-btn>
                 <v-spacer />
-                <v-btn size="x-small" variant="text" color="white" @click="$router.push('/transactions')">전체 →</v-btn>
+                <v-btn size="small" variant="flat" color="amber" class="text-grey-darken-4" @click="$router.push('/transactions')">전체 거래 내역 보기 →</v-btn>
               </v-card-title>
               <v-card-text class="pa-2">
                 <v-list v-if="recentTransactions.length > 0" density="compact">
@@ -775,7 +775,7 @@
                     </div>
                   </v-list-item>
                 </v-list>
-                <div v-else class="text-center py-4 text-grey-darken-2 text-body-2">거래 내역이 없습니다</div>
+                <div v-else class="d-flex align-center justify-center text-grey-darken-2 text-body-2" style="height: 100%; min-height: 150px;">거래 내역이 없습니다</div>
               </v-card-text>
             </v-card>
           </v-col>
@@ -790,12 +790,15 @@
                   <v-icon size="14">mdi-help-circle-outline</v-icon>
                 </v-btn>
               </v-card-title>
-              <v-card-text class="pa-3">
-                <!-- ★★★ 수정: 알림 텍스트 검정색 강제 적용 ★★★ -->
-                <v-alert v-for="(alert, index) in systemAlerts" :key="index" :type="alert.type" variant="tonal" density="compact" class="mb-2" style="color: #424242 !important;">
-                  <span class="font-weight-medium">{{ alert.message }}</span>
-                </v-alert>
-                <div v-if="systemAlerts.length === 0" class="d-flex flex-column align-center justify-center text-grey-darken-2" style="min-height: 120px;">
+              <v-card-text class="pa-3 d-flex flex-column" style="min-height: 150px;">
+                <!-- ★★★ 수정: 알림이 있을 때 아이콘+텍스트 중앙 정렬 ★★★ -->
+                <div v-if="systemAlerts.length > 0" class="d-flex flex-column align-center justify-center flex-grow-1">
+                  <div v-for="(alert, index) in systemAlerts" :key="index" class="d-flex align-center mb-2">
+                    <v-icon :color="alert.type === 'error' ? 'red' : alert.type === 'warning' ? 'orange' : 'info'" class="mr-2">{{ alert.type === 'error' ? 'mdi-alert-circle' : alert.type === 'warning' ? 'mdi-alert' : 'mdi-information' }}</v-icon>
+                    <span class="font-weight-medium text-grey-darken-3">{{ alert.message }}</span>
+                  </div>
+                </div>
+                <div v-else class="d-flex flex-column align-center justify-center text-grey-darken-2 flex-grow-1">
                   <v-icon size="28" class="mb-1">mdi-check-circle-outline</v-icon>
                   <div class="text-body-2">알림 없음</div>
                 </div>

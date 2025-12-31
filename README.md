@@ -1401,7 +1401,7 @@ ADD COLUMN daily_stop_loss_pct INT DEFAULT -5;
 - HTTPS 준비 (템플릿)
   - frontend/nginx.ssl.conf: SSL 설정 템플릿
   - scripts/init-ssl.sh: Let's Encrypt 인증서 발급 스크립트
-  - ⏳ 실제 적용은 Day 28로 이동 (도메인 확보 후)
+  - ⏳ 실제 적용은 Day 29로 이동 (도메인 확보 후)
 
 **생성된 파일:**
 - `.env.development` - 개발 환경 설정
@@ -1431,7 +1431,7 @@ docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 - ✅ 로그인 토큰 발급 - Postman
 - ✅ 백엔드 로그 정상 확인 - Docker
 
-**Day 28로 이동된 작업:**
+**Day 29로 이동된 작업:**
 - ⏳ HTTPS 실제 적용 (Let's Encrypt 인증서 발급)
 - ⏳ Nginx SSL 설정 활성화
 
@@ -1971,6 +1971,20 @@ docker logs crypto-backend-prod --tail 50
 - Backend 수정
   - CoinInfoService bulk API 파라미터 파싱 수정
   - MATIC 코인 자동 비활성화 로직 (@EventListener)
+- 시간대 KST 통일 (전 시스템)
+  - docker-compose.yml: 모든 컨테이너에 `TZ: Asia/Seoul` 추가
+  - docker-compose.prod.yml: 모든 컨테이너에 `TZ: Asia/Seoul` 추가
+  - CryptoTradingApplication.java: JVM 시간대 KST 설정 (`@PostConstruct`)
+  - backend JAVA_OPTS: `-Duser.timezone=Asia/Seoul` 추가
+- AdminDashboardView 오류 수정
+  - `fetchStats()` 함수 추가 (누락으로 인한 에러 해결)
+  - `fetchUsers()` 함수 추가 (배열/페이징 응답 모두 처리)
+  - 사용자 목록 테이블 정상 렌더링
+- 프론트엔드 시간 표시 함수 개선
+  - `formatLastLogin()`: `toLocaleString('ko-KR')` 방식으로 통일
+  - `formatBotTimeDisplay()`: `toLocaleString('ko-KR')` 방식으로 통일
+  - `formatDateTime()`: `toLocaleString('ko-KR')` 방식으로 통일
+  - 로컬/클라우드 환경 모두 KST 정확히 표시
 
 **생성된 파일 (Frontend):**
 - `views/CoinListView.vue` - 코인 목록 페이지
@@ -1982,6 +1996,15 @@ docker logs crypto-backend-prod --tail 50
 
 **수정된 파일 (Backend):**
 - `service/CoinInfoService.java` - bulk API 파싱 수정, MATIC 비활성화 로직
+
+**수정된 파일:**
+| 파일 | 변경 내용 |
+|------|----------|
+| `docker-compose.yml` | mysql, redis, backend, frontend에 `TZ: Asia/Seoul` 추가 |
+| `docker-compose.prod.yml` | redis, frontend에 `TZ: Asia/Seoul` 추가, backend JAVA_OPTS에 시간대 추가 |
+| `CryptoTradingApplication.java` | `@PostConstruct`로 JVM 시간대 KST 설정 |
+| `AdminDashboardView.vue` | `fetchStats()`, `fetchUsers()` 함수 추가 |
+| `DashboardView.vue` | `formatLastLogin()`, `formatBotTimeDisplay()` 개선 |
 
 **대시보드 패널 구성:**
 | 패널 | 설명 |
@@ -2024,7 +2047,11 @@ docker logs crypto-backend-prod --tail 50
 - ✅ 코인 상세 다이얼로그 - 브라우저
 - ✅ MATIC 자동 비활성화 - Docker 로그
 - ✅ 사이드바 메뉴 정상 표시 - 브라우저
-
+- ✅ Docker 컨테이너 시간대 확인 (date 명령어) - 서버
+- ✅ 대시보드 마지막 로그인 시간 정상 표시 - 브라우저
+- ✅ 자동매매 봇 수행 시간 정상 표시 - 브라우저
+- ✅ 관리자 페이지 사용자 목록 정상 렌더링 - 브라우저
+- ✅ 관리자 페이지 마지막 로그인 시간 정상 표시 - 브라우저
 ---
 
 
@@ -2174,7 +2201,7 @@ docker logs crypto-backend-prod --tail 50
 | 25 | ✅ AI 뉴스 분석 - Groq API 연동 + 최적화 | ✅ 완료 |
 | 26 | ✅ AI 뉴스 분석 - 지표 연동 + 뉴스 페이지 UI | ✅ 완료 |
 | 27 | ✅ Oracle Cloud ARM64 배포, DB 스키마 교차검증, docker-compose 동기화, 이슈 해결 | ✅ 완료 |
-| 28 | ✅ 대시보드 재구성, 코인 목록 페이지, bulk API 수정, MATIC 비활성화 | ✅ 완료 |
+| 28 | ✅ 대시보드 재구성, 코인 목록 페이지, bulk API 수정, MATIC 비활성화, 시간대 KST 통일, AdminDashboard 오류 수정, 시간 표시 함수 개선 | ✅ 완료 |
 | 29 | 2FA, IP 제한, 수익 분석 UI, 보안 점검, 테스트 | 🟢 선택 |
 | 30 | 운영 문서 작성, v1.0 릴리즈 | 🔴 필수 |
 

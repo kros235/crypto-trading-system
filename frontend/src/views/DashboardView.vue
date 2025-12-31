@@ -1480,52 +1480,58 @@ const formatDate = (dateStr: string) => {
   return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
 }
 
-// ★★★ 수정: 마지막 로그인 포맷 함수 (UTC → KST 변환) ★★★
+// ★★★ 수정: 마지막 로그인 포맷 함수 - 우상단 현재 시간과 동일한 방식 ★★★
 const formatLastLogin = (dateStr: string | null | undefined) => {
   if (!dateStr) return '-'
   
-  // UTC 시간을 KST로 변환 (+9시간)
-  const utcDate = new Date(dateStr)
-  const kstDate = new Date(utcDate.getTime() + (9 * 60 * 60 * 1000))
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return '-'
   
-  const year = kstDate.getFullYear()
-  const month = String(kstDate.getMonth() + 1).padStart(2, '0')
-  const day = String(kstDate.getDate()).padStart(2, '0')
-  const hours = kstDate.getHours()
-  const minutes = String(kstDate.getMinutes()).padStart(2, '0')
-  const seconds = String(kstDate.getSeconds()).padStart(2, '0')
+  // 우상단 시간과 동일한 toLocaleString('ko-KR') 방식 사용
+  const dateOptions: Intl.DateTimeFormatOptions = { 
+    year: 'numeric', 
+    month: '2-digit', 
+    day: '2-digit' 
+  }
+  const timeOptions: Intl.DateTimeFormatOptions = { 
+    hour: '2-digit', 
+    minute: '2-digit', 
+    second: '2-digit',
+    hour12: true
+  }
   
-  const ampm = hours < 12 ? '오전' : '오후'
-  const displayHours = String(hours % 12 || 12).padStart(2, '0')
+  const datePart = date.toLocaleDateString('ko-KR', dateOptions)
+  const timePart = date.toLocaleTimeString('ko-KR', timeOptions)
   
-  return `${year}. ${month}. ${day}. ${ampm} ${displayHours}:${minutes}:${seconds}`
+  return `${datePart} ${timePart}`
 }
 
 
-// ★★★ [수정] 봇 수행 시간 포맷 함수 - 다양한 형식 처리 ★★★
+// ★★★ [수정] 봇 수행 시간 포맷 함수 - 우상단 현재 시간과 동일한 방식 ★★★
 const formatBotTimeDisplay = (dateStr: string | null | undefined) => {
   if (!dateStr || dateStr === '-') return '-'
   
-  // 이미 HH:mm 형식인 경우 (예: "05:50")
+  // 이미 HH:mm 형식인 경우 (예: "12:05") - 오늘 날짜 붙이기
   if (/^\d{2}:\d{2}$/.test(dateStr)) {
-    const today = new Date()
-    const year = today.getFullYear()
-    const month = String(today.getMonth() + 1).padStart(2, '0')
-    const day = String(today.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day} ${dateStr}`
+    const now = new Date()
+    const dateOptions: Intl.DateTimeFormatOptions = { year: 'numeric', month: '2-digit', day: '2-digit' }
+    const datePart = now.toLocaleDateString('ko-KR', dateOptions).replace(/\. /g, '-').replace('.', '')
+    return `${datePart} ${dateStr}`
   }
   
   // ISO 형식 또는 전체 날짜 형식인 경우
   try {
     const d = new Date(dateStr)
-    if (isNaN(d.getTime())) return dateStr  // 파싱 실패 시 원본 반환
+    if (isNaN(d.getTime())) return dateStr
     
-    const year = d.getFullYear()
-    const month = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    const hours = String(d.getHours()).padStart(2, '0')
-    const minutes = String(d.getMinutes()).padStart(2, '0')
-    return `${year}-${month}-${day} ${hours}:${minutes}`
+    // 우상단 시간과 동일한 toLocaleString('ko-KR') 방식 사용
+    const dateOptions: Intl.DateTimeFormatOptions = { year: 'numeric', month: '2-digit', day: '2-digit' }
+    const timeOptions: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hour12: false }
+    
+    const datePart = d.toLocaleDateString('ko-KR', dateOptions).replace(/\. /g, '-').replace('.', '')
+    const timePart = d.toLocaleTimeString('ko-KR', timeOptions)
+    
+    return `${datePart} ${timePart}`
   } catch {
     return dateStr
   }

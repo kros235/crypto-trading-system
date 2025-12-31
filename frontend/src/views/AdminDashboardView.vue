@@ -623,43 +623,30 @@ const formatDate = (dateStr: string) => {
   return new Date(dateStr).toLocaleDateString('ko-KR')
 }
 
-// ★★★ 수정: 마지막 로그인 시간 (UTC → KST 변환) ★★★
+// ★★★ 수정: 마지막 로그인 시간 - 우상단 현재 시간과 동일한 방식 ★★★
 const formatDateTime = (dateStr: string) => {
   if (!dateStr) return '-'
   
-  // UTC 시간을 KST로 변환 (+9시간)
-  const utcDate = new Date(dateStr)
-  const kstDate = new Date(utcDate.getTime() + (9 * 60 * 60 * 1000))
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return '-'
   
-  const year = kstDate.getFullYear()
-  const month = String(kstDate.getMonth() + 1).padStart(2, '0')
-  const day = String(kstDate.getDate()).padStart(2, '0')
-  const hours = kstDate.getHours()
-  const minutes = String(kstDate.getMinutes()).padStart(2, '0')
-  const seconds = String(kstDate.getSeconds()).padStart(2, '0')
-  
-  const ampm = hours < 12 ? '오전' : '오후'
-  const displayHours = String(hours % 12 || 12).padStart(2, '0')
-  
-  return `${year}. ${month}. ${day}. ${ampm} ${displayHours}:${minutes}:${seconds}`
-}
-
-const fetchStats = async () => {
-  try {
-    const response = await adminApi.getStats()
-    stats.value = response.data
-  } catch (error) {
-    console.error('통계 조회 실패:', error)
+  // toLocaleString('ko-KR') 방식 사용
+  const dateOptions: Intl.DateTimeFormatOptions = { 
+    year: 'numeric', 
+    month: '2-digit', 
+    day: '2-digit' 
   }
-}
-
-const fetchUsers = async () => {
-  try {
-    const response = await adminApi.getUsers()
-    users.value = response.data.content || []
-  } catch (error) {
-    console.error('사용자 목록 조회 실패:', error)
+  const timeOptions: Intl.DateTimeFormatOptions = { 
+    hour: '2-digit', 
+    minute: '2-digit', 
+    second: '2-digit',
+    hour12: true
   }
+  
+  const datePart = date.toLocaleDateString('ko-KR', dateOptions)
+  const timePart = date.toLocaleTimeString('ko-KR', timeOptions)
+  
+  return `${datePart} ${timePart}`
 }
 
 const toggleUserActive = async (user: AdminUser) => {
@@ -668,6 +655,37 @@ const toggleUserActive = async (user: AdminUser) => {
     await fetchUsers()
   } catch (error) {
     console.error('사용자 상태 변경 실패:', error)
+  }
+}
+
+// ★★★ 추가: fetchStats 함수 ★★★
+const fetchStats = async () => {
+  try {
+    const response = await adminApi.getStats()
+    if (response.data) {
+      stats.value = { ...stats.value, ...response.data }
+    }
+  } catch (error) {
+    console.error('통계 조회 실패:', error)
+  }
+}
+
+// ★★★ 추가: fetchUsers 함수 ★★★
+const fetchUsers = async () => {
+  try {
+    const response = await adminApi.getUsers()
+    // API 응답이 배열인지 확인하고 처리
+    if (Array.isArray(response.data)) {
+      users.value = response.data
+    } else if (response.data?.content && Array.isArray(response.data.content)) {
+      // 페이징 응답인 경우
+      users.value = response.data.content
+    } else {
+      users.value = []
+    }
+  } catch (error) {
+    console.error('사용자 목록 조회 실패:', error)
+    users.value = []
   }
 }
 

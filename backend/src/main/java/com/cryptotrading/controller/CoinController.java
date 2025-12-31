@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Arrays;
 
 @RestController
 @RequestMapping("/api/coins")
@@ -46,10 +47,11 @@ public class CoinController {
 
     @GetMapping("/prices")
     public ResponseEntity<List<UpbitTickerDTO>> getMultipleCoinPrices(
-            @RequestParam List<String> symbols
+            @RequestParam String symbols
     ) {
         try {
-            List<UpbitTickerDTO> tickers = upbitApiService.getTicker(symbols);
+            List<String> symbolList = Arrays.asList(symbols.split(","));
+            List<UpbitTickerDTO> tickers = upbitApiService.getTicker(symbolList);
             return ResponseEntity.ok(tickers);
         } catch (RuntimeException e) {
             log.error("현재가 조회 실패: symbols={}, error={}", symbols, e.getMessage());

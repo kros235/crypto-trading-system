@@ -17,6 +17,12 @@
       />
 
       <v-list-item
+        prepend-icon="mdi-currency-btc"
+        title="코인 목록"
+        @click="$router.push('/coins')"
+      />
+
+      <v-list-item
         prepend-icon="mdi-history"
         title="거래 내역"
         @click="$router.push('/transactions')"

@@ -80,6 +80,12 @@ const router = createRouter({
       name: 'News',
       component: () => import('@/views/NewsView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/coins',
+      name: 'coins',
+      component: () => import('../views/CoinListView.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })

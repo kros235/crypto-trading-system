@@ -69,9 +69,13 @@ public class BacktestService {
             List<String> coinSymbols, LocalDate startDate, LocalDate endDate) {
     
         Map<String, List<UpbitCandleDTO>> result = new HashMap<>();
-        // ★★★ 수정: 최대 1년(365일) + 지표 계산용 여유분(50일) ★★★
+        // 최대 1년(365일) + 지표 계산용 여유분(50일)
         int totalDays = (int) ChronoUnit.DAYS.between(startDate, endDate) + 50;
     
+        // 요청된 종료일 기준으로 조회 시작점 설정
+        String initialToDate = endDate.plusDays(1).atTime(9, 0, 0)
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+
         for (String symbol : coinSymbols) {
             try {
                 List<UpbitCandleDTO> allCandles = new ArrayList<>();
@@ -79,21 +83,18 @@ public class BacktestService {
                 // ★★★ 수정: 업비트 API 200개 제한 대응 - 페이징 처리 ★★★
                 if (totalDays <= 200) {
                     // 200개 이하면 한 번에 조회
-                    allCandles = upbitApiService.getDayCandles(symbol, totalDays);
+                    allCandles = upbitApiService.getDayCandlesWithTo(symbol, totalDays, initialToDate);
                 } else {
                     // 200개 초과 시 여러 번 나눠서 조회
                     int remaining = totalDays;
-                    String toDate = null; // null이면 최신 데이터부터
+                    // ★★★ 수정: null 대신 종료일 기준으로 초기화 ★★★
+                    String toDate = initialToDate;
                 
                     while (remaining > 0) {
                         int fetchCount = Math.min(remaining, 200);
                         List<UpbitCandleDTO> candles;
                     
-                        if (toDate == null) {
-                            candles = upbitApiService.getDayCandles(symbol, fetchCount);
-                        } else {
-                            candles = upbitApiService.getDayCandlesWithTo(symbol, fetchCount, toDate);
-                        }
+                        candles = upbitApiService.getDayCandlesWithTo(symbol, fetchCount, toDate);
                     
                         if (candles == null || candles.isEmpty()) {
                             break;

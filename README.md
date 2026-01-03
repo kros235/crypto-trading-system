@@ -2185,7 +2185,7 @@ docker logs crypto-backend-prod --tail 50
 
 ---
 
-#### Day 26: AI 뉴스 분석 (3) - 지표 연동 + 알림
+#### ✅ Day 26: AI 뉴스 분석 (3) - 지표 연동 + 알림
 | 시간 | 작업 | 상세 |
 |------|------|------|
 | 오전 | SignalDetector 연동 | AI 가중치 buyThresholdPct 반영 | ✅ 완료 |

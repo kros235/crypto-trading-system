@@ -2148,7 +2148,7 @@ docker logs crypto-backend-prod --tail 50
 | 오후 | 업비트 API 재시도 | 3회 재시도 + 지수 백오프 | ✅ 완료 |
 | 오후 | 운영용 Docker Compose | docker-compose.prod.yml 생성 | ✅ 완료 |
 | 오후 | HTTPS 템플릿 준비 | nginx.ssl.conf, init-ssl.sh | ✅ 완료 |
-| - | HTTPS 실제 적용 | Let's Encrypt 인증서 발급 | ⏳ Day 28로 이동 |
+| - | HTTPS 실제 적용 | Let's Encrypt 인증서 발급 | ⏳ Day 29로 이동 |
 
 ---
 

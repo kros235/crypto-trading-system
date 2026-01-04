@@ -133,9 +133,9 @@ services:
       - "443:443"
     volumes:
       # ★★★ SSL 인증서 마운트 (도메인 확보 후 활성화) ★★★
-      # - ./ssl/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
-      # - ./ssl/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
-      # - ./frontend/nginx.ssl.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ssl/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
+      - ./ssl/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
+      - ./frontend/nginx.ssl.conf:/etc/nginx/conf.d/default.conf:ro
       - frontend_logs_prod:/var/log/nginx
     depends_on:
       - backend

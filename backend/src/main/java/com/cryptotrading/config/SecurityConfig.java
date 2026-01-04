@@ -106,7 +106,12 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
             "http://localhost", 
             "http://localhost:80", 
-            "http://localhost:3000"
+            "http://localhost:3000",
+            "http://158.179.161.29",
+            "http://crypto-trading-dev.duckdns.org",
+            "https://crypto-trading-dev.duckdns.org",
+            "http://crypto-trading-prd.duckdns.org",
+            "https://crypto-trading-prd.duckdns.org"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));

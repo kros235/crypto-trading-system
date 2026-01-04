@@ -2135,6 +2135,19 @@ docker logs crypto-backend-prod --tail 50
   - 시장 추세 필터: **OFF** (상승장 수익 100% 유지)
   - 누적 손실 한도: **-10%** (급락장 손실 55% 감소)
   - 연속 손절 제한: **3회** (과매매 방지)
+- HTTPS 적용 (DuckDNS + Let's Encrypt)
+  - 무료 도메인: `crypto-trading-prd.duckdns.org`
+  - Let's Encrypt SSL 인증서 발급
+  - nginx.ssl.conf 설정 (HTTP→HTTPS 리다이렉트, 보안 헤더)
+  - docker-compose.prod.yml SSL 볼륨 활성화
+  - frontend/Dockerfile 443 포트 추가
+  - Oracle Cloud 보안 목록 443 포트 개방
+- CORS 운영 도메인 추가
+  - SecurityConfig.java에 DuckDNS 도메인 허용
+- SSL 자동 갱신 설정
+  - scripts/renew-ssl.sh: 인증서 갱신 스크립트
+  - scripts/setup-cron.sh: Cron 설정 스크립트
+  - Cron 등록: 매월 1일, 15일 새벽 3시 자동 갱신
 
 **추가된 DB 컬럼:**
 ```sql
@@ -2143,6 +2156,12 @@ ADD COLUMN use_market_trend_filter BOOLEAN DEFAULT FALSE COMMENT '시장 추세 
 ADD COLUMN cumulative_loss_limit_pct INT DEFAULT -10 COMMENT '누적 손실 한도 (%)',
 ADD COLUMN consecutive_stop_loss_limit INT DEFAULT 3 COMMENT '연속 손절 제한 횟수';
 ```
+
+**생성된 파일:**
+- `scripts/renew-ssl.sh` - SSL 인증서 자동 갱신 스크립트
+- `scripts/setup-cron.sh` - Cron 설정 스크립트
+- `ssl/fullchain.pem` - SSL 인증서 (Git 제외)
+- `ssl/privkey.pem` - SSL 개인키 (Git 제외)
 
 **수정된 파일 (Backend):**
 - `entity/TradingSetting.java` - 급락장 보호 필드 3개 추가
@@ -2153,6 +2172,10 @@ ADD COLUMN consecutive_stop_loss_limit INT DEFAULT 3 COMMENT '연속 손절 제�
 - `service/RiskManagementService.java` - 실거래용 급락장 보호 로직
 - `service/TradingBotService.java` - 급락장 보호 기능 연동
 - `controller/BacktestController.java` - 기본값 수정
+- `frontend/nginx.ssl.conf` - DuckDNS 도메인 적용
+- `docker-compose.prod.yml` - SSL 볼륨 주석 해제
+- `frontend/Dockerfile` - EXPOSE 80 443
+- `backend/src/main/java/com/cryptotrading/config/SecurityConfig.java` - CORS 도메인 추가
 
 **수정된 파일 (Frontend):**
 - `views/TradingSettingsView.vue` - 급락장 보호 설정 UI 추가
@@ -2162,6 +2185,14 @@ ADD COLUMN consecutive_stop_loss_limit INT DEFAULT 3 COMMENT '연속 손절 제�
 
 **수정된 파일 (Database):**
 - `docker/mysql/init.sql` - trading_settings 테이블 3개 컬럼 추가
+
+**서비스 접속 정보:**
+| 서비스 | URL |
+|--------|-----|
+| Frontend (HTTPS) | https://crypto-trading-prd.duckdns.org |
+| Frontend (HTTP→리다이렉트) | http://crypto-trading-prd.duckdns.org |
+| Backend API | https://crypto-trading-prd.duckdns.org/api |
+| Health Check | https://crypto-trading-prd.duckdns.org/api/health |
 
 **★★★ 백테스팅 파라미터 최적화 결과 ★★★**
 
@@ -2209,6 +2240,12 @@ ADD COLUMN consecutive_stop_loss_limit INT DEFAULT 3 COMMENT '연속 손절 제�
 - ✅ 6가지 설정 조합 비교 테스트 - 브라우저
 - ✅ 최적 기본값 적용 - Backend/Frontend
 - ✅ init.sql 스키마 동기화 - MySQL
+- ✅ SSL 인증서 발급 - 서버
+- ✅ HTTPS 접속 (HTTP/2 200) - curl
+- ✅ 보안 헤더 적용 확인 (HSTS, CSP 등) - curl
+- ✅ HTTP→HTTPS 리다이렉트 - 브라우저
+- ✅ 로그인 정상 작동 - 브라우저
+- ✅ 대시보드 접속 - 브라우저
 
 ---
 
@@ -2338,7 +2375,9 @@ ADD COLUMN consecutive_stop_loss_limit INT DEFAULT 3 COMMENT '연속 손절 제�
 | 오후 | 백테스팅 UI 확장 | 급락장 보호 설정 UI 추가 | ✅ 완료 |
 | 오후 | 파라미터 최적화 테스트 | 5가지 시장 상황 × 6가지 설정 종합 비교 | ✅ 완료 |
 | 오후 | 최적 기본값 적용 | 시장필터 OFF, 누적손실 -10%, 연속손절 3회 | ✅ 완료 |
-| 오후 | HTTPS 적용 | Let's Encrypt 인증서 발급, Nginx SSL 활성화 | 🔄 진행 예정  |
+| 오후 | HTTPS 적용 | DuckDNS 무료 도메인 + Let's Encrypt SSL | ✅ 완료 |
+| 오후 | CORS 설정 수정 | 운영 도메인 허용 추가 | ✅ 완료 |
+| 오후 | SSL 자동 갱신 | renew-ssl.sh + Cron 등록 | ✅ 완료 |
 
 ★★★ 급락장 보호 기능 상세 (Day 29 구현 완료) ★★★
 
@@ -2388,7 +2427,7 @@ ADD COLUMN consecutive_stop_loss_limit INT DEFAULT 3 COMMENT '연속 손절 제�
 | 26 | ✅ AI 뉴스 분석 - 지표 연동 + 뉴스 페이지 UI | ✅ 완료 |
 | 27 | ✅ Oracle Cloud ARM64 배포, DB 스키마 교차검증, docker-compose 동기화, 이슈 해결 | ✅ 완료 |
 | 28 | ✅ 대시보드 재구성, 코인 목록 페이지, bulk API 수정, MATIC 비활성화, 시간대 KST 통일, AdminDashboard 오류 수정, 시간 표시 함수 개선 | ✅ 완료 |
-| 29 | ✅ 급락장 보호 기능 3종 구현, 백테스팅 연동, 파라미터 최적화, 최적 기본값 적용, **🟢 HTTPS 적용** | **🟢 진행 중** |
+| 29 | ✅ 급락장 보호 기능 3종, HTTPS 적용 (DuckDNS + Let's Encrypt), CORS 수정, SSL 자동 갱신 | **✅ 완료** |
 | 30 | 2FA, IP 제한, 수익 분석 UI, 보안 점검, 테스트 | 🔄 예정 |
 | 31 | 운영 문서 작성, v1.0 릴리즈 | 🔴 필수 |
 
@@ -2797,6 +2836,8 @@ crypto-trading-system/
 │   ├── backup-db.sh              # Linux/Mac DB 백업
 │   ├── restore-db.ps1            # DB 복원
 │   ├── init-ssl.sh               # SSL 인증서 발급 스크립트
+│   ├── renew-ssl.sh              # ⭐ Day 29: SSL 인증서 자동 갱신
+│   ├── setup-cron.sh             # ⭐ Day 29: Cron 설정 스크립트
 │   ├── archive-transactions.ps1  # ⭐ Day 23: Windows 거래 아카이빙
 │   └── archive-transactions.sh   # ⭐ Day 23: Linux 거래 아카이빙
 ├── backups/                      # 백업 저장소
@@ -2966,7 +3007,7 @@ crypto-trading-system/
 ├── .env.example                  # 환경변수 템플릿
 ├── .env.development              # ⭐ Day 22-25: 개발 환경 (GROQ_API_KEY 추가)
 ├── .env.production               # ⭐ Day 22: 운영 환경 (Git 제외)
-├── .gitignore                    # backups/, .env.* 제외
+├── .gitignore                    # backups/, .env.*, ssl/ 제외
 └── README.md
 ```
 

@@ -52,7 +52,7 @@ public class TradingSettingDTO {
     @DecimalMax(value = "0.00", message = "트레일링 스톱은 0% 이하여야 합니다")
     private BigDecimal trailingStopPct;
 
-  // ★★★ RSI 설정 ★★★
+    // ★★★ RSI 설정 ★★★
     @Min(value = 5, message = "RSI 기간은 최소 5일 이상이어야 합니다")
     @Max(value = 50, message = "RSI 기간은 최대 50일 이하여야 합니다")
     private Integer rsiPeriod;
@@ -94,4 +94,15 @@ public class TradingSettingDTO {
     @Min(value = -50, message = "긴급 정지는 최소 -50% 이상이어야 합니다")
     @Max(value = 0, message = "긴급 정지는 최대 0% 이하여야 합니다")
     private Integer dailyStopLossPct;
+
+    // ⭐⭐⭐ Day 29 추가: 급락장 보호 기능 ⭐⭐⭐
+    private Boolean useMarketTrendFilter;
+    
+    @Min(value = -50, message = "누적 손실 한도는 -50% 이상이어야 합니다")
+    @Max(value = 0, message = "누적 손실 한도는 0% 이하여야 합니다")
+    private Integer cumulativeLossLimitPct;
+    
+    @Min(value = 1, message = "연속 손절 제한은 1회 이상이어야 합니다")
+    @Max(value = 10, message = "연속 손절 제한은 10회 이하여야 합니다")
+    private Integer consecutiveStopLossLimit;
 }

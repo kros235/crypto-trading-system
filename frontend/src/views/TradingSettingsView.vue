@@ -405,6 +405,61 @@
                 </div>
               </div>
 
+          <!-- 급락장 보호 기능 -->
+          <v-divider class="my-4"></v-divider>
+          <div class="text-subtitle-1 font-weight-bold mb-3">
+            <v-icon class="mr-2">mdi-shield-alert</v-icon>
+            급락장 보호 기능
+          </div>
+          
+          <!-- 시장 추세 필터 -->
+          <v-switch
+            v-model="settings.useMarketTrendFilter"
+            label="시장 추세 필터 사용"
+            hint="BTC가 20일 이동평균선 아래로 하락하면 전체 매수를 중단합니다"
+            persistent-hint
+            color="primary"
+            class="mb-4"
+          ></v-switch>
+          
+          <!-- 누적 손실 한도 -->
+          <v-slider
+            v-model="settings.cumulativeLossLimitPct"
+            :min="-50"
+            :max="0"
+            :step="5"
+            label="누적 손실 한도"
+            thumb-label="always"
+            color="error"
+            class="mb-2"
+          >
+            <template v-slot:thumb-label="{ modelValue }">
+              {{ modelValue }}%
+            </template>
+          </v-slider>
+          <div class="text-caption text-grey mb-4">
+            초기 자본 대비 누적 손실이 이 수치에 도달하면 모든 거래를 중단합니다 (현재: {{ settings.cumulativeLossLimitPct }}%)
+          </div>
+          
+          <!-- 연속 손절 제한 -->
+          <v-slider
+            v-model="settings.consecutiveStopLossLimit"
+            :min="1"
+            :max="10"
+            :step="1"
+            label="연속 손절 제한"
+            thumb-label="always"
+            color="warning"
+            class="mb-2"
+          >
+            <template v-slot:thumb-label="{ modelValue }">
+              {{ modelValue }}회
+            </template>
+          </v-slider>
+          <div class="text-caption text-grey mb-4">
+            동일 코인에서 {{ settings.consecutiveStopLossLimit }}회 연속 손절 시 해당 코인 24시간 매수를 금지합니다
+          </div>
+
               <!-- 추가 옵션 -->
               <div class="mb-6">
                 <h3 class="text-h6 mb-3">
@@ -622,7 +677,10 @@ const settings = ref({
   volumeThreshold: 140,       
   dailyTradeLimitPct: 20,     
   maxPositionPct: 25,         
-  dailyStopLossPct: -5        
+  dailyStopLossPct: -5,
+  useMarketTrendFilter: true,
+  cumulativeLossLimitPct: -15,
+  consecutiveStopLossLimit: 3      
 })
 
 // 기본값 (초기화용)
@@ -645,7 +703,10 @@ const defaultSettings = {
   volumeThreshold: 140,       
   dailyTradeLimitPct: 20,
   maxPositionPct: 25,
-  dailyStopLossPct: -5
+  dailyStopLossPct: -5,
+  useMarketTrendFilter: true,
+  cumulativeLossLimitPct: -15,
+  consecutiveStopLossLimit: 3
 }
 
 // 유효성 검증 규칙
@@ -744,7 +805,10 @@ const loadSettings = async () => {
         volumeThreshold: data.volumeThreshold || 140,     
         dailyTradeLimitPct: data.dailyTradeLimitPct || 20,
         maxPositionPct: data.maxPositionPct || 25,
-        dailyStopLossPct: data.dailyStopLossPct || -5
+        dailyStopLossPct: data.dailyStopLossPct || -5,
+        useMarketTrendFilter: data.useMarketTrendFilter ?? true,
+        cumulativeLossLimitPct: data.cumulativeLossLimitPct || -15,
+        consecutiveStopLossLimit: data.consecutiveStopLossLimit || 3
       }
 
       hasExistingSettings.value = true
@@ -784,7 +848,10 @@ const createDefaultSettings = async () => {
       volumeThreshold: Number(settings.value.volumeThreshold),
       dailyTradeLimitPct: Number(settings.value.dailyTradeLimitPct),
       maxPositionPct: Number(settings.value.maxPositionPct),
-      dailyStopLossPct: Number(settings.value.dailyStopLossPct)
+      dailyStopLossPct: Number(settings.value.dailyStopLossPct),
+      useMarketTrendFilter: Boolean(settings.value.useMarketTrendFilter),
+      cumulativeLossLimitPct: Number(settings.value.cumulativeLossLimitPct),
+      consecutiveStopLossLimit: Number(settings.value.consecutiveStopLossLimit)
     }
     
     await tradingApi.createSettings(payload)
@@ -837,7 +904,10 @@ const saveSettings = async () => {
       volumeThreshold: Number(settings.value.volumeThreshold),
       dailyTradeLimitPct: Number(settings.value.dailyTradeLimitPct),
       maxPositionPct: Number(settings.value.maxPositionPct),
-      dailyStopLossPct: Number(settings.value.dailyStopLossPct)
+      dailyStopLossPct: Number(settings.value.dailyStopLossPct),
+      useMarketTrendFilter: Boolean(settings.value.useMarketTrendFilter),
+      cumulativeLossLimitPct: Number(settings.value.cumulativeLossLimitPct),
+      consecutiveStopLossLimit: Number(settings.value.consecutiveStopLossLimit)
     }
 
     console.log('Sending payload:', payload) // 디버깅용
@@ -932,7 +1002,10 @@ const deleteSettings = async () => {
       volumeThreshold: Number(settings.value.volumeThreshold),
       dailyTradeLimitPct: Number(settings.value.dailyTradeLimitPct),
       maxPositionPct: Number(settings.value.maxPositionPct),
-      dailyStopLossPct: Number(settings.value.dailyStopLossPct)
+      dailyStopLossPct: Number(settings.value.dailyStopLossPct),
+      useMarketTrendFilter: Boolean(settings.value.useMarketTrendFilter),
+      cumulativeLossLimitPct: Number(settings.value.cumulativeLossLimitPct),
+      consecutiveStopLossLimit: Number(settings.value.consecutiveStopLossLimit)
     }
     
     await tradingApi.createSettings(payload)

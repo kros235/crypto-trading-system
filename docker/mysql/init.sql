@@ -44,6 +44,10 @@ CREATE TABLE IF NOT EXISTS trading_settings (
     daily_trade_limit_pct INT DEFAULT 20 COMMENT '일일 거래 한도 (%)',
     max_position_pct INT DEFAULT 25 COMMENT '종목당 최대 비중 (%)',
     daily_stop_loss_pct INT DEFAULT -5 COMMENT '긴급 정지 손실률 (%)',
+    -- ⭐⭐⭐ Day 29 추가: 급락장 보호 기능 (3개 컬럼) ⭐⭐⭐
+    use_market_trend_filter BOOLEAN DEFAULT TRUE COMMENT '시장 추세 필터 사용 (BTC MA20 기준)',
+    cumulative_loss_limit_pct INT DEFAULT -15 COMMENT '누적 손실 한도 (%) - 초기 자본 대비',
+    consecutive_stop_loss_limit INT DEFAULT 3 COMMENT '연속 손절 제한 횟수',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,

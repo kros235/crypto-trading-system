@@ -93,6 +93,9 @@ export interface TradingSetting {
   bbPeriod: number
   bbMultiplier: number
   volumeThreshold: number
+  useMarketTrendFilter?: boolean
+  cumulativeLossLimitPct?: number
+  consecutiveStopLossLimit?: number
 }
 
 // 거래 설정 요청 타입

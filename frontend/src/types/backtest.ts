@@ -17,10 +17,14 @@ export interface BacktestRequest {
   bbPeriod?: number;
   bbMultiplier?: number;
   volumeThreshold?: number;
-  // ★★★ 신규 추가: 리스크 관리 설정 ★★★
+  // 리스크 관리 설정
   dailyTradeLimitPct?: number;   // 일일 거래 한도 (%)
   maxPositionPct?: number;       // 단일 종목 비중 제한 (%)
   dailyStopLossPct?: number;     // 긴급 정지 조건 (%)
+  // 급락장 보호 기능
+  useMarketTrendFilter?: boolean
+  cumulativeLossLimitPct?: number
+  consecutiveStopLossLimit?: number
 }
 
 // 백테스트 결과

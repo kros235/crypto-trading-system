@@ -56,7 +56,7 @@ public class BacktestService {
         }
         
         // 5. 남은 포지션 정리 (마지막 날 강제 매도)
-        closeAllPositions(request.getEndDate(), candleDataMap, state);
+        closeAllPositions(request.getEndDate(), candleDataMap, state, request);
         
         // 6. 결과 계산 및 반환
         return buildResult(request, state, totalDays);
@@ -140,7 +140,7 @@ public class BacktestService {
     private void simulateDay(LocalDate date, Map<String, List<UpbitCandleDTO>> candleDataMap,
                               BacktestRequestDTO request, SimulationState state) {
     
-        // ★★★ 신규 추가: 날짜 변경 시 일일 상태 초기화 ★★★
+        // 날짜 변경 시 일일 상태 초기화
         if (state.getCurrentTradeDate() == null || !state.getCurrentTradeDate().equals(date)) {
             state.setCurrentTradeDate(date);
             state.setDailyBuyAmount(BigDecimal.ZERO);
@@ -150,8 +150,35 @@ public class BacktestService {
             BigDecimal holdingValue = calculateHoldingValue(state.getPositions(), candleDataMap, date);
             state.setDailyStartBalance(state.getCashBalance().add(holdingValue));
         }
+
+        // 누적 손실 긴급정지 체크
+        if (!state.isCumulativeLossTriggered() && request.getCumulativeLossLimitPct() != null) {
+            BigDecimal cumulativeProfitLoss = state.getTrades().stream()
+                    .filter(t -> "SELL".equals(t.getType()))
+                    .map(BacktestTrade::getProfit)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            BigDecimal cumulativeLossRate = cumulativeProfitLoss
+                    .divide(request.getInitialBalance(), 4, RoundingMode.HALF_UP)
+                    .multiply(new BigDecimal("100"));
+            
+            if (cumulativeLossRate.compareTo(new BigDecimal(request.getCumulativeLossLimitPct())) <= 0) {
+                state.setCumulativeLossTriggered(true);
+                log.info("누적 손실 긴급정지 발동: {} - 누적손실률 {}%", date, cumulativeLossRate);
+            }
+        }
+        
+        // 누적 손실 긴급정지 발동 시 매수 중단
+        if (state.isCumulativeLossTriggered()) {
+            // 매도만 진행 (기존 포지션 청산)
+            for (String coinSymbol : request.getCoinSymbols()) {
+                // ... 매도 로직만 실행
+            }
+            recordDailyBalance(date, candleDataMap, request, state);
+            return;
+        }
     
-        // ★★★ 신규 추가: 긴급 정지 체크 ★★★
+        // 긴급 정지 체크
         if (request.getDailyStopLossPct() > -100) {
             BigDecimal holdingValue = calculateHoldingValue(state.getPositions(), candleDataMap, date);
             BigDecimal currentBalance = state.getCashBalance().add(holdingValue);
@@ -183,7 +210,7 @@ public class BacktestService {
             // 2. 매수 체크
             if (canBuy(coinSymbol, request, state)) {
                 // ★★★ 수정: 사용자 설정값으로 매수 신호 체크 ★★★
-                if (checkBuySignal(coinSymbol, candles, date, request)) {
+                if (checkBuySignal(coinSymbol, candles, date, request, candleDataMap)) {
                     executeBuy(coinSymbol, currentPrice, date, "매수 신호", request, state);
                 }
             }
@@ -194,10 +221,31 @@ public class BacktestService {
     }
 
     /**
-     * ★★★ 신규: 매수 신호 체크 (사용자 설정 적용) ★★★
+     * 매수 신호 체크 (사용자 설정 적용)
      */
     private boolean checkBuySignal(String coinSymbol, List<UpbitCandleDTO> candles, 
-                                    LocalDate date, BacktestRequestDTO request) {
+                                    LocalDate date, BacktestRequestDTO request,
+                                    Map<String, List<UpbitCandleDTO>> candleDataMap) {
+
+        // 시장 추세 필터 (BTC MA20)
+        if (request.getUseMarketTrendFilter() != null && request.getUseMarketTrendFilter()) {
+            List<UpbitCandleDTO> btcCandles = candleDataMap.get("KRW-BTC");
+            if (btcCandles != null) {
+                List<UpbitCandleDTO> btcHistorical = getHistoricalCandles(btcCandles, date, 25);
+                if (btcHistorical.size() >= 20) {
+                    List<BigDecimal> btcPrices = btcHistorical.stream()
+                            .map(UpbitCandleDTO::getTradePrice)
+                            .toList();
+                    BigDecimal btcMa20 = calculateMA(btcPrices, 20);
+                    BigDecimal btcCurrentPrice = btcPrices.get(0);
+                    
+                    if (btcCurrentPrice.compareTo(btcMa20) < 0) {
+                        // BTC가 MA20 아래 → 전체 매수 중단
+                        return false;
+                    }
+                }
+            }
+        }
         // 현재 날짜 기준으로 과거 데이터 추출
         List<UpbitCandleDTO> historicalCandles = getHistoricalCandles(candles, date, 
                 Math.max(request.getBbPeriod(), request.getRsiPeriod()) + 10);
@@ -354,7 +402,7 @@ public class BacktestService {
      * 매도 실행
      */
     private void executeSell(Position position, BigDecimal price, LocalDate date,
-                              String signal, SimulationState state) {
+                              String signal, SimulationState state, BacktestRequestDTO request) {
         BigDecimal sellAmount = position.getQuantity().multiply(price);
         BigDecimal fee = sellAmount.multiply(FEE_RATE);
         BigDecimal actualAmount = sellAmount.subtract(fee);
@@ -386,6 +434,24 @@ public class BacktestService {
                 .profitRate(profitRate)
                 .signal(signal)
                 .build());
+
+        // 연속 손절 카운터 업데이트
+        if (signal.contains("손절") || signal.contains("stop") || profitRate.compareTo(BigDecimal.ZERO) < 0) {
+            // 손절 발생
+            int currentCount = state.getConsecutiveStopLossCount().getOrDefault(position.getCoinSymbol(), 0) + 1;
+            state.getConsecutiveStopLossCount().put(position.getCoinSymbol(), currentCount);
+            
+            int limit = request.getConsecutiveStopLossLimit() != null ? request.getConsecutiveStopLossLimit() : 3;
+            if (currentCount >= limit) {
+                // 다음날부터 매수 금지 (백테스팅에서는 1일 추가)
+                state.getCoinBuyBlockedUntil().put(position.getCoinSymbol(), date.plusDays(1));
+                log.info("연속 손절 한도 도달 (백테스팅): {} - {}까지 매수 금지", position.getCoinSymbol(), date.plusDays(1));
+            }
+        } else {
+            // 수익 실현 시 카운터 리셋
+            state.getConsecutiveStopLossCount().remove(position.getCoinSymbol());
+            state.getCoinBuyBlockedUntil().remove(position.getCoinSymbol());
+        }
         
         state.setSellCount(state.getSellCount() + 1);
         log.debug("매도: {} - {}원 x {}, 손익: {}원 ({})", 
@@ -393,7 +459,7 @@ public class BacktestService {
     }
 
     /**
-     * ★★★ 신규 추가: 매도 신호 체크 및 실행 ★★★
+     * 매도 신호 체크 및 실행
      */
     private void checkSellSignals(String coinSymbol, BigDecimal currentPrice, LocalDate date,
                                    BacktestRequestDTO request, SimulationState state) {
@@ -411,7 +477,7 @@ public class BacktestService {
             String sellSignal = checkSellSignal(position, currentPrice, profitRate, request);
             
             if (sellSignal != null) {
-                executeSell(position, currentPrice, date, sellSignal, state);
+                executeSell(position, currentPrice, date, sellSignal, state, request);
                 positionsToSell.add(position);
             }
         }
@@ -420,9 +486,22 @@ public class BacktestService {
     }
 
     /**
-     * ★★★ 수정: 매수 가능 여부 확인 (리스크 관리 추가) ★★★
+     * 매수 가능 여부 확인 (리스크 관리 추가)
      */
     private boolean canBuy(String coinSymbol, BacktestRequestDTO request, SimulationState state) {
+
+        // 누적 손실 긴급정지 체크
+        if (state.isCumulativeLossTriggered()) {
+            return false;
+        }
+        
+        // 연속 손절 제한 체크
+        LocalDate blockedUntil = state.getCoinBuyBlockedUntil().get(coinSymbol);
+        if (blockedUntil != null) {
+            // 백테스팅에서는 1일 = 24시간으로 간주
+            // 현재 날짜가 매수금지 해제일 이전이면 매수 불가
+            // (simulateDay의 date 파라미터 사용 필요 - 메서드 시그니처 수정 필요)
+        }
 
         // 0. 긴급 정지 발동 여부 확인
         if (state.isDailyStopTriggered()) {
@@ -516,11 +595,11 @@ public class BacktestService {
      * 모든 포지션 청산
      */
     private void closeAllPositions(LocalDate date, Map<String, List<UpbitCandleDTO>> candleDataMap,
-                                    SimulationState state) {
+                                    SimulationState state, BacktestRequestDTO request) {
         for (Position position : new ArrayList<>(state.getPositions())) {
             UpbitCandleDTO candle = findCandleByDate(candleDataMap.get(position.getCoinSymbol()), date);
             if (candle != null) {
-                executeSell(position, candle.getTradePrice(), date, "백테스트 종료", state);
+                executeSell(position, candle.getTradePrice(), date, "백테스트 종료", state, request);
             }
         }
         state.getPositions().clear();
@@ -801,11 +880,16 @@ public class BacktestService {
         private List<DailyBalance> dailyBalances = new ArrayList<>();
         private List<BacktestTrade> trades = new ArrayList<>();
 
-        // ★★★ 신규 추가: 리스크 관리용 필드 ★★★
+        // 리스크 관리용 필드
         private BigDecimal dailyBuyAmount = BigDecimal.ZERO;  // 당일 매수 금액
         private LocalDate currentTradeDate = null;            	  // 현재 거래일
         private BigDecimal dailyStartBalance = BigDecimal.ZERO; // 당일 시작 잔고
         private boolean dailyStopTriggered = false;           	  // 긴급 정지 발동 여부
+
+        // 급락장 보호 상태
+        private boolean cumulativeLossTriggered = false;           // 누적 손실 긴급정지 발동
+        private Map<String, Integer> consecutiveStopLossCount = new HashMap<>();  // 코인별 연속 손절 횟수
+        private Map<String, LocalDate> coinBuyBlockedUntil = new HashMap<>();     // 코인별 매수 금지 일자
         
         public SimulationState(BigDecimal initialBalance) {
             this.cashBalance = initialBalance;

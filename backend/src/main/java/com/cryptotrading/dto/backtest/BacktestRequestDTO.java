@@ -78,7 +78,7 @@ public class BacktestRequestDTO {
     @Builder.Default
     private Integer rsiSellThreshold = 70;
 
-    // ★★★ 신규 추가: 볼린저 밴드 설정 ★★★
+    // 볼린저 밴드 설정
     @Min(value = 10, message = "볼린저 밴드 기간은 10일 이상")
     @Max(value = 50, message = "볼린저 밴드 기간은 50일 이하")
     @Builder.Default
@@ -89,13 +89,13 @@ public class BacktestRequestDTO {
     @Builder.Default
     private Integer bbMultiplier = 2;
 
-    // ★★★ 신규 추가: 거래량 설정 ★★★
+    // 거래량 설정
     @Min(value = 100, message = "거래량 기준은 100% 이상")
     @Max(value = 500, message = "거래량 기준은 500% 이하")
     @Builder.Default
     private Integer volumeThreshold = 150;
 
-    // ★★★ 신규 추가: 리스크 관리 설정 ★★★
+    // 리스크 관리 설정 
     
     // 일일 최대 거래금액 (초기 자본 대비 %)
     @Min(value = 10, message = "일일 거래 한도는 10% 이상")
@@ -114,4 +114,9 @@ public class BacktestRequestDTO {
     @Max(value = 0, message = "긴급 정지는 0% 이하")
     @Builder.Default
     private Integer dailyStopLossPct = -100;  // 기본값: 사용 안함 (-100%)
+
+    // 급락장 보호 기능
+    private Boolean useMarketTrendFilter = true;      // 시장 추세 필터 (BTC MA20)
+    private Integer cumulativeLossLimitPct = -15;     // 누적 손실 한도 (%)
+    private Integer consecutiveStopLossLimit = 3;     // 연속 손절 제한 횟수
 }

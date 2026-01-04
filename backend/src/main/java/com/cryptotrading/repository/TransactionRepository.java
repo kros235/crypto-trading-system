@@ -130,4 +130,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     BigDecimal sumTodayProfitLoss(@Param("userId") String userId,
                                    @Param("startOfDay") LocalDateTime startOfDay,
                                    @Param("endOfDay") LocalDateTime endOfDay);
+
+    // 전체 누적 손익 합계 ⭐⭐⭐
+    @Query("SELECT COALESCE(SUM(t.profitLoss), 0) FROM Transaction t WHERE t.userId = :userId AND t.status = 'SOLD'")
+    BigDecimal sumTotalProfitLossByUser(@Param("userId") String userId);
 }

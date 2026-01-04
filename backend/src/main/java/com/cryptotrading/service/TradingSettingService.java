@@ -57,6 +57,9 @@ public class TradingSettingService {
                 .dailyTradeLimitPct(dto.getDailyTradeLimitPct() != null ? dto.getDailyTradeLimitPct() : 20)
                 .maxPositionPct(dto.getMaxPositionPct() != null ? dto.getMaxPositionPct() : 25)
                 .dailyStopLossPct(dto.getDailyStopLossPct() != null ? dto.getDailyStopLossPct() : -5)
+                .useMarketTrendFilter(dto.getUseMarketTrendFilter() != null ? dto.getUseMarketTrendFilter() : true)
+                .cumulativeLossLimitPct(dto.getCumulativeLossLimitPct() != null ? dto.getCumulativeLossLimitPct() : -15)
+                .consecutiveStopLossLimit(dto.getConsecutiveStopLossLimit() != null ? dto.getConsecutiveStopLossLimit() : 3)
                 .build();
 
         TradingSetting saved = tradingSettingRepository.save(setting);
@@ -89,6 +92,9 @@ public class TradingSettingService {
         setting.setDailyTradeLimitPct(dto.getDailyTradeLimitPct() != null ? dto.getDailyTradeLimitPct() : 20);
         setting.setMaxPositionPct(dto.getMaxPositionPct() != null ? dto.getMaxPositionPct() : 25);
         setting.setDailyStopLossPct(dto.getDailyStopLossPct() != null ? dto.getDailyStopLossPct() : -5);
+        setting.setUseMarketTrendFilter(dto.getUseMarketTrendFilter() != null ? dto.getUseMarketTrendFilter() : true);
+        setting.setCumulativeLossLimitPct(dto.getCumulativeLossLimitPct() != null ? dto.getCumulativeLossLimitPct() : -15);
+        setting.setConsecutiveStopLossLimit(dto.getConsecutiveStopLossLimit() != null ? dto.getConsecutiveStopLossLimit() : 3);
 
         TradingSetting updated = tradingSettingRepository.save(setting);
         log.info("거래 설정 수정 완료: userId={}", userId);
@@ -127,6 +133,9 @@ public class TradingSettingService {
 	  .dailyTradeLimitPct(setting.getDailyTradeLimitPct())
                 .maxPositionPct(setting.getMaxPositionPct())
                 .dailyStopLossPct(setting.getDailyStopLossPct())
+                .useMarketTrendFilter(setting.getUseMarketTrendFilter())
+                .cumulativeLossLimitPct(setting.getCumulativeLossLimitPct())
+                .consecutiveStopLossLimit(setting.getConsecutiveStopLossLimit())
                 .build();
     }
 }

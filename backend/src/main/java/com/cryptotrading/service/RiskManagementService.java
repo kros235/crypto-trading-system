@@ -15,14 +15,26 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class RiskManagementService {
 
     private final TransactionRepository transactionRepository;
+
+    private final TechnicalIndicatorService technicalIndicatorService;
     
     private static final int SCALE = 8;
+
+    // 연속 손절 추적용 캐시 (코인별)
+    // Key: "userId:coinSymbol", Value: 연속 손절 횟수
+    private final Map<String, Integer> consecutiveStopLossMap = new ConcurrentHashMap<>();
+    // Key: "userId:coinSymbol", Value: 매수 금지 해제 시각
+    private final Map<String, LocalDateTime> buyBlockedUntilMap = new ConcurrentHashMap<>();
+
 
     /**
      * 매수 가능 여부 체크 (모든 리스크 조건)
@@ -30,6 +42,23 @@ public class RiskManagementService {
     public RiskCheckResult canBuy(String userId, String market, BigDecimal amount, TradingSetting setting) {
         log.debug("리스크 체크 시작: userId={}, market={}, amount={}", userId, market, amount);
         
+        // 시장 추세 필터 체크 (BTC MA20) 
+        if (setting.getUseMarketTrendFilter() != null && setting.getUseMarketTrendFilter()) {
+            if (!checkMarketTrendFilter()) {
+                return RiskCheckResult.fail("시장 추세 필터 발동 - BTC가 20일 이동평균선 하회");
+            }
+        }
+        
+        // 누적 손실률 체크 
+        if (!checkCumulativeLossLimit(userId, setting)) {
+            return RiskCheckResult.fail("누적 손실 한도 도달 - 거래 중단");
+        }
+        
+        // 연속 손절 제한 체크
+        if (!checkConsecutiveStopLossLimit(userId, market, setting)) {
+            return RiskCheckResult.fail("연속 손절 제한 - 해당 코인 24시간 매수 금지");
+        }
+
         // 긴급 정지 조건 체크 (dailyStopLossPct)
         if (!checkDailyStopLoss(userId, setting)) {
             return RiskCheckResult.fail("긴급 정지 발동 - 일일 손실 한도 도달");
@@ -55,6 +84,8 @@ public class RiskManagementService {
         log.info("리스크 체크 통과: userId={}, market={}", userId, market);
         return RiskCheckResult.pass();
     }
+
+
 
     /**
      * 일일 거래 한도 체크 (dailyTradeLimitPct 적용)
@@ -133,8 +164,137 @@ public class RiskManagementService {
         return withinLimit;
     }
 
+/**
+     * 시장 추세 필터 체크 (BTC MA20 기준)
+     * BTC가 20일 이동평균선 위에 있으면 true (매수 허용)
+     * BTC가 20일 이동평균선 아래에 있으면 false (전체 매수 중단)
+     */
+    public boolean checkMarketTrendFilter() {
+        try {
+            var btcIndicators = technicalIndicatorService.calculateIndicators("KRW-BTC");
+            
+            if (btcIndicators == null || btcIndicators.getCurrentPrice() == null || btcIndicators.getMa20() == null) {
+                log.warn("BTC 지표 조회 실패 - 시장 추세 필터 우회");
+                return true; // 데이터 없으면 필터 우회
+            }
+            
+            BigDecimal btcPrice = btcIndicators.getCurrentPrice();
+            BigDecimal btcMa20 = btcIndicators.getMa20();
+            
+            boolean isAboveMa20 = btcPrice.compareTo(btcMa20) >= 0;
+            
+            if (!isAboveMa20) {
+                log.info("시장 추세 필터 발동: BTC {}원 < MA20 {}원 - 전체 매수 중단", btcPrice, btcMa20);
+            }
+            
+            return isAboveMa20;
+        } catch (Exception e) {
+            log.error("시장 추세 필터 체크 오류: {}", e.getMessage());
+            return true; // 오류 시 필터 우회
+        }
+    }
+
     /**
-     * 신규 추가: 긴급 정지 조건 체크 (dailyStopLossPct)
+     * 누적 손실률 체크
+     * 초기 자본 대비 누적 손실이 한도에 도달하면 false
+     */
+    public boolean checkCumulativeLossLimit(String userId, TradingSetting setting) {
+        if (setting.getCumulativeLossLimitPct() == null || setting.getCumulativeLossLimitPct() >= 0) {
+            return true; // 설정 없거나 0% 이상이면 체크 안함
+        }
+        
+        try {
+            // 전체 실현 손익 합계 조회
+            BigDecimal totalProfitLoss = transactionRepository.sumTotalProfitLossByUser(userId);
+            if (totalProfitLoss == null) {
+                totalProfitLoss = BigDecimal.ZERO;
+            }
+            
+            // 초기 자본은 일일 한도 금액으로 추정 (설정에서)
+            BigDecimal initialCapital = setting.getDailyLimitAmount();
+            if (initialCapital == null || initialCapital.compareTo(BigDecimal.ZERO) <= 0) {
+                initialCapital = new BigDecimal("1000000"); // 기본값
+            }
+            
+            // 누적 손실률 계산
+            BigDecimal cumulativeLossRate = totalProfitLoss
+                    .divide(initialCapital, 4, RoundingMode.HALF_UP)
+                    .multiply(new BigDecimal("100"));
+            
+            BigDecimal limitPct = new BigDecimal(setting.getCumulativeLossLimitPct());
+            
+            if (cumulativeLossRate.compareTo(limitPct) <= 0) {
+                log.warn("누적 손실 한도 도달: userId={}, 누적손실률={}%, 한도={}%", 
+                        userId, cumulativeLossRate, limitPct);
+                return false;
+            }
+            
+            return true;
+        } catch (Exception e) {
+            log.error("누적 손실률 체크 오류: {}", e.getMessage());
+            return true; // 오류 시 체크 우회
+        }
+    }
+
+    /**
+     * 연속 손절 제한 체크
+     * 동일 코인 연속 손절 횟수가 한도에 도달하면 24시간 매수 금지
+     */
+    public boolean checkConsecutiveStopLossLimit(String userId, String market, TradingSetting setting) {
+        if (setting.getConsecutiveStopLossLimit() == null || setting.getConsecutiveStopLossLimit() <= 0) {
+            return true; // 설정 없으면 체크 안함
+        }
+        
+        String key = userId + ":" + market;
+        
+        // 매수 금지 시간 체크
+        LocalDateTime blockedUntil = buyBlockedUntilMap.get(key);
+        if (blockedUntil != null && LocalDateTime.now().isBefore(blockedUntil)) {
+            log.info("연속 손절 제한 중: {} - 해제 시각: {}", market, blockedUntil);
+            return false;
+        } else if (blockedUntil != null) {
+            // 금지 시간 만료 - 카운터 리셋
+            buyBlockedUntilMap.remove(key);
+            consecutiveStopLossMap.remove(key);
+        }
+        
+        return true;
+    }
+
+    /**
+     * 손절 발생 시 연속 카운터 업데이트
+     * TradingBotService에서 손절 매도 후 호출
+     */
+    public void recordStopLoss(String userId, String market, TradingSetting setting) {
+        String key = userId + ":" + market;
+        int limit = setting.getConsecutiveStopLossLimit() != null ? setting.getConsecutiveStopLossLimit() : 3;
+        
+        int currentCount = consecutiveStopLossMap.getOrDefault(key, 0) + 1;
+        consecutiveStopLossMap.put(key, currentCount);
+        
+        log.info("연속 손절 카운터 업데이트: {} = {}회 (한도: {}회)", market, currentCount, limit);
+        
+        if (currentCount >= limit) {
+            // 24시간 매수 금지 설정
+            LocalDateTime blockedUntil = LocalDateTime.now().plusHours(24);
+            buyBlockedUntilMap.put(key, blockedUntil);
+            log.warn("연속 손절 한도 도달: {} - {}까지 매수 금지", market, blockedUntil);
+        }
+    }
+
+    /**
+     * 수익 실현 시 연속 손절 카운터 리셋
+     */
+    public void recordProfitSell(String userId, String market) {
+        String key = userId + ":" + market;
+        if (consecutiveStopLossMap.containsKey(key)) {
+            consecutiveStopLossMap.remove(key);
+            log.debug("연속 손절 카운터 리셋: {}", market);
+        }
+    }
+
+    /**
+     * 긴급 정지 조건 체크 (dailyStopLossPct)
      */
     public boolean checkDailyStopLoss(String userId, TradingSetting setting) {
         // dailyStopLossPct가 0이면 사용 안함

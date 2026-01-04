@@ -241,7 +241,7 @@
                         </v-slider>
                         <v-divider class="my-4" />
                         
-                        <!-- ★★★ 신규 추가: 리스크 관리 설정 ★★★ -->
+                        <!-- 리스크 관리 설정 -->
                         <div class="text-subtitle-2 mb-3">
                           <v-icon size="small" class="mr-1">mdi-shield-check</v-icon>
                           리스크 관리
@@ -307,6 +307,51 @@
                         <div class="text-caption text-grey-darken-1 mb-1">
                           당일 손실이 {{ request.dailyStopLossPct }}% 도달 시 거래 중단
                         </div>
+
+                        <!-- ★★★ 수정: 급락장 보호 기능을 v-expansion-panel-text 내부로 이동 ★★★ -->
+                        <v-divider class="my-4"></v-divider>
+                        <div class="text-subtitle-2 font-weight-medium mb-3">
+                          <v-icon size="small" class="mr-1">mdi-shield-alert</v-icon>
+                          급락장 보호 기능
+                        </div>
+                        
+                        <!-- ★★★ 수정: color="primary" 추가하여 스위치 색상 수정 ★★★ -->
+                        <v-switch
+                          v-model="request.useMarketTrendFilter"
+                          label="시장 추세 필터 (BTC MA20)"
+                          hint="BTC가 20일선 하회 시 전체 매수 중단"
+                          persistent-hint
+                          density="compact"
+                          color="primary"
+                          class="mb-3"
+                        ></v-switch>
+                        
+                        <!-- ★★★ 수정: color="warning" 추가하여 슬라이더 색상 수정 ★★★ -->
+                        <v-slider
+                          v-model="request.cumulativeLossLimitPct"
+                          :min="-50"
+                          :max="0"
+                          :step="5"
+                          label="누적 손실 한도 (%)"
+                          thumb-label="always"
+                          density="compact"
+                          color="warning"
+                          class="mb-3"
+                        ></v-slider>
+                        
+                        <!-- ★★★ 수정: color="info" 추가하여 슬라이더 색상 수정 ★★★ -->
+                        <v-slider
+                          v-model="request.consecutiveStopLossLimit"
+                          :min="1"
+                          :max="10"
+                          :step="1"
+                          label="연속 손절 제한 (회)"
+                          thumb-label="always"
+                          density="compact"
+                          color="info"
+                        ></v-slider>
+                        <!-- ★★★ 수정 끝 ★★★ -->
+
                       </v-expansion-panel-text>
                     </v-expansion-panel>
                   </v-expansion-panels>
@@ -735,19 +780,22 @@ const request = ref({
   maxHoldingsPerCoin: 2,
   useTrailingStop: true,
   trailingStopPct: 4,
-  // ★★★ 신규 추가: RSI 설정 ★★★
+  // RSI 설정
   rsiPeriod: 14,
   rsiBuyThreshold: 32,
   rsiSellThreshold: 68,
-  // ★★★ 신규 추가: 볼린저 밴드 설정 ★★★
+  // 볼린저 밴드 설정
   bbPeriod: 20,
   bbMultiplier: 2,
-  // ★★★ 신규 추가: 거래량 설정 ★★★
+  // 거래량 설정
   volumeThreshold: 140,
-  // ★★★ 신규 추가: 리스크 관리 설정 ★★★
+  // 리스크 관리 설정
   dailyTradeLimitPct: 20,    // 기본값: 제한 없음
   maxPositionPct: 25,        // 기본값: 제한 없음
-  dailyStopLossPct: -5      // 기본값: 사용 안함
+  dailyStopLossPct: -5,      // 기본값: 사용 안함
+  useMarketTrendFilter: true,
+  cumulativeLossLimitPct: -15,
+  consecutiveStopLossLimit: 3
 })
 
 // 스낵바

@@ -89,7 +89,19 @@ public class TradingSetting extends BaseEntity {
     // 긴급 정지 조건 - 일일 손실률 (%)
     @Column(name = "daily_stop_loss_pct")
     private Integer dailyStopLossPct = -5;
-    // ★★★ 신규 추가 끝 ★★★
+
+    // ⭐⭐⭐ Day 29 추가: 급락장 보호 기능 (3개 필드) ⭐⭐⭐
+    // 시장 추세 필터 (BTC MA20 기준)
+    @Column(name = "use_market_trend_filter")
+    private Boolean useMarketTrendFilter = true;
+
+    // 누적 손실 한도 (초기 자본 대비 %)
+    @Column(name = "cumulative_loss_limit_pct")
+    private Integer cumulativeLossLimitPct = -15;
+
+    // 연속 손절 제한 횟수
+    @Column(name = "consecutive_stop_loss_limit")
+    private Integer consecutiveStopLossLimit = 3;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "user_id", 

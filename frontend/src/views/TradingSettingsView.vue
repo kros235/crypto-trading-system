@@ -678,8 +678,8 @@ const settings = ref({
   dailyTradeLimitPct: 20,     
   maxPositionPct: 25,         
   dailyStopLossPct: -5,
-  useMarketTrendFilter: true,
-  cumulativeLossLimitPct: -15,
+  useMarketTrendFilter: false,
+  cumulativeLossLimitPct: -10,
   consecutiveStopLossLimit: 3      
 })
 
@@ -704,8 +704,8 @@ const defaultSettings = {
   dailyTradeLimitPct: 20,
   maxPositionPct: 25,
   dailyStopLossPct: -5,
-  useMarketTrendFilter: true,
-  cumulativeLossLimitPct: -15,
+  useMarketTrendFilter: false,
+  cumulativeLossLimitPct: -10,
   consecutiveStopLossLimit: 3
 }
 
@@ -806,8 +806,8 @@ const loadSettings = async () => {
         dailyTradeLimitPct: data.dailyTradeLimitPct || 20,
         maxPositionPct: data.maxPositionPct || 25,
         dailyStopLossPct: data.dailyStopLossPct || -5,
-        useMarketTrendFilter: data.useMarketTrendFilter ?? true,
-        cumulativeLossLimitPct: data.cumulativeLossLimitPct || -15,
+        useMarketTrendFilter: data.useMarketTrendFilter ?? false,
+        cumulativeLossLimitPct: data.cumulativeLossLimitPct || -10,
         consecutiveStopLossLimit: data.consecutiveStopLossLimit || 3
       }
 

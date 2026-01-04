@@ -793,8 +793,8 @@ const request = ref({
   dailyTradeLimitPct: 20,    // 기본값: 제한 없음
   maxPositionPct: 25,        // 기본값: 제한 없음
   dailyStopLossPct: -5,      // 기본값: 사용 안함
-  useMarketTrendFilter: true,
-  cumulativeLossLimitPct: -15,
+  useMarketTrendFilter: false,
+  cumulativeLossLimitPct: -10,
   consecutiveStopLossLimit: 3
 })
 

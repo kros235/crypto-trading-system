@@ -49,16 +49,16 @@ public class TradingSettingService {
                 .useTrailingStop(dto.getUseTrailingStop())
                 .trailingStopPct(dto.getTrailingStopPct())
                 .rsiPeriod(dto.getRsiPeriod() != null ? dto.getRsiPeriod() : 14)
-                .rsiBuyThreshold(dto.getRsiBuyThreshold() != null ? dto.getRsiBuyThreshold() : 30)
-                .rsiSellThreshold(dto.getRsiSellThreshold() != null ? dto.getRsiSellThreshold() : 70)
+                .rsiBuyThreshold(dto.getRsiBuyThreshold() != null ? dto.getRsiBuyThreshold() : 32)
+                .rsiSellThreshold(dto.getRsiSellThreshold() != null ? dto.getRsiSellThreshold() : 68)
                 .bbPeriod(dto.getBbPeriod() != null ? dto.getBbPeriod() : 20)
                 .bbMultiplier(dto.getBbMultiplier() != null ? dto.getBbMultiplier() : 2)
-                .volumeThreshold(dto.getVolumeThreshold() != null ? dto.getVolumeThreshold() : 150)
+                .volumeThreshold(dto.getVolumeThreshold() != null ? dto.getVolumeThreshold() : 140)
                 .dailyTradeLimitPct(dto.getDailyTradeLimitPct() != null ? dto.getDailyTradeLimitPct() : 20)
                 .maxPositionPct(dto.getMaxPositionPct() != null ? dto.getMaxPositionPct() : 25)
                 .dailyStopLossPct(dto.getDailyStopLossPct() != null ? dto.getDailyStopLossPct() : -5)
-                .useMarketTrendFilter(dto.getUseMarketTrendFilter() != null ? dto.getUseMarketTrendFilter() : true)
-                .cumulativeLossLimitPct(dto.getCumulativeLossLimitPct() != null ? dto.getCumulativeLossLimitPct() : -15)
+                .useMarketTrendFilter(dto.getUseMarketTrendFilter() != null ? dto.getUseMarketTrendFilter() : false)
+                .cumulativeLossLimitPct(dto.getCumulativeLossLimitPct() != null ? dto.getCumulativeLossLimitPct() : -10)
                 .consecutiveStopLossLimit(dto.getConsecutiveStopLossLimit() != null ? dto.getConsecutiveStopLossLimit() : 3)
                 .build();
 
@@ -92,8 +92,8 @@ public class TradingSettingService {
         setting.setDailyTradeLimitPct(dto.getDailyTradeLimitPct() != null ? dto.getDailyTradeLimitPct() : 20);
         setting.setMaxPositionPct(dto.getMaxPositionPct() != null ? dto.getMaxPositionPct() : 25);
         setting.setDailyStopLossPct(dto.getDailyStopLossPct() != null ? dto.getDailyStopLossPct() : -5);
-        setting.setUseMarketTrendFilter(dto.getUseMarketTrendFilter() != null ? dto.getUseMarketTrendFilter() : true);
-        setting.setCumulativeLossLimitPct(dto.getCumulativeLossLimitPct() != null ? dto.getCumulativeLossLimitPct() : -15);
+        setting.setUseMarketTrendFilter(dto.getUseMarketTrendFilter() != null ? dto.getUseMarketTrendFilter() : false);
+        setting.setCumulativeLossLimitPct(dto.getCumulativeLossLimitPct() != null ? dto.getCumulativeLossLimitPct() : -10);
         setting.setConsecutiveStopLossLimit(dto.getConsecutiveStopLossLimit() != null ? dto.getConsecutiveStopLossLimit() : 3);
 
         TradingSetting updated = tradingSettingRepository.save(setting);

@@ -34,16 +34,16 @@ public class TradingSetting extends BaseEntity {
     private Integer basePeriod = 20;
 
     @Column(name = "buy_threshold_pct", precision = 5, scale = 2)
-    private BigDecimal buyThresholdPct = new BigDecimal("-5.00");
+    private BigDecimal buyThresholdPct = new BigDecimal("-6.00");
 
     @Column(name = "sell_target_pct", precision = 5, scale = 2)
-    private BigDecimal sellTargetPct = new BigDecimal("3.00");
+    private BigDecimal sellTargetPct = new BigDecimal("4.00");
 
     @Column(name = "stop_loss_pct", precision = 5, scale = 2)
-    private BigDecimal stopLossPct = new BigDecimal("-10.00");
+    private BigDecimal stopLossPct = new BigDecimal("-8.00");
 
     @Column(name = "max_holdings_per_coin")
-    private Integer maxHoldingsPerCoin = 3;
+    private Integer maxHoldingsPerCoin = 2;
 
     @Column(name = "daily_limit_amount", precision = 15, scale = 2)
     private BigDecimal dailyLimitAmount = new BigDecimal("1000000.00");
@@ -52,20 +52,20 @@ public class TradingSetting extends BaseEntity {
     private Boolean useAiAnalysis = false;
 
     @Column(name = "use_trailing_stop")
-    private Boolean useTrailingStop = false;
+    private Boolean useTrailingStop = true;
 
     @Column(name = "trailing_stop_pct", precision = 5, scale = 2)
-    private BigDecimal trailingStopPct = new BigDecimal("-5.00");
+    private BigDecimal trailingStopPct = new BigDecimal("-4.00");
 
     // RSI 설정
     @Column(name = "rsi_period")
     private Integer rsiPeriod = 14;
 
     @Column(name = "rsi_buy_threshold")
-    private Integer rsiBuyThreshold = 30;
+    private Integer rsiBuyThreshold = 32;
 
     @Column(name = "rsi_sell_threshold")
-    private Integer rsiSellThreshold = 70;
+    private Integer rsiSellThreshold = 68;
 
     // 볼린저 밴드 설정
     @Column(name = "bb_period")
@@ -76,7 +76,7 @@ public class TradingSetting extends BaseEntity {
 
     // 거래량 설정
     @Column(name = "volume_threshold")
-    private Integer volumeThreshold = 150;
+    private Integer volumeThreshold = 140;
 
     // 일일 최대 거래금액 (초기 자본 대비 %)
     @Column(name = "daily_trade_limit_pct")
@@ -93,11 +93,11 @@ public class TradingSetting extends BaseEntity {
     // ⭐⭐⭐ Day 29 추가: 급락장 보호 기능 (3개 필드) ⭐⭐⭐
     // 시장 추세 필터 (BTC MA20 기준)
     @Column(name = "use_market_trend_filter")
-    private Boolean useMarketTrendFilter = true;
+    private Boolean useMarketTrendFilter = false;
 
     // 누적 손실 한도 (초기 자본 대비 %)
     @Column(name = "cumulative_loss_limit_pct")
-    private Integer cumulativeLossLimitPct = -15;
+    private Integer cumulativeLossLimitPct = -10;
 
     // 연속 손절 제한 횟수
     @Column(name = "consecutive_stop_loss_limit")

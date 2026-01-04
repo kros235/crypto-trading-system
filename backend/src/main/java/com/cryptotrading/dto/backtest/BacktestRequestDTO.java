@@ -116,7 +116,7 @@ public class BacktestRequestDTO {
     private Integer dailyStopLossPct = -100;  // 기본값: 사용 안함 (-100%)
 
     // 급락장 보호 기능
-    private Boolean useMarketTrendFilter = true;      // 시장 추세 필터 (BTC MA20)
-    private Integer cumulativeLossLimitPct = -15;     // 누적 손실 한도 (%)
+    private Boolean useMarketTrendFilter = false;      // 시장 추세 필터 (BTC MA20)
+    private Integer cumulativeLossLimitPct = -10;     // 누적 손실 한도 (%)
     private Integer consecutiveStopLossLimit = 3;     // 연속 손절 제한 횟수
 }

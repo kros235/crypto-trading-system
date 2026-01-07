@@ -160,6 +160,7 @@ public class NewsCollectorService {
                         .sourceUrl(item.getLink())
                         .publishedAt(item.getPubDate())
                         .collectedAt(LocalDateTime.now())
+                        .analyzed(false)  // ⭐ 추가: 미분석 상태로 초기화
                         .build();
                 result.add(news);
             }

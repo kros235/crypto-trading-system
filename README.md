@@ -2457,6 +2457,7 @@ List findUnanalyzedNewsByDate(
 | 오전 | 2FA 인증 (Optional) | Google Authenticator 연동 | |
 | 오전 | IP 화이트리스트 (Optional) | 접속 IP 제한 | |
 | 오전 | 기간별/코인별 수익 분석 | **보유자산 페이지 내 수익 분석 UI | |
+| 오전 | 릴리즈 노트 게시판 | 공지사항/업데이트 이력 게시판 UI + API | |
 | 오후 | 최종 보안 점검 | OWASP Top 10 체크리스트 | |
 | 오후 | 전체 시스템 테스트 | 통합 테스트, 시나리오 테스트 | |
 
@@ -2472,6 +2473,74 @@ List findUnanalyzedNewsByDate(
 
 ---
 
+### 릴리즈 노트 게시판 상세 (Day 30 신규)
+
+#### 개요
+프로젝트 진행 이력 및 업데이트 내용을 사용자에게 공지하는 게시판
+
+#### 기능 요구사항
+
+| 구분 | 기능 | 설명 |
+|------|------|------|
+| **조회** | 목록 조회 | 글번호, 제목, 작성일자, 작성자 표시 |
+| **조회** | 상세 조회 | 게시글 본문 내용 열람 |
+| **조회** | 페이징 | 페이지당 10/20건 선택 |
+| **관리자** | 글 작성 | 제목, 본문 입력 (관리자만) |
+| **관리자** | 글 수정 | 기존 게시글 수정 (관리자만) |
+| **관리자** | 글 삭제 | 게시글 삭제 (관리자만) |
+| **일반 사용자** | 열람만 가능 | 작성/수정/삭제 불가 |
+
+#### 대시보드 연동
+- 대시보드 상단 **공지 카드**에 최신 게시글 1건 한 줄 표시
+- 클릭 시 해당 게시글 상세 페이지로 이동
+
+#### DB 테이블 설계
+```sql
+CREATE TABLE release_notes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    content TEXT NOT NULL,
+    author_id VARCHAR(50) NOT NULL,
+    author_name VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN DEFAULT FALSE,
+    INDEX idx_created_at (created_at DESC)
+);
+```
+
+#### API 엔드포인트
+| Method | Endpoint | 권한 | 설명 |
+|--------|----------|------|------|
+| GET | /api/release-notes | 모든 사용자 | 목록 조회 (페이징) |
+| GET | /api/release-notes/{id} | 모든 사용자 | 상세 조회 |
+| GET | /api/release-notes/latest | 모든 사용자 | 최신 1건 조회 (대시보드용) |
+| POST | /api/release-notes | ADMIN만 | 글 작성 |
+| PUT | /api/release-notes/{id} | ADMIN만 | 글 수정 |
+| DELETE | /api/release-notes/{id} | ADMIN만 | 글 삭제 (soft delete) |
+
+#### 프론트엔드 페이지
+- `ReleaseNotesView.vue` - 게시판 목록/상세 페이지
+- `DashboardView.vue` - 공지 카드에 최신 글 표시
+
+#### 게시글 예시 내용
+README.md의 일별 작업 내용을 게시글로 작성:
+```
+[제목] v1.0 Day 29 업데이트 - 급락장 보호 기능 + HTTPS 적용
+[본문]
+■ 급락장 보호 기능 3종 구현
+  - 시장 추세 필터 (BTC 20일선 기준)
+  - 누적 손실률 긴급정지 (-10%)
+  - 연속 손절 제한 (3회)
+
+■ HTTPS 적용
+  - DuckDNS 무료 도메인 연동
+  - Let's Encrypt SSL 인증서 발급
+  - 자동 갱신 설정 완료
+```
+---
+
+
 ### 📊 일정 요약
 
 | Day | 주요 작업 | 카테고리 |
@@ -2485,7 +2554,7 @@ List findUnanalyzedNewsByDate(
 | 27 | ✅ Oracle Cloud ARM64 배포, DB 스키마 교차검증, docker-compose 동기화, 이슈 해결 | ✅ 완료 |
 | 28 | ✅ 대시보드 재구성, 코인 목록 페이지, bulk API 수정, MATIC 비활성화, 시간대 KST 통일, AdminDashboard 오류 수정, 시간 표시 함수 개선 | ✅ 완료 |
 | 29 | ✅ 급락장 보호 기능 3종, HTTPS 적용 (DuckDNS + Let's Encrypt), CORS 수정, SSL 자동 갱신 | **✅ 완료** |
-| 30 | 2FA, IP 제한, 수익 분석 UI, 보안 점검, 테스트 | 🔄 예정 |
+| 30 | 2FA, IP 제한, 수익 분석 UI, 릴리즈 노트 게시판, 보안 점검, 테스트 | 🔄 예정 |
 | 31 | 운영 문서 작성, v1.0 릴리즈 | 🔴 필수 |
 
 ---

@@ -2159,6 +2159,10 @@ docker logs crypto-backend-prod --tail 50
 - CoinNewsRepository 새 메서드 추가
   - `findUnanalyzedNewsByDate()`: 날짜 기준 미분석 뉴스 조회
   - `DATE(published_at) = :targetDate` 조건으로 당일 발행 뉴스만 조회
+- 뉴스 수집 시 analyzed 기본값 설정 버그 수정
+  - 문제: 새 뉴스 저장 시 analyzed 필드가 NULL로 저장되어 미분석 뉴스 조회 시 누락
+  - 원인: NewsCollectorService에서 CoinNews 엔티티 생성 시 analyzed 값 미설정
+  - 해결: `.analyzed(false)` 명시적 설정으로 새 뉴스는 항상 미분석 상태로 저장
 
 **추가된 DB 컬럼:**
 ```sql
@@ -2190,6 +2194,7 @@ ADD COLUMN consecutive_stop_loss_limit INT DEFAULT 3 COMMENT '연속 손절 제�
 - `backend/src/main/java/com/cryptotrading/repository/CoinNewsRepository.java` - 날짜 기준 조회 메서드 추가
 - `backend/src/main/java/com/cryptotrading/service/NewsAnalysisService.java` - 날짜 필터링 로직 수정
 - `backend/src/main/java/com/cryptotrading/controller/NewsController.java` - 수집 후 즉시 분석 로직 추가
+- `backend/src/main/java/com/cryptotrading/service/NewsCollectorService.java` - 뉴스 저장 시 analyzed=false 기본값 설정
 
 **수정된 파일 (Frontend):**
 - `views/TradingSettingsView.vue` - 급락장 보호 설정 UI 추가
@@ -2297,6 +2302,7 @@ List findUnanalyzedNewsByDate(
 - ✅ Discord DM 알림 발송 - Discord
 - ✅ Email 알림 발송 - Email
 - ✅ 웹 UI 분석완료 상태 즉시 표시 - 브라우저
+- ✅ 새 뉴스 저장 시 analyzed=false 설정 확인 - MySQL
 
 ---
 

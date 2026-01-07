@@ -2148,6 +2148,17 @@ docker logs crypto-backend-prod --tail 50
   - scripts/renew-ssl.sh: 인증서 갱신 스크립트
   - scripts/setup-cron.sh: Cron 설정 스크립트
   - Cron 등록: 매월 1일, 15일 새벽 3시 자동 갱신
+- AI 뉴스 분석 날짜 필터링 버그 수정
+  - 문제: 자정 직후 실행 시 검색 범위가 `00:00 ~ 현재시간`으로 1초 미만이라 뉴스 0건 분석
+  - 원인: 미분석 뉴스 조회 시 **당일 시간 범위** 기준이라 과거 수집 뉴스 제외됨
+  - 해결: **당일 발행 날짜 기준** (`DATE(published_at) = 오늘`)으로 변경
+- 뉴스 수집 후 즉시 AI 분석 기능 추가
+  - 기존: 웹 "뉴스 수집" 버튼 → 수집만 (분석은 스케줄러 대기)
+  - 변경: 웹 "뉴스 수집" 버튼 → **수집 + 즉시 분석** 동시 실행
+  - NewsController의 `collectNews()` 메서드에 분석 로직 추가
+- CoinNewsRepository 새 메서드 추가
+  - `findUnanalyzedNewsByDate()`: 날짜 기준 미분석 뉴스 조회
+  - `DATE(published_at) = :targetDate` 조건으로 당일 발행 뉴스만 조회
 
 **추가된 DB 컬럼:**
 ```sql
@@ -2176,6 +2187,9 @@ ADD COLUMN consecutive_stop_loss_limit INT DEFAULT 3 COMMENT '연속 손절 제�
 - `docker-compose.prod.yml` - SSL 볼륨 주석 해제
 - `frontend/Dockerfile` - EXPOSE 80 443
 - `backend/src/main/java/com/cryptotrading/config/SecurityConfig.java` - CORS 도메인 추가
+- `backend/src/main/java/com/cryptotrading/repository/CoinNewsRepository.java` - 날짜 기준 조회 메서드 추가
+- `backend/src/main/java/com/cryptotrading/service/NewsAnalysisService.java` - 날짜 필터링 로직 수정
+- `backend/src/main/java/com/cryptotrading/controller/NewsController.java` - 수집 후 즉시 분석 로직 추가
 
 **수정된 파일 (Frontend):**
 - `views/TradingSettingsView.vue` - 급락장 보호 설정 UI 추가
@@ -2230,6 +2244,35 @@ ADD COLUMN consecutive_stop_loss_limit INT DEFAULT 3 COMMENT '연속 손절 제�
 | 공격형 | OFF | -25% | 10회 | -46% | 100% |
 | 보수형 | ON | -15% | 3회 | -4% | 24% |
 
+**CoinNewsRepository 추가 메서드:**
+```java
+@Query("SELECT n FROM CoinNews n WHERE n.coinSymbol = :coinSymbol " +
+       "AND (n.analyzed = false OR n.analyzed IS NULL) " +
+       "AND DATE(n.publishedAt) = :targetDate " +
+       "ORDER BY n.publishedAt DESC")
+List findUnanalyzedNewsByDate(
+    @Param("coinSymbol") String coinSymbol,
+    @Param("targetDate") LocalDate targetDate);
+```
+
+**뉴스 수집 + 즉시 분석 동작 흐름:**
+```
+1. 웹 "뉴스 수집" 버튼 클릭
+2. RSS Feed 수집 (CoinTelegraph, Bitcoin Magazine, Decrypt)
+3. ⭐ 즉시 AI 분석 시작 (각 코인별)
+4. Groq API 호출 (벌크 분석)
+5. 분석 결과 저장 + 가중치 계산
+6. Discord DM + 이메일 알림 발송
+7. 완료 응답 반환
+```
+
+**변경된 동작 비교:**
+| 트리거 | 기존 | 변경 후 |
+|--------|------|---------|
+| 웹 "뉴스 수집" 버튼 | 수집만 | ⭐ **수집 + 즉시 분석** |
+| 스케줄러 (3시간마다) | 수집 + 분석 | 수집 + 분석 (변경 없음) |
+| POST /api/news/analyze/{symbol} | 특정 코인 분석 | 특정 코인 분석 (변경 없음) |
+
 **테스트 완료:**
 - ✅ 급락장 보호 기능 구현 - Backend
 - ✅ DB 스키마 확장 (3개 컬럼 추가) - MySQL
@@ -2246,6 +2289,14 @@ ADD COLUMN consecutive_stop_loss_limit INT DEFAULT 3 COMMENT '연속 손절 제�
 - ✅ HTTP→HTTPS 리다이렉트 - 브라우저
 - ✅ 로그인 정상 작동 - 브라우저
 - ✅ 대시보드 접속 - 브라우저
+- ✅ 뉴스 수집 API 호출 시 즉시 분석 실행 - Postman
+- ✅ BTC 23건 분석 완료, 평균점수 0.29 - 로그 확인
+- ✅ ETH 4건 분석 완료, 평균점수 0.60 - 로그 확인
+- ✅ 총 27건 뉴스 수집+분석 동시 완료 - Postman
+- ✅ 가중치 계산 정상 (BTC: +0.18%) - Postman
+- ✅ Discord DM 알림 발송 - Discord
+- ✅ Email 알림 발송 - Email
+- ✅ 웹 UI 분석완료 상태 즉시 표시 - 브라우저
 
 ---
 

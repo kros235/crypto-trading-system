@@ -63,16 +63,12 @@ public class NewsAnalysisService {
         Optional<CoinNewsAnalysis> existingAnalysis = coinNewsAnalysisRepository
                 .findByUserIdAndCoinSymbolAndAnalysisDate(userId, coinSymbol, today);
         
-        // 2. 뉴스 검색 범위 설정 (KST 기준 오늘)
-        LocalDateTime startOfDay = today.atStartOfDay();
-        LocalDateTime endOfDay = LocalDateTime.now(KST);
+        // 당일 발행된 미분석 뉴스 조회 (날짜 기준, 시간 무관) ⭐⭐⭐
+        log.info("뉴스 분석 대상 (KST): {} 발행 + 미분석 뉴스", today);
         
-        log.info("뉴스 검색 범위 (KST): {} ~ {}", startOfDay, endOfDay);
-        
-        // 3. ✅ 분석되지 않은 뉴스만 조회 (최적화 핵심!)
+        // 3. ✅ 당일 발행된 미분석 뉴스만 조회 (날짜 기준)
         List<CoinNews> unanalyzedNews = coinNewsRepository
-                .findByCoinSymbolAndAnalyzedFalseAndPublishedAtBetweenOrderByPublishedAtDesc(
-                        coinSymbol, startOfDay, endOfDay);
+                .findUnanalyzedNewsByDate(coinSymbol, today);
         
         log.info("📰 미분석 뉴스 건수: {} (코인: {})", unanalyzedNews.size(), coinSymbol);
         
@@ -117,7 +113,9 @@ public class NewsAnalysisService {
             }
         }
         
-        // 7. 기존 분석된 뉴스도 포함하여 전체 점수 계산
+       // 7. 기존 분석된 뉴스도 포함하여 전체 점수 계산 (당일 발행 기준)
+        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
         List<CoinNews> allTodayNews = coinNewsRepository
                 .findByCoinSymbolAndPublishedAtBetweenOrderByPublishedAtDesc(
                         coinSymbol, startOfDay, endOfDay);

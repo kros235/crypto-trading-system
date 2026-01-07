@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -70,4 +71,13 @@ public interface CoinNewsRepository extends JpaRepository<CoinNews, Long> {
     Page<CoinNews> findByTitleContainingIgnoreCase(String keyword, Pageable pageable);
     Page<CoinNews> findByCoinSymbolAndTitleContainingIgnoreCase(
             String coinSymbol, String keyword, Pageable pageable);
+
+    // 당일 발행된 미분석 뉴스 조회 (날짜 기준)
+    @Query("SELECT n FROM CoinNews n WHERE n.coinSymbol = :coinSymbol " +
+           "AND (n.analyzed = false OR n.analyzed IS NULL) " +
+           "AND DATE(n.publishedAt) = :targetDate " +
+           "ORDER BY n.publishedAt DESC")
+    List<CoinNews> findUnanalyzedNewsByDate(
+            @Param("coinSymbol") String coinSymbol,
+            @Param("targetDate") LocalDate targetDate);
 }

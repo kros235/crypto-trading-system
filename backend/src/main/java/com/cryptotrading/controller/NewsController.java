@@ -37,11 +37,35 @@ public class NewsController {
     @PostMapping("/collect")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<CoinNewsDTO>>> collectNews(
-            @RequestParam(defaultValue = "KRW-BTC,KRW-ETH") String coins
+            @RequestParam(defaultValue = "KRW-BTC,KRW-ETH") String coins,
+            @AuthenticationPrincipal String userId
     ) {
         log.info("뉴스 수동 수집 요청: {}", coins);
         List<String> targetCoins = Arrays.asList(coins.split(","));
         List<CoinNewsDTO> collected = newsCollectorService.collectAllNews(targetCoins);
+        
+        // ============================================================
+        // ⭐⭐⭐ [추가] 수집 후 즉시 AI 분석 실행 ⭐⭐⭐
+        // ============================================================
+        if (!collected.isEmpty()) {
+            log.info("🤖 수집된 뉴스 AI 분석 시작...");
+            int totalAnalyzed = 0;
+            for (String coinSymbol : targetCoins) {
+                try {
+                    NewsAnalysisResultDTO result = newsAnalysisService.analyzeNewsForCoin(userId, coinSymbol);
+                    if (result.getNewsCount() > 0) {
+                        totalAnalyzed += result.getNewsCount();
+                        log.info("✅ {} 분석 완료: {}건, 평균점수: {}", 
+                                coinSymbol, result.getNewsCount(), result.getAverageScore());
+                    }
+                } catch (Exception e) {
+                    log.error("❌ {} 분석 실패: {}", coinSymbol, e.getMessage());
+                }
+            }
+            log.info("🤖 AI 분석 완료 - 총 {}건 분석", totalAnalyzed);
+        }
+        // ============================================================
+        
         return ResponseEntity.ok(ApiResponse.success(collected, 
                 String.format("%d건의 뉴스가 수집되었습니다.", collected.size())));
     }

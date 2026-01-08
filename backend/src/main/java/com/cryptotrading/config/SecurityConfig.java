@@ -19,6 +19,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
+import org.springframework.http.HttpMethod;
 
 import java.util.Arrays;
 
@@ -86,6 +87,13 @@ public class SecurityConfig {
 	  .requestMatchers("/api/news/today/**").permitAll()     // 당일 뉴스 조회 - 공개
 	  .requestMatchers("/api/news/analysis/status").permitAll()  // AI 상태 확인 - 공개
 	  .requestMatchers("/api/news/**").authenticated()       // 나머지 뉴스 API - 인증 필요
+
+   	  // 릴리즈 노트 API 권한 설정
+	  .requestMatchers(HttpMethod.GET, "/api/release-notes/**").authenticated()  // 조회는 인증된 사용자
+	  .requestMatchers(HttpMethod.POST, "/api/release-notes/**").hasRole("ADMIN") // 작성은 관리자만
+	  .requestMatchers(HttpMethod.PUT, "/api/release-notes/**").hasRole("ADMIN")  // 수정은 관리자만
+	  .requestMatchers(HttpMethod.DELETE, "/api/release-notes/**").hasRole("ADMIN") // 삭제는 관리자만
+
                 // 나머지는 인증 필요
                 .anyRequest().authenticated()
             )

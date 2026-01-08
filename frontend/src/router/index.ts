@@ -86,6 +86,12 @@ const router = createRouter({
       name: 'coins',
       component: () => import('../views/CoinListView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/release-notes',
+      name: 'release-notes',
+      component: () => import('../views/ReleaseNotesView.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })

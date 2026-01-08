@@ -2306,6 +2306,64 @@ List findUnanalyzedNewsByDate(
 
 ---
 
+### ✅ Day 30 (2026-01-08) - 릴리즈 노트 게시판 + 기능 개선
+**완료 항목:**
+- 릴리즈 노트 게시판 기능 구현
+  - DB 스키마: release_notes 테이블 (id, title, content, author_id, author_name, created_at, updated_at, is_deleted)
+  - Backend: ReleaseNote Entity, Repository, Service, Controller
+  - Frontend: ReleaseNotesView.vue 게시판 페이지
+  - 라우팅: /release-notes 경로 추가
+  - 사이드바: 릴리즈 노트 메뉴 추가 (mdi-bullhorn 아이콘)
+  - 권한: 조회(모든 사용자), 작성/수정/삭제(ADMIN만)
+- 대시보드 연동
+  - 시스템 알림 카드에 최신 공지사항 표시
+  - 클릭 시 /release-notes 페이지로 이동
+- 게시판 기능 개선
+  - 페이지당 건수 선택 (10/20/50건)
+  - 검색 기능 (제목, 작성자, 내용)
+  - 글번호 순번화 (삭제와 무관하게 현재 목록 기준)
+  - 작성일 한줄 표시 (YYYY-MM-DD HH:mm)
+  - 대시보드 공지 한줄 간결 표시
+
+**생성된 파일:**
+- `backend/src/main/java/com/cryptotrading/entity/ReleaseNote.java`
+- `backend/src/main/java/com/cryptotrading/repository/ReleaseNoteRepository.java`
+- `backend/src/main/java/com/cryptotrading/service/ReleaseNoteService.java`
+- `backend/src/main/java/com/cryptotrading/controller/ReleaseNoteController.java`
+- `backend/src/main/java/com/cryptotrading/dto/releasenote/ReleaseNoteDTO.java`
+- `backend/src/main/java/com/cryptotrading/dto/releasenote/ReleaseNoteRequest.java`
+- `frontend/src/views/ReleaseNotesView.vue`
+
+**수정된 파일:**
+- `docker/mysql/init.sql` - release_notes 테이블 + 샘플 데이터 추가
+- `backend/src/main/java/com/cryptotrading/config/SecurityConfig.java` - API 권한 설정
+- `frontend/src/router/index.ts` - /release-notes 라우트 추가
+- `frontend/src/components/TheSidebar.vue` - 릴리즈 노트 메뉴 추가
+- `frontend/src/views/DashboardView.vue` - 최신 공지 표시 + 한줄 개선
+
+**API 엔드포인트:**
+| Method | Endpoint | 권한 | 설명 |
+|--------|----------|------|------|
+| GET | /api/release-notes | 인증 사용자 | 목록 조회 (페이징 + 검색) |
+| GET | /api/release-notes/{id} | 인증 사용자 | 상세 조회 |
+| GET | /api/release-notes/latest | 인증 사용자 | 최신 1건 (대시보드용) |
+| POST | /api/release-notes | ADMIN | 글 작성 |
+| PUT | /api/release-notes/{id} | ADMIN | 글 수정 |
+| DELETE | /api/release-notes/{id} | ADMIN | 글 삭제 (soft delete) |
+
+**테스트 완료:**
+- ✅ 릴리즈 노트 목록 조회 - 브라우저
+- ✅ 게시글 작성 (관리자) - 브라우저
+- ✅ 게시글 수정 (관리자) - 브라우저
+- ✅ 게시글 삭제 (관리자) - 브라우저
+- ✅ 페이징 정상 작동 - 브라우저
+- ✅ 대시보드 최신 공지 표시 - 브라우저
+- ✅ 검색 기능 (제목/작성자/내용) - 브라우저
+- ✅ 페이지당 건수 선택 - 브라우저
+- ✅ 작성일 한줄 표시 - 브라우저
+
+---
+
 
 ## 📊 현재 진행 상황
 - **전체 진척도**: 약 **99%**
@@ -2451,12 +2509,19 @@ List findUnanalyzedNewsByDate(
 
 ---
 
-#### Day 30: 추가 기능 구현
+#### ✅ Day 30: 릴리즈 노트 게시판 + 기능 개선 (2026-01-08 진행중)
 | 시간 | 작업 | 상세 | 상태 |
 |------|------|------|------|
-| 오전 | 릴리즈 노트 게시판 | 공지사항/업데이트 이력 게시판 UI + API | |
-| 오후 | 2FA 인증 (Optional) | Google Authenticator 연동 | |
-| 오후 | IP 화이트리스트 (Optional) | 접속 IP 제한 | |
+| 오전 | 릴리즈 노트 게시판 | 공지사항/업데이트 이력 게시판 UI + API | ✅ 완료 |
+| 오전 | DB 스키마 추가 | release_notes 테이블 생성 | ✅ 완료 |
+| 오전 | Backend API 구현 | Entity, Repository, Service, Controller | ✅ 완료 |
+| 오전 | Frontend 페이지 구현 | ReleaseNotesView.vue + 라우팅 + 사이드바 | ✅ 완료 |
+| 오전 | 대시보드 연동 | 시스템 알림 카드에 최신 공지 표시 | ✅ 완료 |
+| 오후 | 게시판 기능 개선 | 페이지당 건수 선택, 검색 기능, 글번호 순번화 | ✅ 완료 |
+| 오후 | 작성일 표시 개선 | 2줄 → 1줄 표시 (YYYY-MM-DD HH:mm) | ✅ 완료 |
+| 오후 | 대시보드 공지 개선 | 한줄 간결한 표시로 변경 | ✅ 완료 |
+| - | 2FA 인증 (Optional) | Google Authenticator 연동 | ⏳ 보류 |
+| - | IP 화이트리스트 (Optional) | 접속 IP 제한 | ⏳ 보류 |
 
 ---
 
@@ -2554,7 +2619,7 @@ README.md의 일별 작업 내용을 게시글로 작성:
 | 27 | ✅ Oracle Cloud ARM64 배포, DB 스키마 교차검증, docker-compose 동기화, 이슈 해결 | ✅ 완료 |
 | 28 | ✅ 대시보드 재구성, 코인 목록 페이지, bulk API 수정, MATIC 비활성화, 시간대 KST 통일, AdminDashboard 오류 수정, 시간 표시 함수 개선 | ✅ 완료 |
 | 29 | ✅ 급락장 보호 기능 3종, HTTPS 적용 (DuckDNS + Let's Encrypt), CORS 수정, SSL 자동 갱신 | **✅ 완료** |
-| 30 | 릴리즈 노트 게시판, 2FA 인증, IP 화이트리스트 | 🔄 예정 |
+| 30 | ✅ 릴리즈 노트 게시판 (CRUD + 검색 + 페이징), 대시보드 연동 | **🔄 진행중** |
 | 31 | 수익 분석 UI, 보안 점검, 시스템 테스트, 운영 문서, v1.0 릴리즈 | 🔴 필수 |
 
 ---
@@ -2985,7 +3050,8 @@ crypto-trading-system/
 │   │   │   ├── NotificationController.java 
 │   │   │   ├── BacktestController.java    
 │   │   │   ├── AdminController.java
-│   │   │   └── NewsController.java               # ⭐ Day 24: 뉴스 API
+│   │   │   ├── NewsController.java               # ⭐ Day 24: 뉴스 API
+│   │   │   └── ReleaseNoteController.java        # ⭐ Day 30: 릴리즈 노트 API
 │   │   ├── service/              # 비즈니스 로직
 │   │   │   ├── AuthService.java
 │   │   │   ├── UserService.java
@@ -2999,55 +3065,39 @@ crypto-trading-system/
 │   │   │   ├── RiskManagementService.java      
 │   │   │   ├── TradingBotService.java          
 │   │   │   ├── NotificationService.java      
-│   │   │   ├── DailyReportService.java      
-│   │   │   ├── BacktestService.java    
-│   │   │   ├── EmailService.java     
-│   │   │   ├── AdminService.java
-│   │   │   ├── DiscordBotService.java        
-│   │   │   ├── LoginAttemptService.java          # ⭐ Day 20: 로그인 시도 제한
-│   │   │   ├── MonitoringService.java            # ⭐ Day 23: 시스템 메트릭 수집
-│   │   │   ├── MonitoringAlertService.java       # ⭐ Day 23: 이상징후 감지
-│   │   │   ├── AdminAlertNotificationService.java # ⭐ Day 23: Admin 멀티채널 알림
-│   │   │   ├── NewsCollectorService.java         # ⭐ Day 24: 뉴스 수집 서비스
-│   │   │   ├── GeminiApiService.java             # ⭐ Day 25: Groq API 연동 (Gemini→Groq 전환)
-│   │   │   └── NewsAnalysisService.java          # ⭐ Day 25: AI 뉴스 분석 서비스
-│   │   ├── config/               # 설정 클래스
-│   │   │   ├── SecurityConfig.java
-│   │   │   ├── NotificationConfig.java
-│   │   │   ├── SwaggerConfig.java                # ⭐ Day 20: Swagger/OpenAPI
-│   │   │   ├── StartupNotificationConfig.java    # ⭐ Day 23: 서버 시작/종료 알림
-│   │   │   └── security/         # Security 핸들러
-│   │   │       ├── CustomAuthenticationEntryPoint.java
-│   │   │       └── CustomAccessDeniedHandler.java
-│   │   ├── filter/               # 필터
-│   │   │   ├── JwtAuthenticationFilter.java
-│   │   │   ├── RateLimitFilter.java
-│   │   │   └── RequestLoggingFilter.java         # 응답 시간 로깅
-│   │   ├── exception/            # 예외 처리
-│   │   │   ├── GlobalExceptionHandler.java
-│   │   │   ├── ErrorCode.java             
-│   │   │   ├── BusinessException.java      
-│   │   │   ├── EntityNotFoundException.java   
-│   │   │   ├── DuplicateResourceException.java 
-│   │   │   ├── UnauthorizedException.java 
-│   │   │   ├── UpbitApiException.java     
-│   │   │   └── TradingException.java       
-│   │   ├── scheduler/            # 스케줄러
-│   │   │   └── TradingScheduler.java
-│   │   ├── repository/           # 데이터 접근 계층
-│   │   │   ├── UserRepository.java               # ⭐ Day 23: findByRoleAndIsActive() 추가
+│   │   │   ├── DailyReportService.java         
+│   │   │   ├── DiscordBotService.java          
+│   │   │   ├── EmailService.java              
+│   │   │   ├── BacktestService.java            
+│   │   │   ├── AdminService.java               
+│   │   │   ├── MonitoringService.java          # ⭐ Day 23: 시스템 모니터링
+│   │   │   ├── MonitoringAlertService.java     # ⭐ Day 23: 이상징후 알림
+│   │   │   ├── AdminAlertNotificationService.java  # ⭐ Day 23: Admin 알림
+│   │   │   ├── NewsCollectorService.java       # ⭐ Day 24: 뉴스 수집
+│   │   │   ├── NewsAnalysisService.java        # ⭐ Day 25: AI 분석
+│   │   │   ├── GeminiApiService.java           # ⭐ Day 25: Groq API 연동
+│   │   │   └── ReleaseNoteService.java         # ⭐ Day 30: 릴리즈 노트 서비스
+│   │   ├── repository/           # 데이터 접근
+│   │   │   ├── UserRepository.java
 │   │   │   ├── TradingSettingRepository.java
 │   │   │   ├── TransactionRepository.java
 │   │   │   ├── CoinInfoRepository.java
-│   │   │   ├── CoinNewsRepository.java           # ⭐ Day 24-25: 뉴스 Repository (미분석 조회 추가)
-│   │   │   └── CoinNewsAnalysisRepository.java   # ⭐ Day 24: 분석 Repository
+│   │   │   ├── DailySummaryRepository.java
+│   │   │   ├── SystemLogRepository.java
+│   │   │   ├── CoinNewsRepository.java           # ⭐ Day 24-25: 뉴스 Repository
+│   │   │   ├── CoinNewsAnalysisRepository.java   # ⭐ Day 24: 분석 Repository
+│   │   │   └── ReleaseNoteRepository.java        # ⭐ Day 30: 릴리즈 노트 Repository
 │   │   ├── entity/               # JPA 엔티티
 │   │   │   ├── User.java
 │   │   │   ├── TradingSetting.java
 │   │   │   ├── Transaction.java
 │   │   │   ├── CoinInfo.java
-│   │   │   ├── CoinNews.java                     # ⭐ Day 24-25: 뉴스 엔티티 (analyzed 플래그 추가)
-│   │   │   └── CoinNewsAnalysis.java             # ⭐ Day 24: 분석 결과 엔티티
+│   │   │   ├── DailySummary.java
+│   │   │   ├── SystemLog.java
+│   │   │   ├── PasswordResetToken.java
+│   │   │   ├── CoinNews.java                     # ⭐ Day 24-25: 뉴스 엔티티
+│   │   │   ├── CoinNewsAnalysis.java             # ⭐ Day 24: 분석 결과 엔티티
+│   │   │   └── ReleaseNote.java                  # ⭐ Day 30: 릴리즈 노트 엔티티
 │   │   ├── dto/                  # 데이터 전송 객체
 │   │   │   ├── common/           # 공통 DTO
 │   │   │   │   ├── ApiResponse.java
@@ -3066,11 +3116,33 @@ crypto-trading-system/
 │   │   │   │   ├── SystemStatsDTO.java
 │   │   │   │   ├── AdminUserDTO.java
 │   │   │   │   └── MonitoringDTO.java            # ⭐ Day 23: 모니터링 DTO
-│   │   │   └── news/             # ⭐ Day 24-25: 뉴스 DTO
-│   │   │       ├── CoinNewsDTO.java              # ⭐ Day 24: 뉴스 DTO
-│   │   │       ├── CoinNewsAnalysisDTO.java      # ⭐ Day 24: 분석 결과 DTO
-│   │   │       ├── RssNewsItem.java              # ⭐ Day 24: RSS 아이템 DTO
-│   │   │       └── NewsAnalysisResultDTO.java    # ⭐ Day 25: AI 분석 결과 DTO
+│   │   │   ├── news/             # ⭐ Day 24-25: 뉴스 DTO
+│   │   │   │   ├── CoinNewsDTO.java
+│   │   │   │   ├── CoinNewsAnalysisDTO.java
+│   │   │   │   ├── RssNewsItem.java
+│   │   │   │   └── NewsAnalysisResultDTO.java
+│   │   │   └── releasenote/      # ⭐ Day 30: 릴리즈 노트 DTO
+│   │   │       ├── ReleaseNoteDTO.java
+│   │   │       └── ReleaseNoteRequest.java
+│   │   ├── config/               # 설정
+│   │   │   ├── SecurityConfig.java
+│   │   │   ├── WebClientConfig.java
+│   │   │   ├── RedisConfig.java
+│   │   │   ├── SwaggerConfig.java
+│   │   │   ├── CorsConfig.java
+│   │   │   ├── EmailConfig.java
+│   │   │   ├── NotificationConfig.java
+│   │   │   └── StartupNotificationConfig.java    # ⭐ Day 23: 서버 시작/종료 알림
+│   │   ├── scheduler/            # 스케줄러
+│   │   │   └── TradingScheduler.java             # ⭐ Day 26: 뉴스 분석 스케줄러 추가
+│   │   ├── exception/            # 예외 처리
+│   │   │   ├── GlobalExceptionHandler.java
+│   │   │   ├── EntityNotFoundException.java
+│   │   │   └── ErrorCode.java
+│   │   ├── security/             # 보안
+│   │   │   ├── JwtUtil.java
+│   │   │   ├── JwtAuthenticationFilter.java
+│   │   │   └── LoginAttemptService.java
 │   │   └── util/                 # 유틸리티
 │   │       ├── JwtUtil.java
 │   │       └── EncryptionUtil.java
@@ -3086,7 +3158,7 @@ crypto-trading-system/
 │   │   │   └── index.ts
 │   │   ├── components/           # 공통 컴포넌트
 │   │   │   ├── TheHeader.vue
-│   │   │   ├── TheSidebar.vue
+│   │   │   ├── TheSidebar.vue                    # ⭐ Day 30: 릴리즈 노트 메뉴 추가
 │   │   │   └── GlobalSnackbar.vue
 │   │   ├── composables/          # Composition API 유틸
 │   │   │   ├── useErrorHandler.ts
@@ -3094,8 +3166,8 @@ crypto-trading-system/
 │   │   ├── views/                # 페이지 컴포넌트
 │   │   │   ├── LoginView.vue
 │   │   │   ├── SignupView.vue
-│   │   │   ├── DashboardView.vue           # ⭐ Day 28: 전면 재구성 (10개 패널)
-│   │   │   ├── CoinListView.vue               # ⭐ Day 28: 코인 목록 페이지 신규
+│   │   │   ├── DashboardView.vue                 # ⭐ Day 28: 전면 재구성, ⭐ Day 30: 최신 공지 표시
+│   │   │   ├── CoinListView.vue                  # ⭐ Day 28: 코인 목록 페이지 신규
 │   │   │   ├── ProfileView.vue
 │   │   │   ├── TradingSettingsView.vue
 │   │   │   ├── TransactionHistoryView.vue
@@ -3104,7 +3176,8 @@ crypto-trading-system/
 │   │   │   ├── DailyReportView.vue
 │   │   │   ├── BacktestView.vue
 │   │   │   ├── NewsView.vue                      # ⭐ Day 26: 코인 뉴스 페이지
-│   │   │   └── AdminDashboardView.vue
+│   │   │   ├── AdminDashboardView.vue
+│   │   │   └── ReleaseNotesView.vue              # ⭐ Day 30: 릴리즈 노트 페이지
 │   │   ├── stores/               # Pinia 상태 관리
 │   │   │   ├── auth.ts
 │   │   │   └── coin.ts
@@ -3114,7 +3187,7 @@ crypto-trading-system/
 │   │   │   ├── backtest.ts
 │   │   │   └── error.ts
 │   │   ├── router/               # Vue Router
-│   │   │   └── index.ts
+│   │   │   └── index.ts                          # ⭐ Day 30: /release-notes 라우트 추가
 │   │   ├── App.vue
 │   │   └── main.ts
 │   ├── nginx.conf                # 개발용 Nginx 설정
@@ -3126,7 +3199,11 @@ crypto-trading-system/
 │   └── mysql/
 │       ├── conf.d/               # ⭐ Day 27: MySQL 설정
 │       │   └── my.cnf            # ⭐ KST 시간대, utf8mb4 문자셋
-│       └── init.sql              # DB 초기화 (coin_news, coin_news_analysis 포함)
+│       └── init.sql              # ⭐ Day 30: release_notes 테이블 추가
+│
+├── ssl/                          # ⭐ Day 29: SSL 인증서 디렉토리
+│   ├── fullchain.pem             # Let's Encrypt 인증서
+│   └── privkey.pem               # 개인 키
 │
 ├── docker-compose.yml            # 개발용 (헬스체크, 재시작) ⭐ Day 25: GROQ 환경변수
 ├── docker-compose.prod.yml       # ⭐ Day 22: 운영용 (리소스 제한)

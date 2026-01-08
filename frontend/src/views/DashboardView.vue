@@ -847,14 +847,31 @@
                 </v-btn>
               </v-card-title>
               <v-card-text class="pa-3 d-flex flex-column" style="min-height: 150px;">
+                <!-- ⭐ Day 30 개선: 최신 공지사항 한줄 표시 -->
+                <div 
+                  v-if="latestReleaseNote" 
+                  class="d-flex align-center mb-2 pa-2 rounded cursor-pointer bg-blue-lighten-5"
+                  @click="$router.push('/release-notes')"
+                  style="border-left: 3px solid #1976D2;"
+                >
+                  <v-icon size="16" color="info" class="mr-2">mdi-information</v-icon>
+                  <span class="text-body-2 text-truncate flex-grow-1">
+                    <strong>📢</strong> {{ latestReleaseNote.title }}
+                  </span>
+                  <span class="text-caption text-grey-darken-1 ml-2 text-no-wrap">
+                    {{ formatDateShort(latestReleaseNote.createdAt) }}
+                  </span>
+                  <v-icon size="14" color="grey" class="ml-1">mdi-chevron-right</v-icon>
+                </div>
+      
                 <!-- ★★★ 수정: 알림이 있을 때 아이콘+텍스트 중앙 정렬 ★★★ -->
                 <div v-if="systemAlerts.length > 0" class="d-flex flex-column align-center justify-center flex-grow-1">
                   <div v-for="(alert, index) in systemAlerts" :key="index" class="d-flex align-center mb-2">
-                    <v-icon :color="alert.type === 'error' ? 'red' : alert.type === 'warning' ? 'orange' : 'info'" class="mr-2">{{ alert.type === 'error' ? 'mdi-alert-circle' : alert.type === 'warning' ? 'mdi-alert' : 'mdi-information' }}</v-icon>
+                    <v-icon :color="alert.type === 'error' ? 'red' : alert.type === 'warning' ? 'orange' : 'info'" class="mr-2">{{ alert.type === 'error' ? 'mdi-alert-circle' : alert.type           === 'warning' ? 'mdi-alert' : 'mdi-information' }}</v-icon>
                     <span class="font-weight-medium text-grey-darken-3">{{ alert.message }}</span>
                   </div>
                 </div>
-                <div v-else class="d-flex flex-column align-center justify-center text-grey-darken-2 flex-grow-1">
+                <div v-else-if="!latestReleaseNote" class="d-flex flex-column align-center justify-center text-grey-darken-2 flex-grow-1">
                   <v-icon size="28" class="mb-1">mdi-check-circle-outline</v-icon>
                   <div class="text-body-2">알림 없음</div>
                 </div>
@@ -1100,31 +1117,44 @@ const loadingIndicators = ref(false)
 const isRefreshing = ref(false)
 const showAllIndicators = ref(false)
 
-// ★★★ [추가] 카드 도움말 시스템 ★★★
+// 카드 도움말 시스템
 const showHelpDialog = ref(false)
 const currentHelp = ref({ title: '', content: '' })
 
-// ★★★ [추가] 상세 보기 다이얼로그 관련 변수 ★★★
+// 상세 보기 다이얼로그 관련 변수
 const showIndicatorDetailDialog = ref(false)
 const selectedCoinDetail = ref<any>(null)
 
-// ★★★ [추가] AI 가중치 총합 (표시용) ★★★
+// AI 가중치 총합 (표시용)
 const totalAiWeight = ref(0)
 
-// ★★★ [추가] 봇 상태 자동 새로고침 타이머 ★★★
+// 봇 상태 자동 새로고침 타이머
 const botStatusTimer = ref<number | null>(null)
 
-// ★★★ [추가] 상세 보기 팝업 열기 함수 ★★★
+// 최신 릴리즈 노트 상태 추가
+const latestReleaseNote = ref<any>(null)
+
+// 최신 릴리즈 노트 조회 함수 추가
+const fetchLatestReleaseNote = async () => {
+  try {
+    const response = await api.get('/release-notes/latest')
+    latestReleaseNote.value = response.data
+  } catch (error) {
+    console.error('최신 릴리즈 노트 조회 실패:', error)
+  }
+}
+
+// 상세 보기 팝업 열기 함수
 const openIndicatorDetail = (coin: any) => {
   selectedCoinDetail.value = coin
   showIndicatorDetailDialog.value = true
 }
 
-// ★★★ 신규: 실시간 시간 표시 ★★★
+// 실시간 시간 표시 
 const currentTime = ref('')
 let timeInterval: number | null = null
 
-// ★★★ [추가] 실시간 카운트다운 ★★★
+// 실시간 카운트다운
 const countdownSeconds = ref(0)
 let countdownInterval: number | null = null
 
@@ -1478,6 +1508,13 @@ const formatDate = (dateStr: string) => {
   if (!dateStr) return '-'
   const d = new Date(dateStr)
   return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+}
+
+// 짧은 날짜 포맷 (MM/DD HH:mm)
+const formatDateShort = (dateStr: string) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
 // ★★★ 수정: 마지막 로그인 포맷 함수 - 우상단 현재 시간과 동일한 방식 ★★★
@@ -1871,7 +1908,19 @@ const fetchAssetHistory = async () => {
   }
 }
 const generateSystemAlerts = () => { const a: any[] = []; if (!authStore.user?.hasApiKey) a.push({ type: 'warning', message: 'API 키가 미등록 상태입니다' }); if (!tradingSettings.value) a.push({ type: 'warning', message: '거래 설정을 완료해주세요' }); const n = new Date(); if (n.getHours() === 9 && n.getMinutes() < 10) a.push({ type: 'info', message: '업비트 점검 시간 (09:00~09:10)' }); if (botStatus.value.emergencyStop) a.push({ type: 'error', message: '긴급 정지 발동됨' }); systemAlerts.value = a }
-const refreshAll = async () => { isRefreshing.value = true; try { await Promise.all([fetchDashboardStats(), fetchUpbitAccount(), fetchBotStatus(), fetchTradingSettings()]); await Promise.all([fetchIndicators(), fetchHoldings(), fetchRecentTransactions()]); generateSystemAlerts(); showSnackbar('새로고침 완료', 'success') } finally { isRefreshing.value = false } }
+const refreshAll = async () => { 
+    isRefreshing.value = true; 
+    try { 
+        await Promise.all([fetchDashboardStats(), fetchUpbitAccount(), fetchBotStatus(), fetchTradingSettings()]); 
+        await Promise.all([fetchIndicators(), fetchHoldings(), fetchRecentTransactions()]); 
+        generateSystemAlerts(); 
+        fetchLatestReleaseNote()
+        showSnackbar('새로고침 완료', 'success') 
+    } 
+    finally { 
+        isRefreshing.value = false 
+    } 
+}
 
 let refreshInterval: number | null = null
 const startAutoRefresh = () => { refreshInterval = window.setInterval(() => { fetchDashboardStats(); fetchUpbitAccount(); fetchBotStatus() }, 60000) }
@@ -2050,6 +2099,7 @@ onMounted(async () => {
   await Promise.all([fetchIndicators(), fetchHoldings(), fetchRecentTransactions(), fetchAssetHistory()]); 
   generateSystemAlerts(); 
   startAutoRefresh() 
+  fetchLatestReleaseNote()  
 })
 onUnmounted(() => { 
   stopAutoRefresh()

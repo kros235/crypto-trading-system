@@ -73,6 +73,12 @@
         prepend-icon="mdi-shield-crown"
         title="관리자"
       />
+
+      <v-list-item
+        prepend-icon="mdi-bullhorn"
+        title="릴리즈 노트"
+        @click="$router.push('/release-notes')"
+      />
     </v-list>
   </v-navigation-drawer>
 </template>

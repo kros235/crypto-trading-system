@@ -226,7 +226,7 @@ CREATE TABLE IF NOT EXISTS coin_news_analysis (
     INDEX idx_analysis_coin (coin_symbol)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ⭐⭐⭐ 비밀번호 재설정 토큰 테이블 (신규 추가) ⭐⭐⭐
+-- 비밀번호 재설정 토큰 테이블
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(50) NOT NULL COMMENT '사용자 ID',
@@ -238,3 +238,24 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     INDEX idx_prt_token (token),
     INDEX idx_prt_user_id (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- 릴리즈 노트 테이블 (2026-01-08 추가)
+CREATE TABLE IF NOT EXISTS release_notes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(200) NOT NULL COMMENT '게시글 제목',
+    content TEXT NOT NULL COMMENT '게시글 본문',
+    author_id VARCHAR(50) NOT NULL COMMENT '작성자 ID',
+    author_name VARCHAR(100) NOT NULL COMMENT '작성자 이름',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '작성일시',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일시',
+    is_deleted BOOLEAN DEFAULT FALSE COMMENT '삭제 여부 (soft delete)',
+    INDEX idx_release_notes_created_at (created_at DESC),
+    INDEX idx_release_notes_is_deleted (is_deleted)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 초기 릴리즈 노트 데이터 (샘플)
+INSERT INTO release_notes (title, content, author_id, author_name) VALUES
+('v1.0 Day 30 업데이트 - 릴리즈 노트 기능 추가', 
+'■ 릴리즈 노트 게시판 기능 추가\n  - 공지사항 및 업데이트 이력 게시판\n  - 관리자만 작성/수정/삭제 가능\n  - 대시보드 시스템 알림 연동\n\n■ 2FA 인증 (Optional)\n  - Google Authenticator 연동\n\n■ IP 화이트리스트 (Optional)\n  - 접속 IP 제한 기능',
+'admin', '관리자');

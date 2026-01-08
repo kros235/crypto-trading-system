@@ -298,7 +298,7 @@ const loadNews = async () => {
 const collectNews = async () => {
   collecting.value = true
   try {
-    const response = await api.post('/news/collect')
+    const response = await api.post('/news/collect', {}, { timeout: 60000 })
     if (response.data.success) {
       const count = response.data.data?.length || 0
       if (count > 0) {

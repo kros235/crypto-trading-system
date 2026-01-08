@@ -2326,6 +2326,7 @@ List findUnanalyzedNewsByDate(
   - 작성일 한줄 표시 (YYYY-MM-DD HH:mm)
 - 코인 뉴스 페이지 개선
   - 하단 Items per page 중복 컨트롤 제거 (hide-default-footer)
+  - 뉴스 수집 API 타임아웃 60초로 증가 (외부 RSS 수집 시간 고려)
 
 **생성된 파일:**
 - `backend/src/main/java/com/cryptotrading/entity/ReleaseNote.java`
@@ -2342,7 +2343,7 @@ List findUnanalyzedNewsByDate(
 - `frontend/src/router/index.ts` - /release-notes 라우트 추가
 - `frontend/src/components/TheSidebar.vue` - 릴리즈 노트 메뉴 추가
 - `frontend/src/views/DashboardView.vue` - 최신 공지 표시 + 한줄 개선
-- `frontend/src/views/NewsView.vue` - hide-default-footer 추가
+- `frontend/src/views/NewsView.vue` - hide-default-footer 추가, 뉴스 수집 API 타임아웃 60초로 증가
 
 **API 엔드포인트:**
 | Method | Endpoint | 권한 | 설명 |
@@ -2383,6 +2384,7 @@ CREATE TABLE IF NOT EXISTS release_notes (
 - ✅ 대시보드 최신 공지 표시 - 브라우저
 - ✅ 운영 서버 배포 완료 - Oracle Cloud
 - ✅ 코인 뉴스 하단 중복 컨트롤 제거 - 브라우저
+- ✅ 뉴스 수집 API 타임아웃 증가 (60초) - 브라우저
 
 ---
 

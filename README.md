@@ -2318,12 +2318,14 @@ List findUnanalyzedNewsByDate(
 - 대시보드 연동
   - 시스템 알림 카드에 최신 공지사항 표시
   - 클릭 시 /release-notes 페이지로 이동
+  - 한줄 간결 표시 (info 아이콘 + 제목 + 날짜)
 - 게시판 기능 개선
   - 페이지당 건수 선택 (10/20/50건)
   - 검색 기능 (제목, 작성자, 내용)
   - 글번호 순번화 (삭제와 무관하게 현재 목록 기준)
   - 작성일 한줄 표시 (YYYY-MM-DD HH:mm)
-  - 대시보드 공지 한줄 간결 표시
+- 코인 뉴스 페이지 개선
+  - 하단 Items per page 중복 컨트롤 제거 (hide-default-footer)
 
 **생성된 파일:**
 - `backend/src/main/java/com/cryptotrading/entity/ReleaseNote.java`
@@ -2340,6 +2342,7 @@ List findUnanalyzedNewsByDate(
 - `frontend/src/router/index.ts` - /release-notes 라우트 추가
 - `frontend/src/components/TheSidebar.vue` - 릴리즈 노트 메뉴 추가
 - `frontend/src/views/DashboardView.vue` - 최신 공지 표시 + 한줄 개선
+- `frontend/src/views/NewsView.vue` - hide-default-footer 추가
 
 **API 엔드포인트:**
 | Method | Endpoint | 권한 | 설명 |
@@ -2351,16 +2354,35 @@ List findUnanalyzedNewsByDate(
 | PUT | /api/release-notes/{id} | ADMIN | 글 수정 |
 | DELETE | /api/release-notes/{id} | ADMIN | 글 삭제 (soft delete) |
 
+**운영 서버 배포 참고:**
+- 기존 운영 DB에는 release_notes 테이블이 없으므로 수동 생성 필요:
+```sql
+CREATE TABLE IF NOT EXISTS release_notes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    content TEXT NOT NULL,
+    author_id VARCHAR(50) NOT NULL,
+    author_name VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN DEFAULT FALSE,
+    INDEX idx_release_notes_created_at (created_at DESC),
+    INDEX idx_release_notes_is_deleted (is_deleted)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
 **테스트 완료:**
 - ✅ 릴리즈 노트 목록 조회 - 브라우저
 - ✅ 게시글 작성 (관리자) - 브라우저
 - ✅ 게시글 수정 (관리자) - 브라우저
 - ✅ 게시글 삭제 (관리자) - 브라우저
 - ✅ 페이징 정상 작동 - 브라우저
-- ✅ 대시보드 최신 공지 표시 - 브라우저
 - ✅ 검색 기능 (제목/작성자/내용) - 브라우저
-- ✅ 페이지당 건수 선택 - 브라우저
+- ✅ 페이지당 건수 선택 (10/20/50) - 브라우저
 - ✅ 작성일 한줄 표시 - 브라우저
+- ✅ 대시보드 최신 공지 표시 - 브라우저
+- ✅ 운영 서버 배포 완료 - Oracle Cloud
+- ✅ 코인 뉴스 하단 중복 컨트롤 제거 - 브라우저
 
 ---
 
@@ -2520,6 +2542,7 @@ List findUnanalyzedNewsByDate(
 | 오후 | 게시판 기능 개선 | 페이지당 건수 선택, 검색 기능, 글번호 순번화 | ✅ 완료 |
 | 오후 | 작성일 표시 개선 | 2줄 → 1줄 표시 (YYYY-MM-DD HH:mm) | ✅ 완료 |
 | 오후 | 대시보드 공지 개선 | 한줄 간결한 표시로 변경 | ✅ 완료 |
+| 오후 | 코인 뉴스 페이지 개선 | 하단 중복 컨트롤 제거 | ✅ 완료 |
 | - | 2FA 인증 (Optional) | Google Authenticator 연동 | ⏳ 보류 |
 | - | IP 화이트리스트 (Optional) | 접속 IP 제한 | ⏳ 보류 |
 
@@ -2619,7 +2642,7 @@ README.md의 일별 작업 내용을 게시글로 작성:
 | 27 | ✅ Oracle Cloud ARM64 배포, DB 스키마 교차검증, docker-compose 동기화, 이슈 해결 | ✅ 완료 |
 | 28 | ✅ 대시보드 재구성, 코인 목록 페이지, bulk API 수정, MATIC 비활성화, 시간대 KST 통일, AdminDashboard 오류 수정, 시간 표시 함수 개선 | ✅ 완료 |
 | 29 | ✅ 급락장 보호 기능 3종, HTTPS 적용 (DuckDNS + Let's Encrypt), CORS 수정, SSL 자동 갱신 | **✅ 완료** |
-| 30 | ✅ 릴리즈 노트 게시판 (CRUD + 검색 + 페이징), 대시보드 연동 | **🔄 진행중** |
+| 30 | ✅ 릴리즈 노트 게시판 (CRUD + 검색 + 페이징), 대시보드 연동, 뉴스 페이지 개선 | **🔄 진행중** |
 | 31 | 수익 분석 UI, 보안 점검, 시스템 테스트, 운영 문서, v1.0 릴리즈 | 🔴 필수 |
 
 ---

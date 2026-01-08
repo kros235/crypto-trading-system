@@ -78,6 +78,7 @@
                 :items="newsList"
                 :loading="loading"
                 :items-per-page="pageSize"
+                hide-default-footer
                 class="elevation-1"
                 @click:row="openNewsDetail"
               >

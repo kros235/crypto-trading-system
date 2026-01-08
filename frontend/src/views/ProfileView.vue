@@ -254,7 +254,7 @@
               </v-card-text>
             </v-card>
           </v-col>
-        </v-row>
+        </v-row>     
 
         <!-- 업비트 API 키 설정 카드 -->
         <v-row>
@@ -358,7 +358,7 @@
               </v-card-text>
             </v-card>
           </v-col>
-        </v-row>
+        </v-row>   
 
         <!-- API 키 삭제 확인 다이얼로그 -->
         <v-dialog v-model="deleteDialog" max-width="400">
@@ -396,6 +396,112 @@
             </v-card-actions>
           </v-card>
         </v-dialog>
+
+        <!-- 업비트 API 키 설정 + IP 화이트리스트 카드 (세로 배치) -->
+        <v-row>
+          <v-col cols="12">
+            <!-- IP 화이트리스트 카드 -->
+            <v-card>
+              <v-card-title class="bg-warning text-white">
+                <v-icon icon="mdi-ip-network" class="mr-2" />
+                IP 화이트리스트
+                <v-chip 
+                  v-if="ipWhitelistEnabled" 
+                  color="success" 
+                  size="small" 
+                  class="ml-2"
+                >
+                  활성화
+                </v-chip>
+                <v-chip v-else color="grey" size="small" class="ml-2">
+                  비활성화
+                </v-chip>
+              </v-card-title>
+
+              <v-card-text class="pt-4">
+                <v-alert
+                  v-if="ipMessage"
+                  :type="ipMessageType"
+                  dismissible
+                  class="mb-4"
+                  @click:close="ipMessage = ''"
+                >
+                  {{ ipMessage }}
+                </v-alert>
+
+                <!-- ★★★ 변경: 상태 표시 alert 삭제됨 ★★★ -->
+
+                <v-alert type="info" variant="tonal" class="mb-4">
+                  <p class="text-body-2 mb-1">
+                    <strong>IP 화이트리스트</strong>를 활성화하면 등록된 IP에서만 로그인할 수 있습니다.
+                  </p>
+                  <p class="text-body-2 mb-0">
+                    현재 접속 IP: <strong>{{ currentIp || '확인 중...' }}</strong>
+                  </p>
+                </v-alert>
+
+                <!-- 등록된 IP 목록 -->
+                <div v-if="allowedIps.length > 0" class="mb-4">
+                  <p class="text-subtitle-2 mb-2">등록된 IP ({{ allowedIps.length }}/3)</p>
+                  <v-chip
+                    v-for="ip in allowedIps"
+                    :key="ip"
+                    closable
+                    class="mr-2 mb-2"
+                    color="primary"
+                    @click:close="removeIp(ip)"
+                  >
+                    {{ ip }}
+                  </v-chip>
+                </div>
+
+                <!-- ★★★ 변경: IP 추가 폼 + 비활성화 버튼 한 줄 배치 ★★★ -->
+                <div class="ip-add-row">
+                  <v-text-field
+                    v-if="allowedIps.length < 3"
+                    v-model="newIp"
+                    label="IP 주소"
+                    placeholder="예: 123.456.789.012"
+                    prepend-icon="mdi-ip"
+                    variant="outlined"
+                    density="compact"
+                    :disabled="ipLoading"
+                    hide-details
+                    class="ip-input"
+                  />
+                  <v-btn
+                    v-if="allowedIps.length < 3"
+                    color="primary"
+                    :loading="ipLoading"
+                    @click="addIp"
+                  >
+                    IP 추가
+                  </v-btn>
+                  <v-btn
+                    v-if="allowedIps.length < 3"
+                    color="secondary"
+                    variant="outlined"
+                    :loading="ipLoading"
+                    @click="addCurrentIp"
+                  >
+                    현재 IP 추가
+                  </v-btn>
+                  <!-- ★★★ 변경: 비활성화 버튼 위치 이동 및 스타일 변경 ★★★ -->
+                  <v-btn
+                    v-if="ipWhitelistEnabled"
+                    color="error"
+                    variant="outlined"
+                    :loading="ipLoading"
+                    @click="disableIpWhitelist"
+                  >
+                    화이트리스트 비활성화
+                  </v-btn>
+                </div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+
       </v-container>
     </v-main>
   </v-app>
@@ -421,6 +527,15 @@ const testDailyReportLoading = ref(false)
 const testBuyLoading = ref(false)
 const testSellLoading = ref(false)
 const testStopLossLoading = ref(false)
+
+// IP 화이트리스트 상태 추가
+const ipLoading = ref(false)
+const ipMessage = ref('')
+const ipMessageType = ref<'success' | 'error' | 'info'>('info')
+const allowedIps = ref<string[]>([])
+const newIp = ref('')
+const currentIp = ref('')
+const ipWhitelistEnabled = ref(false)
 
 // ⭐ Sidebar Ref 추가
 const sidebarRef = ref()
@@ -546,6 +661,102 @@ const loadProfile = async () => {
   } catch (error: any) {
     profileMessage.value = error.response?.data?.message || '프로필 정보를 불러오는데 실패했습니다'
     profileMessageType.value = 'error'
+  }
+}
+
+// IP 화이트리스트 메서드 추가
+
+// IP 목록 로드
+const loadAllowedIps = async () => {
+  try {
+    const response = await userApi.getAllowedIps()
+    allowedIps.value = response.data.allowedIps || []
+    ipWhitelistEnabled.value = allowedIps.value.length > 0
+  } catch (error: any) {
+    console.error('IP 목록 로드 실패:', error)
+  }
+}
+
+// 현재 IP 조회
+const loadCurrentIp = async () => {
+  try {
+    const response = await userApi.getCurrentIp()
+    currentIp.value = response.data.ip
+  } catch (error: any) {
+    console.error('현재 IP 조회 실패:', error)
+  }
+}
+
+// IP 추가
+const addIp = async () => {
+  if (!newIp.value.trim()) {
+    ipMessage.value = 'IP 주소를 입력해주세요'
+    ipMessageType.value = 'error'
+    return
+  }
+
+  ipLoading.value = true
+  ipMessage.value = ''
+
+  try {
+    const response = await userApi.addAllowedIp(newIp.value.trim())
+    allowedIps.value = response.data.allowedIps
+    ipWhitelistEnabled.value = true
+    newIp.value = ''
+    ipMessage.value = 'IP가 추가되었습니다'
+    ipMessageType.value = 'success'
+  } catch (error: any) {
+    ipMessage.value = error.response?.data?.error || 'IP 추가 실패'
+    ipMessageType.value = 'error'
+  } finally {
+    ipLoading.value = false
+  }
+}
+
+// 현재 IP 추가
+const addCurrentIp = async () => {
+  if (!currentIp.value) {
+    await loadCurrentIp()
+  }
+  newIp.value = currentIp.value
+  await addIp()
+}
+
+// IP 삭제
+const removeIp = async (ip: string) => {
+  ipLoading.value = true
+  ipMessage.value = ''
+
+  try {
+    const response = await userApi.removeAllowedIp(ip)
+    allowedIps.value = response.data.allowedIps
+    ipWhitelistEnabled.value = allowedIps.value.length > 0
+    ipMessage.value = 'IP가 삭제되었습니다'
+    ipMessageType.value = 'success'
+  } catch (error: any) {
+    ipMessage.value = error.response?.data?.error || 'IP 삭제 실패'
+    ipMessageType.value = 'error'
+  } finally {
+    ipLoading.value = false
+  }
+}
+
+// IP 화이트리스트 비활성화
+const disableIpWhitelist = async () => {
+  ipLoading.value = true
+  ipMessage.value = ''
+
+  try {
+    await userApi.disableIpWhitelist()
+    allowedIps.value = []
+    ipWhitelistEnabled.value = false
+    ipMessage.value = 'IP 화이트리스트가 비활성화되었습니다'
+    ipMessageType.value = 'success'
+  } catch (error: any) {
+    ipMessage.value = error.response?.data?.error || '비활성화 실패'
+    ipMessageType.value = 'error'
+  } finally {
+    ipLoading.value = false
   }
 }
 
@@ -814,6 +1025,8 @@ const testStopLossDM = async () => {
 // 컴포넌트 마운트 시 프로필 로드
 onMounted(() => {
   loadProfile()
+  loadAllowedIps()
+  loadCurrentIp()
 })
 </script>
 
@@ -822,7 +1035,7 @@ onMounted(() => {
   gap: 8px;
 }
 
-/* ★★★ 추가: 높이 맞춤 스타일 ★★★ */
+/* 높이 맞춤 스타일 */
 .equal-height-row {
   align-items: stretch;
 }
@@ -833,5 +1046,34 @@ onMounted(() => {
 
 .equal-height-row .v-card {
   width: 100%;
+}
+
+/* IP 추가 폼 한 줄 배치 */
+.ip-add-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ip-add-row .ip-input {
+  flex: 1;
+  min-width: 200px;
+  max-width: 400px;
+}
+
+@media (max-width: 600px) {
+  .ip-add-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .ip-add-row .ip-input {
+    max-width: 100%;
+  }
+  
+  .ip-add-row .v-btn {
+    width: 100%;
+  }
 }
 </style>

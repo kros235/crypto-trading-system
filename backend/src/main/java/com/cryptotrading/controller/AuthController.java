@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.HashMap;
 import java.util.Map;
+import jakarta.servlet.http.HttpServletRequest;
 
 @Tag(name = "인증", description = "회원가입, 로그인, 토큰 검증 API")
 @RestController
@@ -67,10 +68,15 @@ public class AuthController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "423", description = "계정 잠금")
     })
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+     @PostMapping("/login")
+    public ResponseEntity<?> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest  // IP 추출용 추가
+    ) {
         try {
-            AuthResponse response = authService.login(request);
+            // 클라이언트 IP 추출
+            String clientIp = getClientIp(httpRequest);
+            AuthResponse response = authService.login(request, clientIp);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             log.error("로그인 실패: {}", e.getMessage());
@@ -103,4 +109,25 @@ public class AuthController {
                     .body(ApiResponse.error(error));
         }
     }
+
+    // 클라이언트 IP 추출 메서드 추가
+    private String getClientIp(HttpServletRequest request) {
+        String[] headerNames = {
+            "X-Forwarded-For",
+            "X-Real-IP",
+            "Proxy-Client-IP",
+            "WL-Proxy-Client-IP"
+        };
+
+        for (String header : headerNames) {
+            String ip = request.getHeader(header);
+            if (ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
+                // X-Forwarded-For는 여러 IP가 쉼표로 구분될 수 있음
+                return ip.split(",")[0].trim();
+            }
+        }
+
+        return request.getRemoteAddr();
+    }
+
 }

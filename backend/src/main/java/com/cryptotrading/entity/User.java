@@ -3,6 +3,10 @@ package com.cryptotrading.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import java.util.List;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -51,6 +55,11 @@ public class User extends BaseEntity {
 
     @Column(name = "secret_key_encrypted", columnDefinition = "TEXT")
     private String secretKeyEncrypted;
+
+    // IP 화이트리스트 필드
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "allowed_ips", columnDefinition = "json")
+    private List<String> allowedIps;
 
     @PrePersist
     public void prePersist() {

@@ -2327,6 +2327,13 @@ List findUnanalyzedNewsByDate(
 - 코인 뉴스 페이지 개선
   - 하단 Items per page 중복 컨트롤 제거 (hide-default-footer)
   - 뉴스 수집 API 타임아웃 60초로 증가 (외부 RSS 수집 시간 고려)
+- IP 화이트리스트 기능 구현
+  - DB 스키마: users 테이블에 allowed_ips JSON 컬럼 추가
+  - Backend: User 엔티티, UserService, AuthService, AuthController, UserController 수정
+  - Frontend: ProfileView.vue IP 화이트리스트 카드 추가
+  - 기능: IP 추가/삭제, 현재 IP 조회, 화이트리스트 비활성화
+  - 제한: 최대 3개 IP 등록 가능
+  - 보안: 등록된 IP에서만 로그인 허용 (비활성화 시 모든 IP 허용)
 
 **생성된 파일:**
 - `backend/src/main/java/com/cryptotrading/entity/ReleaseNote.java`
@@ -2344,6 +2351,16 @@ List findUnanalyzedNewsByDate(
 - `frontend/src/components/TheSidebar.vue` - 릴리즈 노트 메뉴 추가
 - `frontend/src/views/DashboardView.vue` - 최신 공지 표시 + 한줄 개선
 - `frontend/src/views/NewsView.vue` - hide-default-footer 추가, 뉴스 수집 API 타임아웃 60초로 증가
+- `docker/mysql/init.sql` - users 테이블 allowed_ips 컬럼 추가
+- `backend/src/main/java/com/cryptotrading/entity/User.java` - allowedIps 필드 추가
+- `backend/src/main/java/com/cryptotrading/dto/user/UserInfoDTO.java` - allowedIps 필드 추가
+- `backend/src/main/java/com/cryptotrading/service/UserService.java` - IP 관리 메서드 추가
+- `backend/src/main/java/com/cryptotrading/service/AuthService.java` - IP 검증 로직 추가
+- `backend/src/main/java/com/cryptotrading/controller/AuthController.java` - 현재 IP 조회 API
+- `backend/src/main/java/com/cryptotrading/controller/UserController.java` - IP 관리 API 4개
+- `frontend/src/types/index.ts` - IP 관련 타입 추가
+- `frontend/src/api/index.ts` - IP 관리 API 함수 추가
+- `frontend/src/views/ProfileView.vue` - IP 화이트리스트 카드 UI
 
 **API 엔드포인트:**
 | Method | Endpoint | 권한 | 설명 |
@@ -2354,6 +2371,11 @@ List findUnanalyzedNewsByDate(
 | POST | /api/release-notes | ADMIN | 글 작성 |
 | PUT | /api/release-notes/{id} | ADMIN | 글 수정 |
 | DELETE | /api/release-notes/{id} | ADMIN | 글 삭제 (soft delete) |
+| GET | /api/auth/current-ip | 인증 사용자 | 현재 접속 IP 조회 |
+| GET | /api/users/allowed-ips | 인증 사용자 | 등록된 IP 목록 조회 |
+| POST | /api/users/allowed-ips | 인증 사용자 | IP 추가 (최대 3개) |
+| DELETE | /api/users/allowed-ips | 인증 사용자 | IP 삭제 |
+| DELETE | /api/users/allowed-ips/all | 인증 사용자 | 화이트리스트 비활성화 |
 
 **운영 서버 배포 참고:**
 - 기존 운영 DB에는 release_notes 테이블이 없으므로 수동 생성 필요:
@@ -2385,12 +2407,19 @@ CREATE TABLE IF NOT EXISTS release_notes (
 - ✅ 운영 서버 배포 완료 - Oracle Cloud
 - ✅ 코인 뉴스 하단 중복 컨트롤 제거 - 브라우저
 - ✅ 뉴스 수집 API 타임아웃 증가 (60초) - 브라우저
+- ✅ IP 화이트리스트 API 9단계 테스트 - Postman
+- ✅ 현재 IP 조회 - Postman
+- ✅ IP 추가/삭제 - Postman
+- ✅ 중복 IP 추가 에러 처리 - Postman
+- ✅ 잘못된 IP 형식 에러 처리 - Postman
+- ✅ 화이트리스트 비활성화 - Postman
+- ✅ 프로필 페이지 IP 화이트리스트 UI - 브라우저
 
 ---
 
 
 ## 📊 현재 진행 상황
-- **전체 진척도**: 약 **99%**
+- **전체 진척도**: 약 **99.5%**
 - **Phase 1 (핵심 기능)**: 100% 완료 ✅
 - **Phase 2 (고도화)**: 100% 완료 ✅
 - **Phase 3 (안정화)**: 100% 완료 ✅
@@ -2533,7 +2562,7 @@ CREATE TABLE IF NOT EXISTS release_notes (
 
 ---
 
-#### ✅ Day 30: 릴리즈 노트 게시판 + 기능 개선 (2026-01-08 진행중)
+#### ✅ Day 30: 릴리즈 노트 게시판 + IP 화이트리스트 + 기능 개선 (2026-01-08 완료)
 | 시간 | 작업 | 상세 | 상태 |
 |------|------|------|------|
 | 오전 | 릴리즈 노트 게시판 | 공지사항/업데이트 이력 게시판 UI + API | ✅ 완료 |
@@ -2545,8 +2574,10 @@ CREATE TABLE IF NOT EXISTS release_notes (
 | 오후 | 작성일 표시 개선 | 2줄 → 1줄 표시 (YYYY-MM-DD HH:mm) | ✅ 완료 |
 | 오후 | 대시보드 공지 개선 | 한줄 간결한 표시로 변경 | ✅ 완료 |
 | 오후 | 코인 뉴스 페이지 개선 | 하단 중복 컨트롤 제거 | ✅ 완료 |
-| - | 2FA 인증 (Optional) | Google Authenticator 연동 | ⏳ 보류 |
-| - | IP 화이트리스트 (Optional) | 접속 IP 제한 | ⏳ 보류 |
+| 오후 | IP 화이트리스트 | 접속 IP 제한 기능 (최대 3개) | ✅ 완료 |
+| 오후 | Backend API 구현 | User 엔티티 확장, 5개 API 엔드포인트 | ✅ 완료 |
+| 오후 | Frontend UI 구현 | ProfileView.vue IP 화이트리스트 카드 | ✅ 완료 |
+| - | 2FA 인증 (Optional) | Google Authenticator 연동 | ⏳ Day 31 |
 
 ---
 
@@ -2627,6 +2658,49 @@ README.md의 일별 작업 내용을 게시글로 작성:
   - DuckDNS 무료 도메인 연동
   - Let's Encrypt SSL 인증서 발급
   - 자동 갱신 설정 완료
+
+### IP 화이트리스트 상세 (Day 30 신규)
+
+#### 개요
+사용자가 지정한 IP 주소에서만 로그인을 허용하는 보안 기능
+
+#### 기능 요구사항
+
+| 구분 | 기능 | 설명 |
+|------|------|------|
+| **조회** | 현재 IP 조회 | 접속 중인 클라이언트 IP 표시 |
+| **조회** | IP 목록 조회 | 등록된 화이트리스트 IP 목록 |
+| **등록** | IP 추가 | 최대 3개까지 IP 등록 가능 |
+| **등록** | 현재 IP 추가 | 버튼 클릭으로 현재 접속 IP 자동 등록 |
+| **삭제** | IP 삭제 | 개별 IP 삭제 |
+| **비활성화** | 전체 삭제 | 화이트리스트 비활성화 (모든 IP 허용) |
+
+#### 보안 동작
+- **활성화 상태** (1개 이상 IP 등록): 등록된 IP에서만 로그인 가능
+- **비활성화 상태** (IP 목록 비어있음): 모든 IP에서 로그인 가능
+- **검증 시점**: 로그인 요청 시 IP 검증
+
+#### DB 스키마 변경
+```sql
+-- users 테이블에 컬럼 추가
+ALTER TABLE users ADD COLUMN allowed_ips JSON DEFAULT NULL;
+
+-- 예시 데이터
+UPDATE users SET allowed_ips = '["192.168.1.100", "10.0.0.50"]' WHERE user_id = 'admin';
+```
+
+#### API 엔드포인트
+| Method | Endpoint | 권한 | 설명 |
+|--------|----------|------|------|
+| GET | /api/auth/current-ip | 인증 사용자 | 현재 접속 IP 조회 |
+| GET | /api/users/allowed-ips | 인증 사용자 | 등록된 IP 목록 |
+| POST | /api/users/allowed-ips | 인증 사용자 | IP 추가 |
+| DELETE | /api/users/allowed-ips | 인증 사용자 | IP 삭제 |
+| DELETE | /api/users/allowed-ips/all | 인증 사용자 | 화이트리스트 비활성화 |
+
+#### 프론트엔드 UI
+- `ProfileView.vue` - 프로필 설정 페이지 내 IP 화이트리스트 카드
+- 현재 IP 표시, IP 입력 필드, 추가/삭제 버튼, 비활성화 버튼
 ```
 ---
 
@@ -2644,7 +2718,7 @@ README.md의 일별 작업 내용을 게시글로 작성:
 | 27 | ✅ Oracle Cloud ARM64 배포, DB 스키마 교차검증, docker-compose 동기화, 이슈 해결 | ✅ 완료 |
 | 28 | ✅ 대시보드 재구성, 코인 목록 페이지, bulk API 수정, MATIC 비활성화, 시간대 KST 통일, AdminDashboard 오류 수정, 시간 표시 함수 개선 | ✅ 완료 |
 | 29 | ✅ 급락장 보호 기능 3종, HTTPS 적용 (DuckDNS + Let's Encrypt), CORS 수정, SSL 자동 갱신 | **✅ 완료** |
-| 30 | ✅ 릴리즈 노트 게시판 (CRUD + 검색 + 페이징), 대시보드 연동, 뉴스 페이지 개선 | **🔄 진행중** |
+| 30 | ✅ 릴리즈 노트 게시판 (CRUD + 검색 + 페이징), IP 화이트리스트, 대시보드 연동, 뉴스 페이지 개선 | **🔄 진행중** |
 | 31 | 수익 분석 UI, 보안 점검, 시스템 테스트, 운영 문서, v1.0 릴리즈 | 🔴 필수 |
 
 ---
@@ -3192,8 +3266,8 @@ crypto-trading-system/
 │   │   │   ├── LoginView.vue
 │   │   │   ├── SignupView.vue
 │   │   │   ├── DashboardView.vue                 # ⭐ Day 28: 전면 재구성, ⭐ Day 30: 최신 공지 표시
-│   │   │   ├── CoinListView.vue                  # ⭐ Day 28: 코인 목록 페이지 신규
-│   │   │   ├── ProfileView.vue
+│   │   │   ├── CoinListView.vue                     # ⭐ Day 28: 코인 목록 페이지 신규
+│   │   │   ├── ProfileView.vue                       # ⭐ Day 30: IP 화이트리스트 카드 추가
 │   │   │   ├── TradingSettingsView.vue
 │   │   │   ├── TransactionHistoryView.vue
 │   │   │   ├── HoldingsView.vue

@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -22,4 +23,6 @@ public class UserInfoDTO {
     private LocalDateTime lastLogin;
     private Boolean isActive;
     private Boolean hasApiKey; // API 키 등록 여부만 반환
+    private List<String> allowedIps;	    // IP 화이트리스트 필드 추가
+    private Boolean ipWhitelistEnabled;
 }

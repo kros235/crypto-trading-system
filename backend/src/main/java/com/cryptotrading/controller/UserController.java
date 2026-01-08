@@ -9,7 +9,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/user")
@@ -84,6 +86,137 @@ public class UserController {
             error.put("error", e.getMessage());
             return ResponseEntity.badRequest().body(error);
         }
+    }
+
+    // IP 화이트리스트 관리 API 추가
+
+    /**
+     * 허용 IP 목록 조회
+     */
+    @GetMapping("/allowed-ips")
+    public ResponseEntity<?> getAllowedIps(Authentication authentication) {
+        try {
+            String userId = authentication.getName();
+            List<String> ips = userService.getAllowedIps(userId);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("allowedIps", ips);
+            response.put("count", ips.size());
+            response.put("maxCount", 3);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            log.error("IP 목록 조회 실패: {}", e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    /**
+     * 허용 IP 추가
+     */
+    @PostMapping("/allowed-ips")
+    public ResponseEntity<?> addAllowedIp(
+            @RequestBody Map<String, String> request,
+            Authentication authentication
+    ) {
+        try {
+            String userId = authentication.getName();
+            String ip = request.get("ip");
+            
+            if (ip == null || ip.trim().isEmpty()) {
+                throw new RuntimeException("IP 주소를 입력해주세요");
+            }
+            
+            List<String> ips = userService.addAllowedIp(userId, ip.trim());
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "IP가 추가되었습니다");
+            response.put("allowedIps", ips);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            log.error("IP 추가 실패: {}", e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    /**
+     * 허용 IP 삭제
+     */
+    @DeleteMapping("/allowed-ips/{ip}")
+    public ResponseEntity<?> removeAllowedIp(
+            @PathVariable String ip,
+            Authentication authentication
+    ) {
+        try {
+            String userId = authentication.getName();
+            List<String> ips = userService.removeAllowedIp(userId, ip);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "IP가 삭제되었습니다");
+            response.put("allowedIps", ips);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            log.error("IP 삭제 실패: {}", e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    /**
+     * IP 화이트리스트 비활성화
+     */
+    @DeleteMapping("/allowed-ips")
+    public ResponseEntity<?> disableIpWhitelist(Authentication authentication) {
+        try {
+            String userId = authentication.getName();
+            userService.disableIpWhitelist(userId);
+            
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "IP 화이트리스트가 비활성화되었습니다");
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            log.error("IP 화이트리스트 비활성화 실패: {}", e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    /**
+     * 현재 접속 IP 조회
+     */
+    @GetMapping("/current-ip")
+    public ResponseEntity<?> getCurrentIp(HttpServletRequest request) {
+        String clientIp = getClientIp(request);
+        
+        Map<String, String> response = new HashMap<>();
+        response.put("ip", clientIp);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 클라이언트 IP 추출
+     */
+    private String getClientIp(HttpServletRequest request) {
+        String[] headerNames = {
+            "X-Forwarded-For",
+            "X-Real-IP",
+            "Proxy-Client-IP",
+            "WL-Proxy-Client-IP"
+        };
+
+        for (String header : headerNames) {
+            String ip = request.getHeader(header);
+            if (ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
+                return ip.split(",")[0].trim();
+            }
+        }
+
+        return request.getRemoteAddr();
     }
 
     // 비밀번호 변경 API

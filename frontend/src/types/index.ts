@@ -9,6 +9,9 @@ export interface User {
   lastLogin?: string
   isActive: boolean
   hasApiKey: boolean
+  // IP 화이트리스트 필드 추가
+  allowedIps?: string[]
+  ipWhitelistEnabled?: boolean
 }
 
 // 로그인 요청 타입

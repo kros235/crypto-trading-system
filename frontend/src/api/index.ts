@@ -112,7 +112,6 @@ export const authApi = {
     api.get('/auth/validate')
 }
 
-// ✅ 수정 후 (깔끔하게 정리)
 export const userApi = {
   getProfile: () =>
     api.get<User>('/user/profile'),
@@ -124,7 +123,14 @@ export const userApi = {
     api.post('/user/api-keys', data),
 
   deleteApiKeys: () =>
-    api.delete('/user/api-keys')
+    api.delete('/user/api-keys'),
+
+  // IP 화이트리스트 API 추가
+  getAllowedIps: () => api.get('/user/allowed-ips'),
+  addAllowedIp: (ip: string) => api.post('/user/allowed-ips', { ip }),
+  removeAllowedIp: (ip: string) => api.delete(`/user/allowed-ips/${ip}`),
+  disableIpWhitelist: () => api.delete('/user/allowed-ips'),
+  getCurrentIp: () => api.get<{ ip: string }>('/user/current-ip'),
 }
 
 // 코인 API

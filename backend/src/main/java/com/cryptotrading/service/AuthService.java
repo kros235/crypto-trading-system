@@ -24,6 +24,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final LoginAttemptService loginAttemptService;
+    private final UserService userService;  // IP 검증용 추가
 
     @Transactional
     public AuthResponse signup(SignupRequest request) {
@@ -62,8 +63,8 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthResponse login(LoginRequest request) {
-        String userId = request.getUserId();  // ⭐ [추가] 이 줄이 빠져 있었음
+    public AuthResponse login(LoginRequest request, String clientIp) {  // clientIp 파라미터 추가
+        String userId = request.getUserId(); 
 
         // 차단 여부 확인
         if (loginAttemptService.isBlocked(userId)) {
@@ -82,6 +83,13 @@ public class AuthService {
         // 계정 활성화 체크
         if (!user.getIsActive()) {
             throw new RuntimeException("비활성화된 계정입니다");
+        }
+
+        // IP 화이트리스트 검증
+        if (!userService.isIpAllowed(userId, clientIp)) {
+            log.warn("허용되지 않은 IP에서 로그인 시도: userId={}, ip={}", userId, clientIp);
+            throw new RuntimeException("허용되지 않은 IP입니다. 등록된 IP: " + 
+                String.join(", ", user.getAllowedIps()));
         }
 
         // 비밀번호 검증  // ⭐ [수정] `/`를 `//`로 수정

@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
     role ENUM('USER', 'ADMIN') DEFAULT 'USER',
     api_key_encrypted TEXT,
     secret_key_encrypted TEXT,
+    allowed_ips JSON DEFAULT NULL COMMENT '허용 IP 목록 (최대 3개)',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_email (email),

@@ -4,6 +4,8 @@
 # 생성일: Day 22
 # 실행: docker-compose -f docker-compose.prod.yml --env-file .env.production up -d
 # ============================================
+# ⭐ Day 31 수정: IP 화이트리스트 실제 IP 전달을 위해 frontend를 host 네트워크로 변경
+# ============================================
 
 services:
   mysql:
@@ -31,7 +33,6 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
-    # ★★★ 운영 환경: 리소스 제한 ★★★
     deploy:
       resources:
         limits:
@@ -91,14 +92,11 @@ services:
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       TZ: Asia/Seoul
-      # ★★★ 운영 환경: JVM 옵션 ★★★
-      # ★★★ 운영 환경: JVM 옵션 (KST 시간대 포함) ★★★
       JAVA_OPTS: "-Xms512m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Duser.timezone=Asia/Seoul"
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       GEMINI_API_ENABLED: ${GEMINI_API_ENABLED:-false}
       GROQ_API_KEY: ${GROQ_API_KEY}
       GROQ_MODEL: ${GROQ_MODEL}
-
     depends_on:
       mysql:
         condition: service_healthy
@@ -113,7 +111,7 @@ services:
       retries: 3
       start_period: 90s
     restart: always
-    stop_grace_period: 30s  # ⭐ 추가: 종료 시 30초 대기
+    stop_grace_period: 30s
     volumes:
       - backend_logs_prod:/app/logs
     deploy:
@@ -128,19 +126,18 @@ services:
     container_name: crypto-frontend-prod
     environment:
       TZ: Asia/Seoul
-    ports:
-      - "80:80"
-      - "443:443"
+    # ⭐⭐⭐ [Day 31 변경] IP 화이트리스트 실제 IP 전달을 위해 host 네트워크 사용 ⭐⭐⭐
+    # 기존: ports: - "80:80" - "443:443" / networks: - crypto-network-prod
+    # 변경: network_mode: "host"
+    # 효과: $remote_addr가 실제 클라이언트 IP를 받음 (172.18.0.1 대신)
+    network_mode: "host"
     volumes:
-      # ★★★ SSL 인증서 마운트 (도메인 확보 후 활성화) ★★★
       - ./ssl/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
       - ./ssl/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
       - ./frontend/nginx.ssl.conf:/etc/nginx/conf.d/default.conf:ro
       - frontend_logs_prod:/var/log/nginx
     depends_on:
       - backend
-    networks:
-      - crypto-network-prod
     restart: always
     deploy:
       resources:

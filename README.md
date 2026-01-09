@@ -2334,6 +2334,18 @@ List findUnanalyzedNewsByDate(
   - 기능: IP 추가/삭제, 현재 IP 조회, 화이트리스트 비활성화
   - 제한: 최대 3개 IP 등록 가능
   - 보안: 등록된 IP에서만 로그인 허용 (비활성화 시 모든 IP 허용)
+
+- 문제 발견: Docker Bridge 네트워크에서 모든 접속이 172.18.0.1 (Gateway IP)로 표시
+- 근본 원인: Docker iptables NAT로 인해 원본 클라이언트 IP가 손실됨
+- 해결 방안: Frontend(Nginx) 컨테이너를 network_mode: host로 변경
+-환경별 설정 분리:
+      - 개발 환경 (Windows/Mac): network_mode: host 미지원 → 기존 bridge 방식 유지
+      - 운영 환경 (Linux/Oracle Cloud): network_mode: host 적용 → 실제 IP 전달
+- 수정 파일:
+      - docker-compose.yml (개발용): bridge 네트워크 유지, proxy_pass http://backend:8080
+      - docker-compose.prod.yml (운영용): network_mode: "host" 적용
+      - frontend/nginx.conf (개발용): proxy_pass http://backend:8080 (기존 유지)
+      - frontend/nginx.ssl.conf (운영용): proxy_pass http://127.0.0.1:8080 (⭐ 변경)
 - 2FA 인증 (Google Authenticator) 구현
   - Backend: TotpService (TOTP 생성/검증), UserService (2FA 상태 관리)
   - Backend: UserController (2FA 설정 API 4개 엔드포인트)
@@ -2345,6 +2357,43 @@ List findUnanalyzedNewsByDate(
   - DB 스키마: users 테이블에 totp_secret, two_factor_enabled 컬럼 추가
   - 기능: 2FA 활성화/비활성화, QR코드 스캔, OTP 코드 검증
   - 라이브러리: dev.samstevens.totp (백엔드), qrcode (프론트엔드)
+
+** IP 화이트리스트 환경별 설정 상세:**
+
+| 환경 | Docker Compose 파일 | Nginx 설정 | 네트워크 모드 | proxy_pass | IP 표시 |
+|------|---------------------|------------|--------------|------------|---------|
+| **개발 (Windows/Mac)** | `docker-compose.yml` | `nginx.conf` | `bridge` (기존) | `backend:8080` | Docker IP (172.18.0.1) |
+| **운영 (Linux/Oracle)** | `docker-compose.prod.yml` | `nginx.ssl.conf` | `host` | `127.0.0.1:8080` | **실제 클라이언트 IP** ✅ |
+
+** 운영 환경 docker-compose.prod.yml 변경 내용:**
+```yaml
+  frontend:
+    # IP 화이트리스트 실제 IP 전달을 위해 host 네트워크 사용
+    # 기존: ports: - "80:80" - "443:443" / networks: - crypto-network-prod
+    # 변경: network_mode: "host"
+    # 효과: $remote_addr가 실제 클라이언트 IP를 받음 (172.18.0.1 대신)
+    network_mode: "host"
+    # ports 제거 (host 모드에서는 컨테이너가 직접 호스트 포트 사용)
+    # networks 제거 (host 모드에서는 Docker 네트워크 사용 불가)
+```
+
+** 운영 환경 nginx.ssl.conf 변경 내용:**
+```nginx
+# backend:8080 → 127.0.0.1:8080 (host 네트워크 모드)
+# 모든 proxy_pass 위치에 적용:
+# - /swagger-ui/, /swagger-ui.html, /v3/api-docs, /swagger-resources, /webjars/
+# - /api/, /ws/
+
+location /api/ {
+    proxy_pass http://127.0.0.1:8080/api/;  # ⭐ 변경
+    # ... 기타 설정 동일
+}
+
+** 개발 환경 제약사항:**
+- Windows Docker Desktop (WSL2)에서 `network_mode: host`가 제대로 동작하지 않음
+- 개발 환경에서는 IP 화이트리스트 테스트 시 `172.18.0.1`로 표시됨 (정상)
+- 실제 IP 테스트는 운영 서버(Oracle Cloud Linux)에서만 가능
+
 
 **생성된 파일:**
 - `backend/src/main/java/com/cryptotrading/entity/ReleaseNote.java`
@@ -2374,6 +2423,10 @@ List findUnanalyzedNewsByDate(
 - `frontend/src/types/index.ts` - IP 관련 타입 추가
 - `frontend/src/api/index.ts` - IP 관리 API 함수 추가
 - `frontend/src/views/ProfileView.vue` - IP 화이트리스트 카드 UI
+- `docker-compose.yml`** - 개발용 (bridge 네트워크 유지, ports/networks 유지)
+- `docker-compose.prod.yml`** - 운영용 (`network_mode: "host"` 추가, ports/networks 제거)
+- `frontend/nginx.conf`** - 개발용 (`proxy_pass http://backend:8080` 유지)
+- `frontend/nginx.ssl.conf`** - 운영용 (`proxy_pass http://127.0.0.1:8080`으로 변경)
 - `backend/src/main/java/com/cryptotrading/entity/User.java` - totpSecret, twoFactorEnabled 필드 추가
 - `backend/src/main/java/com/cryptotrading/dto/user/UserInfoDTO.java` - twoFactorEnabled 필드 추가
 - `backend/src/main/java/com/cryptotrading/service/UserService.java` - 2FA 설정/해제 메서드 추가
@@ -2424,6 +2477,32 @@ CREATE TABLE IF NOT EXISTS release_notes (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
+** 운영 서버 배포 명령어 (IP 화이트리스트 적용):**
+```bash
+# SSH 접속
+ssh -i ~/.ssh/crypto-key ubuntu@158.179.161.29
+
+cd ~/crypto-trading-system
+git pull origin main
+
+# 재배포 (network_mode: host 적용)
+docker compose -f docker-compose.prod.yml --env-file .env.production down
+docker compose -f docker-compose.prod.yml --env-file .env.production build frontend
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+
+# 상태 확인
+docker ps
+docker logs crypto-frontend-prod
+```
+
+** IP 화이트리스트 테스트 절차 (운영 서버):**
+1. PC에서 로그인
+2. 보안 설정 > IP 화이트리스트 이동
+3. 현재 IP 확인 (실제 Public IP 표시 확인 - 예: `121.xxx.xxx.xxx`)
+4. 현재 IP 추가
+5. 모바일 데이터로 접속 (Wi-Fi 끄고)
+6. 로그아웃 후 로그인 시도 → "허용되지 않은 IP입니다" 메시지 확인 ✅
+
 **테스트 완료:**
 - ✅ 릴리즈 노트 목록 조회 - 브라우저
 - ✅ 게시글 작성 (관리자) - 브라우저
@@ -2444,6 +2523,9 @@ CREATE TABLE IF NOT EXISTS release_notes (
 - ✅ 잘못된 IP 형식 에러 처리 - Postman
 - ✅ 화이트리스트 비활성화 - Postman
 - ✅ 프로필 페이지 IP 화이트리스트 UI - 브라우저
+- ✅ 개발 환경 (Windows) Docker 실행 정상 - 브라우저
+- ✅ 개발 환경 IP 표시 (172.18.0.1) - 브라우저 (예상대로 Docker IP 표시)
+- ⏳ **운영 환경 (Oracle Cloud) 실제 IP 테스트** - 배포 후 테스트 예정
 - ✅ 2FA 상태 조회 API - Postman
 - ✅ 2FA 설정 시작 (QR코드 URL 생성) - Postman
 - ✅ 2FA 활성화 확인 (OTP 검증) - 브라우저
@@ -2461,6 +2543,22 @@ CREATE TABLE IF NOT EXISTS release_notes (
 2. qrcode 패키지 import 오류
    - 문제: `Cannot find module 'qrcode'` 에러 발생
    - 해결: `npm install qrcode @types/qrcode` 패키지 설치
+
+** 해결한 주요 이슈 (IP 화이트리스트 Docker 네트워크):
+1. Docker Bridge 네트워크에서 실제 IP 손실 문제
+   - 문제: 모든 접속이 `172.18.0.1` (Docker Gateway IP)로 표시
+   - 원인: Docker iptables NAT로 인해 클라이언트 원본 IP가 Gateway IP로 변환됨
+   - 해결: 운영 환경에서 `network_mode: host` 적용
+   
+2. Windows Docker Desktop에서 `network_mode: host` 미지원
+   - 문제: 개발 환경에서 `network_mode: host` 적용 시 `http://localhost` 접속 불가
+   - 원인: Windows Docker Desktop (WSL2)은 `network_mode: host`를 제한적으로 지원
+   - 해결: 개발/운영 환경 분리 - 개발은 bridge 유지, 운영만 host 모드 적용
+
+3. docker-compose.yml frontend 들여쓰기 오류
+   - 문제: `frontend:` 서비스가 `services:` 블록 바깥에 위치
+   - 원인: 들여쓰기 누락으로 YAML 파싱 오류 발생
+   - 해결: `frontend:` 앞에 2칸 들여쓰기 추가
 
 DB 마이그레이션 (2FA):
 ```sql

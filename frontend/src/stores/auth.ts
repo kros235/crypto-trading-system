@@ -38,7 +38,13 @@ export const useAuthStore = defineStore('auth', () => {
         return '2FA_REQUIRED'
       }
       
-      error.value = err.response?.data?.error || err.response?.data?.message || '로그인에 실패했습니다'
+      // 에러 메시지 추출 (다양한 응답 구조 지원)
+      const errorData = err.response?.data
+      error.value = errorData?.error?.message  // ApiResponse 구조
+        || errorData?.message                   // 일반 메시지
+        || errorData?.error                     // 문자열 에러
+        || '로그인에 실패했습니다'
+
       return false
     } finally {
       loading.value = false

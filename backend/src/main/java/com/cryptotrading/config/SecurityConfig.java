@@ -20,6 +20,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.http.HttpMethod;
+import org.springframework.web.filter.CorsFilter;
 
 import java.util.Arrays;
 
@@ -97,6 +98,9 @@ public class SecurityConfig {
                 // 나머지는 인증 필요
                 .anyRequest().authenticated()
             )
+            // CORS 필터를 Security 필터 체인 최상단에 배치
+            // 401/403 에러 응답에도 CORS 헤더가 포함되어 브라우저에서 에러 메시지 읽기 가능
+            .addFilterBefore(corsFilter(), UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterAfter(requestLoggingFilter, SecurityContextHolderFilter.class);  
@@ -106,6 +110,12 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+
+    @Bean
+    public CorsFilter corsFilter() {
+        return new CorsFilter(corsConfigurationSource());
     }
 
     @Bean

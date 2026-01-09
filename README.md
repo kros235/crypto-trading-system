@@ -2357,6 +2357,11 @@ List findUnanalyzedNewsByDate(
   - DB 스키마: users 테이블에 totp_secret, two_factor_enabled 컬럼 추가
   - 기능: 2FA 활성화/비활성화, QR코드 스캔, OTP 코드 검증
   - 라이브러리: dev.samstevens.totp (백엔드), qrcode (프론트엔드)
+- 로그인 에러 메시지 상세 표시 개선
+  - 문제: IP 화이트리스트 차단 시 "로그인에 실패했습니다"만 표시
+  - 원인: api/index.ts 인터셉터에서 401 응답 가공 시 원본 response 손실
+  - 해결: 로그인/회원가입 API는 원본 에러 응답 유지하도록 수정
+  - 결과: "허용되지 않은 IP입니다. 등록된 IP: xxx" 상세 메시지 표시
 
 ** IP 화이트리스트 환경별 설정 상세:**
 
@@ -2421,8 +2426,9 @@ location /api/ {
 - `backend/src/main/java/com/cryptotrading/controller/AuthController.java` - 현재 IP 조회 API
 - `backend/src/main/java/com/cryptotrading/controller/UserController.java` - IP 관리 API 4개
 - `frontend/src/types/index.ts` - IP 관련 타입 추가
-- `frontend/src/api/index.ts` - IP 관리 API 함수 추가
-- `frontend/src/views/ProfileView.vue` - IP 화이트리스트 카드 UI
+- `frontend/src/api/index.ts - IP 관리 API 함수 추가, 로그인/회원가입 API 401 응답 시 원본 에러 유지
+- `frontend/src/views/ProfileView.vue - IP 화이트리스트 카드 UI
+- `frontend/src/stores/auth.ts - 에러 메시지 추출 로직 개선 (error.detail 우선)
 - `docker-compose.yml`** - 개발용 (bridge 네트워크 유지, ports/networks 유지)
 - `docker-compose.prod.yml`** - 운영용 (`network_mode: "host"` 추가, ports/networks 제거)
 - `frontend/nginx.conf`** - 개발용 (`proxy_pass http://backend:8080` 유지)
@@ -2440,6 +2446,8 @@ location /api/ {
 - `frontend/src/components/TheSidebar.vue` - 보안 설정 메뉴 추가
 - `frontend/package.json` - qrcode 패키지 추가
 - `docker/mysql/init.sql` - users 테이블에 totp_secret, two_factor_enabled 컬럼 추가
+- `frontend/src/api/index.ts` - 로그인/회원가입 API 401 응답 시 원본 에러 유지
+- `frontend/src/stores/auth.ts` - 에러 메시지 추출 로직 개선 (error.detail 우선)
 
 **API 엔드포인트:**
 | Method | Endpoint | 권한 | 설명 |
@@ -2525,7 +2533,8 @@ docker logs crypto-frontend-prod
 - ✅ 프로필 페이지 IP 화이트리스트 UI - 브라우저
 - ✅ 개발 환경 (Windows) Docker 실행 정상 - 브라우저
 - ✅ 개발 환경 IP 표시 (172.18.0.1) - 브라우저 (예상대로 Docker IP 표시)
-- ⏳ **운영 환경 (Oracle Cloud) 실제 IP 테스트** - 배포 후 테스트 예정
+- ✅ 운영 환경 (Oracle Cloud) 실제 IP 테스트 - 브라우저
+- ✅ IP 화이트리스트 차단 시 상세 에러 메시지 표시 ("허용되지 않은 IP입니다. 등록된 IP: xxx") - 브라우저
 - ✅ 2FA 상태 조회 API - Postman
 - ✅ 2FA 설정 시작 (QR코드 URL 생성) - Postman
 - ✅ 2FA 활성화 확인 (OTP 검증) - 브라우저
@@ -2533,6 +2542,17 @@ docker logs crypto-frontend-prod
 - ✅ 2FA 로그인 OTP 검증 성공 - 브라우저
 - ✅ 2FA 비활성화 (OTP 검증) - 브라우저
 - ✅ 보안 설정 페이지 UI 렌더링 - 브라우저
+- ✅ IP 화이트리스트 차단 시 상세 에러 메시지 표시 - 브라우저
+
+해결한 주요 이슈 (로그인 에러 메시지 표시):
+
+IP 화이트리스트 차단 시 상세 메시지 미표시 문제
+
+문제: IP 차단 시 "로그인에 실패했습니다"만 표시되고 상세 사유 미표시
+원인: api/index.ts 인터셉터에서 401 응답을 가공하면서 원본 response 객체 손실
+해결: 로그인/회원가입 API는 인터셉터에서 가공하지 않고 원본 에러 그대로 전달
+추가 수정: auth.ts에서 error.detail 필드를 우선적으로 표시하도록 변경
+결과: "허용되지 않은 IP입니다. 등록된 IP: 118.235.13.3" 상세 메시지 정상 표시
 
 해결한 주요 이슈 (2FA):
 1. 2FA 로그인 시 OTP 입력 필드 미표시 문제

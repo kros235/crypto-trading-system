@@ -68,7 +68,7 @@ public class AuthController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "423", description = "계정 잠금")
     })
-     @PostMapping("/login")
+    @PostMapping("/login")
     public ResponseEntity<?> login(
             @Valid @RequestBody LoginRequest request,
             HttpServletRequest httpRequest  // IP 추출용 추가
@@ -80,6 +80,18 @@ public class AuthController {
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             log.error("로그인 실패: {}", e.getMessage());
+            
+            // 2FA 필요 시 특별 응답
+            if ("2FA_REQUIRED".equals(e.getMessage())) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("code", "2FA_REQUIRED");
+                response.put("message", "2단계 인증이 필요합니다");
+                response.put("requires2FA", true);
+                return ResponseEntity
+                        .status(HttpStatus.UNAUTHORIZED)
+                        .body(response);
+            }
+           
             ErrorResponse error = ErrorResponse.builder()
                     .code(ErrorCode.LOGIN_FAILED.getCode())
                     .message(ErrorCode.LOGIN_FAILED.getMessage())

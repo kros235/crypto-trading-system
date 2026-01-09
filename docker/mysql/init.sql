@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS users (
     api_key_encrypted TEXT,
     secret_key_encrypted TEXT,
     allowed_ips JSON DEFAULT NULL COMMENT '허용 IP 목록 (최대 3개)',
+    totp_secret VARCHAR(64) DEFAULT NULL COMMENT '2FA TOTP 비밀키',
+    totp_enabled BOOLEAN DEFAULT FALSE COMMENT '2FA 활성화 여부',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_email (email),

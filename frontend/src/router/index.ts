@@ -92,6 +92,12 @@ const router = createRouter({
       name: 'release-notes',
       component: () => import('../views/ReleaseNotesView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/account-security',
+      name: 'account-security',
+      component: () => import('../views/AccountSecurityView.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })

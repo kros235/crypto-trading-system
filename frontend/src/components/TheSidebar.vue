@@ -68,6 +68,12 @@
       />
 
       <v-list-item
+        prepend-icon="mdi-shield-lock"
+        title="계정 보안"
+        @click="$router.push('/account-security')"
+      />
+
+      <v-list-item
         v-if="authStore.isAdmin"
         :to="'/admin'"
         prepend-icon="mdi-shield-crown"

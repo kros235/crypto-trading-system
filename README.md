@@ -2306,7 +2306,7 @@ List findUnanalyzedNewsByDate(
 
 ---
 
-### ✅ Day 30 (2026-01-08) - 릴리즈 노트 게시판 + 기능 개선
+### ✅ Day 30 (2026-01-08) - 릴리즈 노트 게시판 + 2FA 인증 + 기능 개선
 **완료 항목:**
 - 릴리즈 노트 게시판 기능 구현
   - DB 스키마: release_notes 테이블 (id, title, content, author_id, author_name, created_at, updated_at, is_deleted)
@@ -2334,6 +2334,17 @@ List findUnanalyzedNewsByDate(
   - 기능: IP 추가/삭제, 현재 IP 조회, 화이트리스트 비활성화
   - 제한: 최대 3개 IP 등록 가능
   - 보안: 등록된 IP에서만 로그인 허용 (비활성화 시 모든 IP 허용)
+- 2FA 인증 (Google Authenticator) 구현
+  - Backend: TotpService (TOTP 생성/검증), UserService (2FA 상태 관리)
+  - Backend: UserController (2FA 설정 API 4개 엔드포인트)
+  - Backend: AuthController (로그인 시 2FA 검증, 2FA_REQUIRED 응답)
+  - Frontend: AccountSecurityView.vue (보안 설정 페이지 - QR코드, OTP 입력)
+  - Frontend: LoginView.vue (OTP 입력 필드 추가)
+  - Frontend: auth.ts (2FA_REQUIRED 응답 처리 로직)
+  - Frontend: api/index.ts (401 응답 인터셉터에 2FA_REQUIRED 처리 추가)
+  - DB 스키마: users 테이블에 totp_secret, two_factor_enabled 컬럼 추가
+  - 기능: 2FA 활성화/비활성화, QR코드 스캔, OTP 코드 검증
+  - 라이브러리: dev.samstevens.totp (백엔드), qrcode (프론트엔드)
 
 **생성된 파일:**
 - `backend/src/main/java/com/cryptotrading/entity/ReleaseNote.java`
@@ -2343,6 +2354,8 @@ List findUnanalyzedNewsByDate(
 - `backend/src/main/java/com/cryptotrading/dto/releasenote/ReleaseNoteDTO.java`
 - `backend/src/main/java/com/cryptotrading/dto/releasenote/ReleaseNoteRequest.java`
 - `frontend/src/views/ReleaseNotesView.vue`
+- `backend/src/main/java/com/cryptotrading/service/TotpService.java` - TOTP 생성/검증 서비스
+- `frontend/src/views/AccountSecurityView.vue` - 보안 설정 페이지
 
 **수정된 파일:**
 - `docker/mysql/init.sql` - release_notes 테이블 + 샘플 데이터 추가
@@ -2361,6 +2374,19 @@ List findUnanalyzedNewsByDate(
 - `frontend/src/types/index.ts` - IP 관련 타입 추가
 - `frontend/src/api/index.ts` - IP 관리 API 함수 추가
 - `frontend/src/views/ProfileView.vue` - IP 화이트리스트 카드 UI
+- `backend/src/main/java/com/cryptotrading/entity/User.java` - totpSecret, twoFactorEnabled 필드 추가
+- `backend/src/main/java/com/cryptotrading/dto/user/UserInfoDTO.java` - twoFactorEnabled 필드 추가
+- `backend/src/main/java/com/cryptotrading/service/UserService.java` - 2FA 설정/해제 메서드 추가
+- `backend/src/main/java/com/cryptotrading/controller/UserController.java` - 2FA API 4개 엔드포인트 추가
+- `backend/src/main/java/com/cryptotrading/controller/AuthController.java` - 로그인 시 2FA 검증 로직 추가
+- `backend/pom.xml` - dev.samstevens.totp 의존성 추가
+- `frontend/src/views/LoginView.vue` - OTP 입력 필드 추가
+- `frontend/src/stores/auth.ts` - 2FA_REQUIRED 응답 처리 로직 추가
+- `frontend/src/api/index.ts` - 401 응답 인터셉터에 2FA_REQUIRED 처리 추가
+- `frontend/src/router/index.ts` - /account-security 라우트 추가
+- `frontend/src/components/TheSidebar.vue` - 보안 설정 메뉴 추가
+- `frontend/package.json` - qrcode 패키지 추가
+- `docker/mysql/init.sql` - users 테이블에 totp_secret, two_factor_enabled 컬럼 추가
 
 **API 엔드포인트:**
 | Method | Endpoint | 권한 | 설명 |
@@ -2376,6 +2402,10 @@ List findUnanalyzedNewsByDate(
 | POST | /api/users/allowed-ips | 인증 사용자 | IP 추가 (최대 3개) |
 | DELETE | /api/users/allowed-ips | 인증 사용자 | IP 삭제 |
 | DELETE | /api/users/allowed-ips/all | 인증 사용자 | 화이트리스트 비활성화 |
+| GET | /api/user/2fa/status | 인증 사용자 | 2FA 활성화 상태 조회 |
+| POST | /api/user/2fa/setup | 인증 사용자 | 2FA 설정 시작 (QR코드 URL 반환) |
+| POST | /api/user/2fa/confirm | 인증 사용자 | 2FA 활성화 확인 (OTP 검증) |
+| POST | /api/user/2fa/disable | 인증 사용자 | 2FA 비활성화 (OTP 검증) |
 
 **운영 서버 배포 참고:**
 - 기존 운영 DB에는 release_notes 테이블이 없으므로 수동 생성 필요:
@@ -2414,6 +2444,31 @@ CREATE TABLE IF NOT EXISTS release_notes (
 - ✅ 잘못된 IP 형식 에러 처리 - Postman
 - ✅ 화이트리스트 비활성화 - Postman
 - ✅ 프로필 페이지 IP 화이트리스트 UI - 브라우저
+- ✅ 2FA 상태 조회 API - Postman
+- ✅ 2FA 설정 시작 (QR코드 URL 생성) - Postman
+- ✅ 2FA 활성화 확인 (OTP 검증) - 브라우저
+- ✅ 2FA 활성화 후 로그인 시 OTP 입력 필드 표시 - 브라우저
+- ✅ 2FA 로그인 OTP 검증 성공 - 브라우저
+- ✅ 2FA 비활성화 (OTP 검증) - 브라우저
+- ✅ 보안 설정 페이지 UI 렌더링 - 브라우저
+
+해결한 주요 이슈 (2FA):
+1. 2FA 로그인 시 OTP 입력 필드 미표시 문제
+   - 문제: 2FA 활성화 후 로그인 시 OTP 입력 필드가 나타나지 않음
+   - 원인: api/index.ts 인터셉터에서 401 응답 시 에러 객체 가공 과정에서 `err.response`가 undefined로 전달됨
+   - 해결: 401 응답 처리 시 `2FA_REQUIRED` 코드를 감지하여 `err.response.data` 형태로 명시적 전달
+   
+2. qrcode 패키지 import 오류
+   - 문제: `Cannot find module 'qrcode'` 에러 발생
+   - 해결: `npm install qrcode @types/qrcode` 패키지 설치
+
+DB 마이그레이션 (2FA):
+```sql
+-- users 테이블에 2FA 컬럼 추가
+ALTER TABLE users 
+ADD COLUMN totp_secret VARCHAR(255) NULL COMMENT 'TOTP 비밀키 (암호화)',
+ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE COMMENT '2FA 활성화 여부';
+```
 
 ---
 
@@ -2718,7 +2773,7 @@ UPDATE users SET allowed_ips = '["192.168.1.100", "10.0.0.50"]' WHERE user_id = 
 | 27 | ✅ Oracle Cloud ARM64 배포, DB 스키마 교차검증, docker-compose 동기화, 이슈 해결 | ✅ 완료 |
 | 28 | ✅ 대시보드 재구성, 코인 목록 페이지, bulk API 수정, MATIC 비활성화, 시간대 KST 통일, AdminDashboard 오류 수정, 시간 표시 함수 개선 | ✅ 완료 |
 | 29 | ✅ 급락장 보호 기능 3종, HTTPS 적용 (DuckDNS + Let's Encrypt), CORS 수정, SSL 자동 갱신 | **✅ 완료** |
-| 30 | ✅ 릴리즈 노트 게시판 (CRUD + 검색 + 페이징), IP 화이트리스트, 대시보드 연동, 뉴스 페이지 개선 | **🔄 진행중** |
+| 30 | ✅ 릴리즈 노트 게시판 (CRUD + 검색 + 페이징), IP 화이트리스트, 2FA 인증, 대시보드 연동, 뉴스 페이지 개선 | **🔄 진행중** |
 | 31 | 수익 분석 UI, 보안 점검, 시스템 테스트, 운영 문서, v1.0 릴리즈 | 🔴 필수 |
 
 ---
@@ -3175,7 +3230,8 @@ crypto-trading-system/
 │   │   │   ├── NewsCollectorService.java       # ⭐ Day 24: 뉴스 수집
 │   │   │   ├── NewsAnalysisService.java        # ⭐ Day 25: AI 분석
 │   │   │   ├── GeminiApiService.java           # ⭐ Day 25: Groq API 연동
-│   │   │   └── ReleaseNoteService.java         # ⭐ Day 30: 릴리즈 노트 서비스
+│   │   │   ├── ReleaseNoteService.java         # ⭐ Day 30: 릴리즈 노트 서비스
+│   │   │   └── TotpService.java                    # ⭐ Day 30: TOTP 생성/검증
 │   │   ├── repository/           # 데이터 접근
 │   │   │   ├── UserRepository.java
 │   │   │   ├── TradingSettingRepository.java
@@ -3276,7 +3332,8 @@ crypto-trading-system/
 │   │   │   ├── BacktestView.vue
 │   │   │   ├── NewsView.vue                      # ⭐ Day 26: 코인 뉴스 페이지
 │   │   │   ├── AdminDashboardView.vue
-│   │   │   └── ReleaseNotesView.vue              # ⭐ Day 30: 릴리즈 노트 페이지
+│   │   │   ├── ReleaseNotesView.vue               # ⭐ Day 30: 릴리즈 노트 페이지
+│   │   │   └── AccountSecurityView.vue           # ⭐ Day 30: 보안 설정 페이지
 │   │   ├── stores/               # Pinia 상태 관리
 │   │   │   ├── auth.ts
 │   │   │   └── coin.ts

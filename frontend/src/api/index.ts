@@ -63,6 +63,16 @@ api.interceptors.response.use(
     
     // 401 Unauthorized - 토큰 만료/무효
     if (status === 401) {
+      // 2FA 필요 응답 처리
+      if (errorData?.code === '2FA_REQUIRED') {
+        return Promise.reject({
+          response: {
+            status: 401,
+            data: errorData
+          }
+        })
+      }
+      
       const errorCode = errorData?.error?.code
       // 로그인 API 경로이거나 로그인 실패(A005)인 경우 리다이렉트하지 않음
       const isLoginRequest = error.config?.url?.includes('/auth/login')
@@ -131,6 +141,12 @@ export const userApi = {
   removeAllowedIp: (ip: string) => api.delete(`/user/allowed-ips/${ip}`),
   disableIpWhitelist: () => api.delete('/user/allowed-ips'),
   getCurrentIp: () => api.get<{ ip: string }>('/user/current-ip'),
+
+  // 2FA API
+  get2FAStatus: () => api.get('/user/2fa/status'),
+  setup2FA: () => api.post('/user/2fa/setup'),
+  confirm2FA: (code: string) => api.post('/user/2fa/confirm', { code }),
+  disable2FA: (code: string) => api.post('/user/2fa/disable', { code }),
 }
 
 // 코인 API
@@ -314,6 +330,24 @@ export const adminApi = {
 export const emailApi = {
   sendTest: () => api.post('/notifications/email/test'),
   sendDailyReport: () => api.post('/notifications/email/daily-report')
+}
+
+// 2FA API
+export const twoFactorApi = {
+  // 2FA 설정 시작
+  setup: () => api.post('/2fa/setup'),
+  
+  // 2FA 활성화
+  enable: (otpCode: string) => api.post('/2fa/enable', { otpCode }),
+  
+  // 2FA 비활성화
+  disable: (otpCode: string) => api.post('/2fa/disable', { otpCode }),
+  
+  // 2FA 상태 확인
+  getStatus: () => api.get('/2fa/status'),
+  
+  // 2FA 필요 여부 확인 (로그인 전)
+  checkRequired: (userId: string) => api.get(`/2fa/required/${userId}`)
 }
 
 export default api

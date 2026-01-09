@@ -61,10 +61,21 @@ public class User extends BaseEntity {
     @Column(name = "allowed_ips", columnDefinition = "json")
     private List<String> allowedIps;
 
+    // 2FA 관련 필드
+    @Column(name = "totp_secret", length = 100)
+    private String totpSecret;
+
+    @Column(name = "two_factor_enabled")
+    private Boolean twoFactorEnabled = false;
+
     @PrePersist
     public void prePersist() {
         if (joinDate == null) {
             joinDate = LocalDateTime.now();
+        }
+
+        if (twoFactorEnabled == null) {
+            twoFactorEnabled = false;
         }
     }
 }

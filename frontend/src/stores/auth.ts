@@ -18,21 +18,27 @@ export const useAuthStore = defineStore('auth', () => {
   const login = async (credentials: LoginRequest) => {
     loading.value = true
     error.value = null
-
     try {
       const response = await authApi.login(credentials)
       const data = response.data
-
       // 토큰 및 사용자 정보 저장
       token.value = data.token
       localStorage.setItem('token', data.token)
-
       // 프로필 정보 가져오기
       await fetchProfile()
-
       return true
     } catch (err: any) {
-      error.value = err.response?.data?.error || '로그인에 실패했습니다'
+      console.log('로그인 에러 응답:', err.response)
+      console.log('에러 데이터:', err.response?.data)
+      console.log('에러 코드:', err.response?.data?.code)
+      
+      // 2FA 필요 응답 처리
+      const errorCode = err.response?.data?.code
+      if (errorCode === '2FA_REQUIRED') {
+        return '2FA_REQUIRED'
+      }
+      
+      error.value = err.response?.data?.error || err.response?.data?.message || '로그인에 실패했습니다'
       return false
     } finally {
       loading.value = false

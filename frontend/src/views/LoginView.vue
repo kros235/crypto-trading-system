@@ -41,6 +41,26 @@
                 class="mb-2"
               />
 
+              <!-- 2FA OTP 입력 필드 -->
+              <v-expand-transition>
+                <div v-if="requires2FA">
+                  <v-alert type="info" variant="tonal" class="mb-3">
+                    2단계 인증이 활성화되어 있습니다.<br>
+                    Google Authenticator 앱의 6자리 코드를 입력하세요.
+                  </v-alert>
+                  <v-text-field
+                    v-model="otpCode"
+                    label="인증 코드 (6자리)"
+                    prepend-icon="mdi-shield-key"
+                    maxlength="6"
+                    :rules="[rules.required, rules.otpLength]"
+                    variant="outlined"
+                    class="mb-2"
+                    autofocus
+                  />
+                </div>
+              </v-expand-transition>
+
               <v-btn
                 type="submit"
                 color="primary"
@@ -84,6 +104,8 @@ const authStore = useAuthStore()
 const formRef = ref()
 const valid = ref(false)
 const showPassword = ref(false)
+const requires2FA = ref(false) 
+const otpCode = ref('')         
 
 const loginForm = ref({
   userId: '',
@@ -91,18 +113,31 @@ const loginForm = ref({
 })
 
 const rules = {
-  required: (value: string) => !!value || '필수 입력 항목입니다'
+  required: (value: string) => !!value || '필수 입력 항목입니다',
+  otpLength: (value: string) => value.length === 6 || '6자리 코드를 입력하세요'  
 }
 
 const handleLogin = async () => {
   if (!formRef.value) return
-
   const { valid: isValid } = await formRef.value.validate()
   if (!isValid) return
 
-  const success = await authStore.login(loginForm.value)
+  // 2FA 필요 시 OTP 코드 포함
+  const loginData = {
+    ...loginForm.value,
+    otpCode: requires2FA.value ? otpCode.value : undefined
+  }
 
-  if (success) {
+  const result = await authStore.login(loginData)
+  
+  // 2FA 필요 응답 처리
+  if (result === '2FA_REQUIRED') {
+    requires2FA.value = true
+    authStore.error = null  // 에러 메시지 숨김
+    return
+  }
+  
+  if (result === true) {
     router.push('/dashboard')
   }
 }

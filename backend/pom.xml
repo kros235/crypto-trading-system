@@ -170,6 +170,13 @@
             <version>2.3.0</version>
         </dependency>
 
+        <!-- Google Authenticator TOTP 라이브러리 -->
+        <dependency>
+            <groupId>dev.samstevens.totp</groupId>
+            <artifactId>totp</artifactId>
+            <version>1.7.1</version>
+        </dependency>
+
     </dependencies>
 
     <build>

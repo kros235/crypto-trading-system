@@ -4,6 +4,7 @@ import com.cryptotrading.dto.UserInfoDTO;
 import com.cryptotrading.entity.User;
 import com.cryptotrading.repository.UserRepository;
 import com.cryptotrading.util.EncryptionUtil;
+import com.cryptotrading.service.TotpService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,6 +23,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final EncryptionUtil encryptionUtil;
+    private final TotpService totpService;
 
     @Transactional(readOnly = true)
     public UserInfoDTO getUserInfo(String userId) {
@@ -39,7 +41,8 @@ public class UserService {
                 .isActive(user.getIsActive())
                 .hasApiKey(user.getApiKeyEncrypted() != null)
                 .allowedIps(user.getAllowedIps())
-                .ipWhitelistEnabled(user.getAllowedIps() != null && !user.getAllowedIps().isEmpty())               
+                .ipWhitelistEnabled(user.getAllowedIps() != null && !user.getAllowedIps().isEmpty())    
+                .twoFactorEnabled(user.getTwoFactorEnabled() != null && user.getTwoFactorEnabled())           
                 .build();
     }
 
@@ -251,4 +254,40 @@ public class UserService {
         String ipv4Pattern = "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$";
         return ip.matches(ipv4Pattern);
     }
+
+    // 2FA 관련 메서드
+
+    /**
+     * 2FA 활성화 상태 확인
+     */
+    @Transactional(readOnly = true)
+    public boolean is2FAEnabled(String userId) {
+        User user = userRepository.findById(userId).orElse(null);
+        return user != null && Boolean.TRUE.equals(user.getTwoFactorEnabled());
+    }
+
+    /**
+     * 2FA 설정 시작 - 비밀키 생성 및 QR 코드 URL 반환
+     */
+    @Transactional
+    public TotpService.TwoFactorSetupResult initiate2FASetup(String userId) {
+        return totpService.setup2FA(userId);
+    }
+
+    /**
+     * 2FA 설정 확인 및 활성화
+     */
+    @Transactional
+    public void confirm2FASetup(String userId, String code) {
+        totpService.enable2FA(userId, code);
+    }
+
+    /**
+     * 2FA 비활성화
+     */
+    @Transactional
+    public void disable2FA(String userId, String code) {
+        totpService.disable2FA(userId, code);
+    }
+
 }

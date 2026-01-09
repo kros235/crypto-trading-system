@@ -2,6 +2,7 @@ package com.cryptotrading.controller;
 
 import com.cryptotrading.dto.UserInfoDTO;
 import com.cryptotrading.service.UserService;
+import com.cryptotrading.service.TotpService; 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -196,6 +197,112 @@ public class UserController {
         Map<String, String> response = new HashMap<>();
         response.put("ip", clientIp);
         return ResponseEntity.ok(response);
+    }
+ 
+    // ========================
+    // 2FA (Two-Factor Authentication) API
+    // ========================
+
+    /**
+     * 2FA 상태 조회
+     */
+    @GetMapping("/2fa/status")
+    public ResponseEntity<?> get2FAStatus(Authentication authentication) {
+        try {
+            String userId = authentication.getName();
+            boolean enabled = userService.is2FAEnabled(userId);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("enabled", enabled);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            log.error("2FA 상태 조회 실패: {}", e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    /**
+     * 2FA 설정 시작 - QR 코드 및 비밀키 생성
+     */
+    @PostMapping("/2fa/setup")
+    public ResponseEntity<?> setup2FA(Authentication authentication) {
+        try {
+            String userId = authentication.getName();
+            TotpService.TwoFactorSetupResult result = userService.initiate2FASetup(userId);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("secret", result.secret());
+            response.put("qrCodeUrl", result.qrCodeUrl());
+            response.put("message", "QR 코드를 스캔하고 인증 코드를 입력하세요");
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            log.error("2FA 설정 시작 실패: {}", e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    /**
+     * 2FA 설정 확인 및 활성화
+     */
+    @PostMapping("/2fa/confirm")
+    public ResponseEntity<?> confirm2FA(
+            @RequestBody Map<String, String> request,
+            Authentication authentication
+    ) {
+        try {
+            String userId = authentication.getName();
+            String code = request.get("code");
+            
+            if (code == null || code.length() != 6) {
+                throw new RuntimeException("6자리 인증 코드를 입력해주세요");
+            }
+            
+            userService.confirm2FASetup(userId, code);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("enabled", true);
+            response.put("message", "2FA가 활성화되었습니다");
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            log.error("2FA 활성화 실패: {}", e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    /**
+     * 2FA 비활성화
+     */
+    @PostMapping("/2fa/disable")
+    public ResponseEntity<?> disable2FA(
+            @RequestBody Map<String, String> request,
+            Authentication authentication
+    ) {
+        try {
+            String userId = authentication.getName();
+            String code = request.get("code");
+            
+            if (code == null || code.length() != 6) {
+                throw new RuntimeException("6자리 인증 코드를 입력해주세요");
+            }
+            
+            userService.disable2FA(userId, code);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("enabled", false);
+            response.put("message", "2FA가 비활성화되었습니다");
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            log.error("2FA 비활성화 실패: {}", e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
     }
 
     /**

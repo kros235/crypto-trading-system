@@ -12,6 +12,7 @@ export interface User {
   // IP 화이트리스트 필드 추가
   allowedIps?: string[]
   ipWhitelistEnabled?: boolean
+  twoFactorEnabled?: boolean		 // 2FA 필드
 }
 
 // 로그인 요청 타입
@@ -188,4 +189,11 @@ export interface PageResponse<T> {
   totalPages: number
   size: number
   number: number
+}
+
+// 로그인 요청 타입 수정
+export interface LoginRequest {
+  userId: string
+  password: string
+  otpCode?: string  // 2FA 코드 (선택)
 }

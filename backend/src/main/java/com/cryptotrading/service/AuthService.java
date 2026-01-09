@@ -25,6 +25,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final LoginAttemptService loginAttemptService;
     private final UserService userService;  // IP 검증용 추가
+    private final TotpService totpService;  // 2FA 검증용
 
     @Transactional
     public AuthResponse signup(SignupRequest request) {
@@ -99,6 +100,16 @@ public class AuthService {
             int remaining = loginAttemptService.getRemainingAttempts(userId);
             log.warn("비밀번호 불일치: {} (남은 시도: {}회)", userId, remaining);
             throw new RuntimeException("비밀번호가 일치하지 않습니다. 남은 시도: " + remaining + "회");
+        }
+
+        // 2FA 검증
+        if (user.getTwoFactorEnabled() != null && user.getTwoFactorEnabled()) {
+            if (request.getOtpCode() == null || request.getOtpCode().isEmpty()) {
+                throw new RuntimeException("2FA_REQUIRED");  // 프론트엔드에서 처리할 특수 코드
+            }
+            if (!totpService.verify2FAForLogin(userId, request.getOtpCode())) {
+                throw new RuntimeException("OTP 코드가 올바르지 않습니다");
+            }
         }
 
         // 로그인 성공 시 시도 횟수 초기화

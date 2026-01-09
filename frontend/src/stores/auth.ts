@@ -40,9 +40,13 @@ export const useAuthStore = defineStore('auth', () => {
       
       // 에러 메시지 추출 (다양한 응답 구조 지원)
       const errorData = err.response?.data
-      error.value = errorData?.error?.message  // ApiResponse 구조
-        || errorData?.message                   // 일반 메시지
-        || errorData?.error                     // 문자열 에러
+      const errorObj = errorData?.error  // { code: "A005", message: "...", detail: "..." }
+
+      // detail이 있으면 detail 표시, 없으면 message 표시
+      error.value = errorObj?.detail     // "허용되지 않은 IP입니다. 등록된 IP: xxx"
+        || errorObj?.message             // "아이디 또는 비밀번호가 일치하지 않습니다."
+        || errorData?.message
+        || errorData?.error
         || '로그인에 실패했습니다'
 
       return false

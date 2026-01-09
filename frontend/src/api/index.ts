@@ -60,6 +60,15 @@ api.interceptors.response.use(
         originalError: error
       })
     }
+
+    // 로그인/회원가입 API는 원본 에러 유지
+    const isLoginRequest = error.config?.url?.includes('/auth/login')
+    const isSignupRequest = error.config?.url?.includes('/auth/signup')
+    
+    if (isLoginRequest || isSignupRequest) {
+      // 로그인/회원가입 API는 원본 response 구조 유지 (auth.ts에서 처리)
+      return Promise.reject(error)
+    }
     
     // 401 Unauthorized - 토큰 만료/무효
     if (status === 401) {

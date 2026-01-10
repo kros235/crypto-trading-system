@@ -2606,12 +2606,12 @@ ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE COMMENT '2FA 활성화 여�
 | Phase 1 (핵심 기능) | Day 1~9 | ✅ 완료 |
 | Phase 2 (고도화) | Day 10~16 | ✅ 완료 |
 | Phase 3 (안정화) | Day 17~21 | ✅ 완료 |
-| Phase 4 (운영 준비) | Day 22~30 | 🟢 진행 중 |
-| v1.0 릴리즈 | Day 31 | 🎯 목표 |
+| Phase 4 (운영 준비) | Day 22~31 | 🟢 진행 중 |
+| v1.0 릴리즈 | Day 32 | 🎯 목표 |
 
 ---
 
-## 🎯 다음 단계 (Day 21~28)
+## 🎯 다음 단계 (Day 21~32)
 
 ### 📅 상세 일정
 
@@ -2754,10 +2754,21 @@ ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE COMMENT '2FA 활성화 여�
 
 ---
 
-#### Day 31: 수익 분석 + 보안 점검 + 운영 문서 + v1.0 릴리즈
+#### Day 31: 기간별/코인별 수익 분석 UI 구현
 | 시간 | 작업 | 상세 | 상태 |
 |------|------|------|------|
-| 오전 | 기간별/코인별 수익 분석 | 보유자산 페이지 내 수익 분석 UI | |
+| 오전 | **기간별/코인별 수익 분석** | **HoldingsView 탭 확장 (3탭 구조)** | |
+| 오전 | **├ Backend API** | **기간별 수익 집계 엔드포인트 (3개)** | |
+| 오전 | **├ Frontend 탭1** | **보유 현황 (기존 유지)** | |
+| 오전 | **├ Frontend 탭2** | **기간별 수익 분석 (오늘/이번달/올해/1년/누적)** | |
+| 오전 | **└ Frontend 탭3** | **코인별 수익 분석 (테이블 + 상세 다이얼로그)** | |
+| 오후 | **Dashboard 연동** | **수익 현황에 오늘 수익 추가 + 상세 분석 버튼** | |
+
+---
+
+#### Day 32: 최종 보안 점검 + 운영 문서 + v1.0 릴리즈
+| 시간 | 작업 | 상세 | 상태 |
+|------|------|------|------|
 | 오전 | 최종 보안 점검 | OWASP Top 10 체크리스트 | |
 | 오전 | 전체 시스템 테스트 | 통합 테스트, 시나리오 테스트 | |
 | 오후 | 운영 문서 작성 | 아키텍처 다이어그램, 배포 절차서 | |
@@ -2875,6 +2886,122 @@ UPDATE users SET allowed_ips = '["192.168.1.100", "10.0.0.50"]' WHERE user_id = 
 - `ProfileView.vue` - 프로필 설정 페이지 내 IP 화이트리스트 카드
 - 현재 IP 표시, IP 입력 필드, 추가/삭제 버튼, 비활성화 버튼
 ```
+
+### 기간별/코인별 수익 분석 상세 (Day 31 신규)
+
+#### 개요
+보유자산 페이지(HoldingsView)를 3탭 구조로 확장하여 기간별/코인별 수익 분석 기능 제공
+
+#### 구현 방향
+- **옵션 A 채택**: HoldingsView 확장 + Dashboard 경량 연동
+- **선정 이유**:
+  1. 프로젝트 지침과 일치 ("보유자산 페이지 내 수익 분석 UI")
+  2. 사용자 동선 자연스러움 (내 자산 → 수익 분석)
+  3. 기존 DashboardView와 역할 분리 (Dashboard=요약, Holdings=상세)
+  4. 개발 효율성 (라우팅/메뉴 변경 불필요)
+
+#### HoldingsView 확장 구조
+```
+보유 자산 페이지 (3탭 구조)
+├── [탭 1] 보유 현황 (기존)
+│   ├── 통계 카드 4개 (총 투자금액, 현재 평가액, 평가 손익, 수익률)
+│   └── 보유 자산 테이블 (코인별 수량, 매수가, 현재가, 평가손익)
+│
+├── [탭 2] 기간별 수익 분석 (신규)
+│   ├── 수익 요약 카드 3개
+│   │   ├── 오늘 수익 (금액, %)
+│   │   ├── 이번달 수익 (금액, %)
+│   │   └── 올해 수익 (금액, %)
+│   ├── 기간 선택 탭: 오늘 | 이번달 | 올해 | 1년 | 누적
+│   │   ├── 선택 기간 총 수익금액
+│   │   └── 선택 기간 수익률 (%)
+│   └── 기간별 거래 통계
+│       ├── 매수 건수 / 매도 건수
+│       └── 총 거래량 (금액)
+│
+└── [탭 3] 코인별 수익 분석 (신규)
+    ├── 코인별 수익 테이블
+    │   ├── 코인 심볼
+    │   ├── 거래 횟수
+    │   ├── 총 투자금액
+    │   ├── 실현 손익
+    │   └── 수익률 (%)
+    └── 코인별 상세 분석 버튼
+        └── 다이얼로그: 해당 코인 거래 이력, 평균 매수가, 평균 수익률
+```
+
+#### Dashboard 연동 (경량)
+```
+대시보드 수익 현황 섹션 강화
+├── [기존] 평가 수익 (미확정)
+├── [기존] 실현 수익 (확정)
+├── [기존] 누적 총 수익
+├── [추가] 오늘 실현 수익 (간략히)
+└── [추가] "상세 분석" 버튼 → /holdings?tab=period (탭2로 이동)
+```
+
+#### Backend API 엔드포인트 (신규)
+| Method | Endpoint | 인증 | 설명 |
+|--------|----------|------|------|
+| GET | /api/transactions/profit/period | ✅ | 기간별 수익 집계 (today/month/year/1y/all) |
+| GET | /api/transactions/profit/by-coin | ✅ | 코인별 수익 집계 |
+| GET | /api/transactions/profit/coin/{symbol}/detail | ✅ | 특정 코인 상세 분석 |
+
+#### 기간별 수익 API 응답 예시
+```json
+{
+  "period": "month",
+  "startDate": "2026-01-01",
+  "endDate": "2026-01-11",
+  "realizedProfit": 125000,
+  "unrealizedProfit": 35000,
+  "totalProfit": 160000,
+  "profitRate": 3.2,
+  "buyCount": 15,
+  "sellCount": 8,
+  "totalVolume": 5000000
+}
+```
+
+#### 코인별 수익 API 응답 예시
+```json
+[
+  {
+    "coinSymbol": "KRW-BTC",
+    "coinName": "비트코인",
+    "tradeCount": 12,
+    "totalInvestment": 3000000,
+    "realizedProfit": 85000,
+    "profitRate": 2.83
+  },
+  {
+    "coinSymbol": "KRW-ETH",
+    "coinName": "이더리움",
+    "tradeCount": 8,
+    "totalInvestment": 1500000,
+    "realizedProfit": 40000,
+    "profitRate": 2.67
+  }
+]
+```
+
+#### 프론트엔드 수정 파일
+| 파일 | 변경 내용 |
+|------|----------|
+| `HoldingsView.vue` | v-tabs 3탭 구조로 전면 개편, 기간별/코인별 분석 UI 추가 |
+| `DashboardView.vue` | 수익 현황 섹션에 오늘 수익 + 상세 분석 버튼 추가 |
+| `api/index.ts` | 수익 분석 API 함수 3개 추가 |
+| `types/index.ts` | ProfitPeriod, CoinProfit 타입 추가 |
+
+#### 기간 계산 기준 (KST)
+| 기간 | 시작일 | 종료일 |
+|------|--------|--------|
+| 오늘 | 오늘 00:00:00 | 현재 시간 |
+| 이번달 | 이번달 1일 00:00:00 | 현재 시간 |
+| 올해 | 올해 1월 1일 00:00:00 | 현재 시간 |
+| 1년 | 1년 전 오늘 | 현재 시간 |
+| 누적 | 첫 거래일 | 현재 시간 |
+
 ---
 
 
@@ -2892,7 +3019,8 @@ UPDATE users SET allowed_ips = '["192.168.1.100", "10.0.0.50"]' WHERE user_id = 
 | 28 | ✅ 대시보드 재구성, 코인 목록 페이지, bulk API 수정, MATIC 비활성화, 시간대 KST 통일, AdminDashboard 오류 수정, 시간 표시 함수 개선 | ✅ 완료 |
 | 29 | ✅ 급락장 보호 기능 3종, HTTPS 적용 (DuckDNS + Let's Encrypt), CORS 수정, SSL 자동 갱신 | **✅ 완료** |
 | 30 | ✅ 릴리즈 노트 게시판 (CRUD + 검색 + 페이징), IP 화이트리스트, 2FA 인증, 대시보드 연동, 뉴스 페이지 개선 | **🔄 진행중** |
-| 31 | 수익 분석 UI, 보안 점검, 시스템 테스트, 운영 문서, v1.0 릴리즈 | 🔴 필수 |
+| 31 | HoldingsView 3탭 확장 (수익 분석), Dashboard 연동 | 🔴 필수 |
+| 32 | 최종 보안 점검, 전체 시스템 테스트, 운영 문서 작성, 장애 대응 매뉴얼, v1.0 릴리즈 | 🔴 필수 |
 
 ---
 
@@ -3166,7 +3294,7 @@ DELETE FROM coin_news_analysis WHERE created_at < DATE_SUB(NOW(), INTERVAL 7 DAY
 | WebSocket 실시간 모니터링 | 실시간 가격/거래 업데이트 | 🟢 선택 | 1~2일 |
 | 2FA 인증 | Google Authenticator 연동 | 🟢 선택 | 0.5일 |
 | IP 화이트리스트 | 접속 IP 제한 기능 | 🟢 선택 | 2시간 |
-| 기간별/코인별 수익 분석 | 보유자산 페이지 내 수익 통계 (오늘/이번달/올해/누적) | 🟢 선택 | 0.5일 |
+| 기간별/코인별 수익 분석 | HoldingsView 3탭 확장 (보유현황/기간별/코인별) | 🔴 필수 | Day 31 예정 |
 
 ---
 
@@ -3444,7 +3572,7 @@ crypto-trading-system/
 │   │   │   ├── ProfileView.vue                       # ⭐ Day 30: IP 화이트리스트 카드 추가
 │   │   │   ├── TradingSettingsView.vue
 │   │   │   ├── TransactionHistoryView.vue
-│   │   │   ├── HoldingsView.vue
+│   │   │   ├── HoldingsView.vue                  # ⭐ Day 31: 3탭 구조 (보유현황/기간별/코인별 수익)
 │   │   │   ├── BotMonitorView.vue
 │   │   │   ├── DailyReportView.vue
 │   │   │   ├── BacktestView.vue

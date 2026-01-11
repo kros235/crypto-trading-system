@@ -2845,7 +2845,7 @@ ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE COMMENT '2FA 활성화 여�
 | 오후 | IP 화이트리스트 | 접속 IP 제한 기능 (최대 3개) | ✅ 완료 |
 | 오후 | Backend API 구현 | User 엔티티 확장, 5개 API 엔드포인트 | ✅ 완료 |
 | 오후 | Frontend UI 구현 | ProfileView.vue IP 화이트리스트 카드 | ✅ 완료 |
-| - | 2FA 인증 (Optional) | Google Authenticator 연동 | ⏳ Day 31 |
+| 오후 | 2FA 인증 | Google Authenticator 연동 | ✅ 완료 |
 
 ---
 
@@ -3165,7 +3165,7 @@ UPDATE users SET allowed_ips = '["192.168.1.100", "10.0.0.50"]' WHERE user_id = 
 | 27 | ✅ Oracle Cloud ARM64 배포, DB 스키마 교차검증, docker-compose 동기화, 이슈 해결 | ✅ 완료 |
 | 28 | ✅ 대시보드 재구성, 코인 목록 페이지, bulk API 수정, MATIC 비활성화, 시간대 KST 통일, AdminDashboard 오류 수정, 시간 표시 함수 개선 | ✅ 완료 |
 | 29 | ✅ 급락장 보호 기능 3종, HTTPS 적용 (DuckDNS + Let's Encrypt), CORS 수정, SSL 자동 갱신 | **✅ 완료** |
-| 30 | ✅ 릴리즈 노트 게시판 (CRUD + 검색 + 페이징), IP 화이트리스트, 2FA 인증, 대시보드 연동, 뉴스 페이지 개선 | **🔄 진행중** |
+| 30 | ✅ 릴리즈 노트 게시판 (CRUD + 검색 + 페이징), IP 화이트리스트, 2FA 인증, 대시보드 연동, 뉴스 페이지 개선 | ✅ 완료 |
 | 31 | ✅ HoldingsView 2탭+보유현황 (수익 분석), 자산 변동 차트, UI 스타일 개선, UI 통일성 개선 (6개 페이지) | ✅ 완료 |
 | 32 | 최종 보안 점검, 전체 시스템 테스트, 운영 문서 작성, 장애 대응 매뉴얼, v1.0 릴리즈 | 🔴 필수 |
 
@@ -3437,11 +3437,11 @@ DELETE FROM coin_news_analysis WHERE created_at < DATE_SUB(NOW(), INTERVAL 7 DAY
 
 | 작업 | 설명 | 우선순위 | 예상 시간 |
 |------|------|----------|----------|
-| AI 뉴스 분석 | Google Gemini API (무료), 뉴스 수집, 지표 연동 | 🟢 선택 | 3일 |
-| WebSocket 실시간 모니터링 | 실시간 가격/거래 업데이트 | 🟢 선택 | 1~2일 |
-| 2FA 인증 | Google Authenticator 연동 | 🟢 선택 | 0.5일 |
-| IP 화이트리스트 | 접속 IP 제한 기능 | 🟢 선택 | 2시간 |
-| 기간별/코인별 수익 분석 | HoldingsView 3탭 확장 (보유현황/기간별/코인별) | 🔴 필수 | Day 31 예정 |
+| AI 뉴스 분석 | Groq API (무료), 뉴스 수집, 지표 연동 | 🟢 선택 | ✅ Day 24-26 완료 |
+| WebSocket 실시간 모니터링 | 실시간 가격/거래 업데이트 | 🟢 선택 | 미구현 |
+| 2FA 인증 | Google Authenticator 연동 | 🟢 선택 | ✅ Day 30 완료 |
+| IP 화이트리스트 | 접속 IP 제한 기능 | 🟢 선택 | ✅ Day 30 완료 |
+| 기간별/코인별 수익 분석 | HoldingsView 2탭+보유현황 구조 | 🔴 필수 | ✅ Day 31 완료 |
 
 ---
 

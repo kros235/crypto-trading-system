@@ -275,14 +275,14 @@ export const notificationApi = {
   // 알림 상태
   getStatus: () => api.get('/notifications/status'),
 
-  // ★★★ 추가: Discord DM API ★★★
+  // Discord DM API
   // Discord Bot 상태 조회
   getDiscordBotStatus: () => api.get('/notifications/discord/bot-status'),
   
   // Discord DM 테스트 발송
   sendTestDiscordDM: () => api.post('/notifications/discord/test-dm'),
 
-  // ★★★ 추가: Discord DM 알림 테스트 API ★★★
+  // Discord DM 알림 테스트 API
   testDailyReportDM: () => api.post('/notifications/discord/test-daily-report'),
   testBuyDM: () => api.post('/notifications/discord/test-buy'),
   testSellDM: () => api.post('/notifications/discord/test-sell'),
@@ -357,6 +357,18 @@ export const twoFactorApi = {
   
   // 2FA 필요 여부 확인 (로그인 전)
   checkRequired: (userId: string) => api.get(`/2fa/required/${userId}`)
+}
+
+// 수익 분석 API
+export const profitApi = {
+  // 기간별 수익 요약 조회
+  getSummary: () => api.get('/profit/summary'),
+  
+  // 특정 기간 수익 상세 조회
+  getByPeriod: (period: string) => api.get(`/profit/by-period?period=${period}`),
+  
+  // 코인별 수익 분석 조회
+  getByCoin: () => api.get('/profit/by-coin'),
 }
 
 export default api

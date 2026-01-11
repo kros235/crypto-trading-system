@@ -3,7 +3,7 @@
     <the-header @toggle-drawer="sidebarRef.drawer = !sidebarRef.drawer" />
     <the-sidebar ref="sidebarRef" />
 
-    <v-main class="bg-grey-lighten-4">
+    <v-main class="bg-grey-lighten-3">
       <v-container fluid>
         <v-row class="mb-4">
           <v-col>

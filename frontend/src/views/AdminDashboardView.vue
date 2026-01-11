@@ -2,7 +2,7 @@
   <v-app>
     <the-header @toggle-drawer="sidebarRef.drawer = !sidebarRef.drawer" />
     <the-sidebar ref="sidebarRef" />
-    <v-main>
+    <v-main class="bg-grey-lighten-3">
       <v-container fluid>
     <!-- Page Title -->
     <v-row class="mb-4">

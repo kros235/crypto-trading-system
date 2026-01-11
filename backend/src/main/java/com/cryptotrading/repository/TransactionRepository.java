@@ -131,7 +131,25 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
                                    @Param("startOfDay") LocalDateTime startOfDay,
                                    @Param("endOfDay") LocalDateTime endOfDay);
 
-    // 전체 누적 손익 합계 ⭐⭐⭐
+    // 전체 누적 손익 합계
     @Query("SELECT COALESCE(SUM(t.profitLoss), 0) FROM Transaction t WHERE t.userId = :userId AND t.status = 'SOLD'")
     BigDecimal sumTotalProfitLossByUser(@Param("userId") String userId);
+
+    // 기간별 수익 분석용 쿼리
+    
+    // 특정 기간 내 매도된 모든 거래 조회 (soldAt 기준)
+    @Query("SELECT t FROM Transaction t WHERE t.userId = :userId " +
+           "AND t.status = 'SOLD' " +
+           "AND t.soldAt >= :start AND t.soldAt <= :end " +
+           "ORDER BY t.soldAt DESC")
+    List<Transaction> findSoldTransactionsByPeriod(@Param("userId") String userId,
+                                                    @Param("start") LocalDateTime start,
+                                                    @Param("end") LocalDateTime end);
+    
+    // 코인별 매도 거래 목록 조회
+    @Query("SELECT t FROM Transaction t WHERE t.userId = :userId " +
+           "AND t.coinSymbol = :coinSymbol AND t.status = 'SOLD' " +
+           "ORDER BY t.soldAt DESC")
+    List<Transaction> findSoldTransactionsByCoin(@Param("userId") String userId,
+                                                  @Param("coinSymbol") String coinSymbol);
 }

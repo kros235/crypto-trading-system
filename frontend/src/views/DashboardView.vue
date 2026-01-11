@@ -425,10 +425,33 @@
                 <v-btn icon size="x-small" variant="text" color="white" @click.stop="openHelp('profitSummary')" class="ml-1">
                   <v-icon size="14">mdi-help-circle-outline</v-icon>
                 </v-btn>
+                <!-- ⭐ Day 31 추가: 상세 분석 버튼 -->
+                <v-spacer />
+                <v-btn 
+                  size="small" 
+                  variant="flat" 
+                  color="amber" 
+                  class="text-grey-darken-4"
+                  @click="$router.push('/holdings?tab=period')"
+                >
+                  상세 분석 →
+                </v-btn>
               </v-card-title>
               <v-card-text class="pa-3">
                 <v-row dense>
-                  <v-col cols="12" md="4">
+                  <!-- ⭐ Day 31 추가: 오늘 수익 카드 -->
+                  <v-col cols="12" md="3">
+                    <v-card variant="outlined" class="pa-3 text-center" height="110">
+                      <div class="text-caption text-grey-darken-2">🌅 오늘 수익</div>
+                      <div :class="todayProfit >= 0 ? 'text-teal-darken-2' : 'text-red-darken-2'" class="text-h5 font-weight-bold mt-2">
+                        {{ todayProfit >= 0 ? '+' : '' }}{{ formatCurrency(todayProfit) }}
+                      </div>
+                      <div class="text-caption mt-1" :class="todayProfitPct >= 0 ? 'text-teal-darken-1' : 'text-red-darken-1'">
+                        ({{ todayProfitPct >= 0 ? '+' : '' }}{{ todayProfitPct.toFixed(2) }}%)
+                      </div>
+                    </v-card>
+                  </v-col>
+                  <v-col cols="12" md="3">
                     <v-card variant="outlined" class="pa-3 text-center" height="110">
                       <div class="text-caption text-grey-darken-2">📈 평가 수익 (미실현)</div>
                       <div :class="profitSummary.unrealizedProfit >= 0 ? 'text-teal-darken-2' : 'text-red-darken-2'" class="text-h5 font-weight-bold mt-2">
@@ -439,7 +462,7 @@
                       </div>
                     </v-card>
                   </v-col>
-                  <v-col cols="12" md="4">
+                  <v-col cols="12" md="3">
                     <v-card variant="outlined" class="pa-3 text-center" height="110">
                       <div class="text-caption text-grey-darken-2">✅ 실현 수익 (확정)</div>
                       <div :class="profitSummary.realizedProfit >= 0 ? 'text-teal-darken-2' : 'text-red-darken-2'" class="text-h5 font-weight-bold mt-2">
@@ -448,7 +471,7 @@
                       <div class="text-caption mt-1 text-grey-darken-1">&nbsp;</div>
                     </v-card>
                   </v-col>
-                  <v-col cols="12" md="4">
+                  <v-col cols="12" md="3">
                     <v-card variant="outlined" class="pa-3 text-center total-profit-card" height="110">
                       <div class="text-caption text-teal-darken-2 font-weight-medium">💰 누적 총 수익</div>
                       <div :class="profitSummary.totalProfit >= 0 ? 'text-teal-darken-2' : 'text-red-darken-2'" class="text-h5 font-weight-bold mt-2">
@@ -1195,6 +1218,8 @@ const dailyLimit = ref({ totalLimit: 0, usedAmount: 0, remainingAmount: 0, usedP
 const holdingsPerCoin = ref<Record<string, number>>({})
 const coinIndicators = ref<any[]>([])
 const profitSummary = ref({ unrealizedProfit: 0, unrealizedProfitPct: 0, realizedProfit: 0, totalProfit: 0 })
+const todayProfit = ref(0)
+const todayProfitPct = ref(0)
 const systemAlerts = ref<any[]>([])
 const chartPeriod = ref('month')
 const assetHistory = ref<any[]>([])
@@ -1228,7 +1253,7 @@ const areaPath = computed(() => {
 })
 const hoveredData = computed(() => hoveredIndex.value >= 0 ? assetHistory.value[hoveredIndex.value] : null)
 
-// ★★★ [추가] 백테스팅 스타일 차트용 computed ★★★
+// 백테스팅 스타일 차트용 computed 
 const chartHeight = 280
 const maxBalanceChart = computed(() => assetHistory.value.length ? Math.max(...assetHistory.value.map(d => d.balance), initialAsset.value) : initialAsset.value)
 const minBalanceChart = computed(() => assetHistory.value.length ? Math.min(...assetHistory.value.map(d => d.balance), initialAsset.value) : initialAsset.value)
@@ -1269,7 +1294,7 @@ const chartEndDate = computed(() => {
   return assetHistory.value[assetHistory.value.length - 1]?.date || ''
 })
 
-// ★★★ 추가: 기간 선택에 따른 시작일 계산 ★★★
+// 기간 선택에 따른 시작일 계산
 const chartPeriodStartDate = computed(() => {
   const today = new Date()
   let startDate = new Date()
@@ -1312,7 +1337,7 @@ const firstTradeDate = computed(() => {
   return sorted[0]?.createdAt ? new Date(sorted[0].createdAt) : null
 })
 
-// ★★★ 추가: 선택한 기간이 첫 투자일 이전인지 확인 ★★★
+// 선택한 기간이 첫 투자일 이전인지 확인
 const isBeforeFirstTrade = computed(() => {
   if (!firstTradeDate.value) return false
   
@@ -1320,7 +1345,7 @@ const isBeforeFirstTrade = computed(() => {
   return periodStart < firstTradeDate.value
 })
 
-// ★★★ 수정: 표시할 시작일 (투자 시작일 기준) ★★★
+// 표시할 시작일 (투자 시작일 기준)
 const displayChartStartDate = computed(() => {
   if (assetHistory.value.length > 0) {
     return chartStartDate.value
@@ -1340,7 +1365,7 @@ const displayChartStartDate = computed(() => {
   return formatTodayDate()
 })
 
-// ★★★ 수정: 기간 내 모든 날짜 데이터 생성 (투자 시작일 이후만) ★★★
+// 기간 내 모든 날짜 데이터 생성 (투자 시작일 이후만)
 const emptyPeriodDates = computed(() => {
   // 오늘 날짜를 명시적으로 계산 (시간 제거)
   const today = new Date()
@@ -1380,7 +1405,7 @@ const emptyPeriodDates = computed(() => {
   return dates
 })
 
-// ★★★ 수정: 빈 기간 차트 포인트 계산 (우측 여백 적용) ★★★
+// 빈 기간 차트 포인트 계산 (우측 여백 적용)
 const emptyChartPoints = computed(() => {
   if (!emptyPeriodDates.value.length) return []
   const total = emptyPeriodDates.value.length
@@ -1394,17 +1419,29 @@ const emptyChartPoints = computed(() => {
   }))
 })
 
-// ★★★ 추가: 빈 차트 호버 데이터 ★★★
+//  빈 차트 호버 데이터
 const emptyHoveredData = computed(() => {
   if (hoveredIndex.value < 0 || !emptyPeriodDates.value.length) return null
   return emptyPeriodDates.value[hoveredIndex.value] || null
 })
 
 
-// ★★★ 추가: 오늘 날짜 포맷 함수 ★★★
+// 오늘 날짜 포맷 함수
 const formatTodayDate = () => {
   const today = new Date()
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+}
+
+// ⭐ Day 31 추가: 오늘 수익 조회
+const fetchTodayProfit = async () => {
+  try {
+    const response = await api.get('/profit/summary')
+    const data = response.data?.data || response.data
+    todayProfit.value = data?.todayProfit || 0
+    todayProfitPct.value = data?.todayProfitPct || 0
+  } catch (error) {
+    console.error('오늘 수익 조회 실패:', error)
+  }
 }
 
 
@@ -1414,10 +1451,8 @@ const formatTodayDate = () => {
 
 
 
-
-
-// ★★★ [추가 시작] 백테스팅 스타일 차트용 상수 및 computed ★★★
-// ★★★ [추가] 백테스팅 스타일 차트용 상수 및 computed ★★★
+// 백테스팅 스타일 차트용 상수 및 computed
+// 백테스팅 스타일 차트용 상수 및 computed 
 const svgHeightBacktest = 350
 
 const maxBalanceBacktest = computed(() => {
@@ -1437,7 +1472,7 @@ const getYPositionBacktest = (balance: number) => {
   return svgPadding + ((max - balance) / range) * (svgHeightBacktest - svgPadding * 2)
 }
 
-// ★★★ 수정: 우측 여백 적용 ★★★
+// 우측 여백 적용
 const chartPointsBacktest = computed(() => {
   if (!assetHistory.value.length) return []
   const total = assetHistory.value.length
@@ -1493,7 +1528,7 @@ const formatCurrency = (value: number) => {
   if (value === undefined || value === null) return '₩0'
   return '₩' + value.toLocaleString('ko-KR', { maximumFractionDigits: 0 })
 }
-// ★★★ 신규: 간결한 가격 포맷 함수 ★★★
+// 간결한 가격 포맷 함수
 const formatCompactPrice = (value: number) => {
   if (value === undefined || value === null) return '-'
   if (value >= 100000000) return (value / 100000000).toFixed(2) + '억'
@@ -1517,7 +1552,7 @@ const formatDateShort = (dateStr: string) => {
   return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
-// ★★★ 수정: 마지막 로그인 포맷 함수 - 우상단 현재 시간과 동일한 방식 ★★★
+// 마지막 로그인 포맷 함수 - 우상단 현재 시간과 동일한 방식
 const formatLastLogin = (dateStr: string | null | undefined) => {
   if (!dateStr) return '-'
   
@@ -1544,7 +1579,7 @@ const formatLastLogin = (dateStr: string | null | undefined) => {
 }
 
 
-// ★★★ [수정] 봇 수행 시간 포맷 함수 - 우상단 현재 시간과 동일한 방식 ★★★
+// 봇 수행 시간 포맷 함수 - 우상단 현재 시간과 동일한 방식
 const formatBotTimeDisplay = (dateStr: string | null | undefined) => {
   if (!dateStr || dateStr === '-') return '-'
   
@@ -1574,7 +1609,7 @@ const formatBotTimeDisplay = (dateStr: string | null | undefined) => {
   }
 }
 
-// ★★★ [추가] 카운트다운 시작 함수 ★★★
+// 카운트다운 시작 함수
 const startCountdown = (seconds: number) => {
   countdownSeconds.value = seconds
   
@@ -1627,7 +1662,7 @@ const handleChartHover = (event: MouseEvent) => {
       const index = Math.floor(((svgX - svgPadding) / chartWidth) * emptyTotal)
       hoveredIndex.value = Math.max(0, Math.min(emptyTotal - 1, index))
       tooltipY.value = (svgHeightBacktest / 2) * (rect.height / svgHeightBacktest)
-      // ★★★ 추가: 점의 실제 X 좌표 계산 ★★★
+      // 점의 실제 X 좌표 계산
       if (emptyChartPoints.value[hoveredIndex.value]) {
         pointX.value = emptyChartPoints.value[hoveredIndex.value].x * (rect.width / svgWidth)
       }
@@ -1643,12 +1678,12 @@ const handleChartHover = (event: MouseEvent) => {
   if (chartPointsBacktest.value[hoveredIndex.value]) {
     const pointY = chartPointsBacktest.value[hoveredIndex.value].y
     tooltipY.value = pointY * (rect.height / svgHeightBacktest)
-    // ★★★ 추가: 점의 실제 X 좌표 계산 ★★★
+    // 점의 실제 X 좌표 계산
     pointX.value = chartPointsBacktest.value[hoveredIndex.value].x * (rect.width / svgWidth)
   }
 }
 
-// ★★★ 수정: 점의 실제 위치에 툴팁 표시 ★★★
+// 점의 실제 위치에 툴팁 표시
 const getTooltipPosition = () => {
   return pointX.value
 }
@@ -1722,7 +1757,7 @@ const fetchBotStatus = async () => {
       secondsUntilNext: r.data?.secondsUntilNextExecution || 0
     }
     
-    // ★★★ [추가] 카운트다운 시작 ★★★
+    // 카운트다운 시작
     const seconds = r.data?.secondsUntilNextExecution || 0
     if (seconds > 0) {
       startCountdown(seconds)
@@ -1747,7 +1782,7 @@ const fetchIndicators = async () => {
     const indicators = r.data || []
     const bt = tradingSettings.value.buyThresholdPct || -3
     
-    // ★★★ [추가] AI 가중치 조회 (사용자가 AI 분석 사용 시) ★★★
+    // AI 가중치 조회 (사용자가 AI 분석 사용 시)
     let aiWeights: Record<string, number> = {}
     if (tradingSettings.value.useAiAnalysis) {
       try {
@@ -1771,7 +1806,7 @@ const fetchIndicators = async () => {
       const dr = ma > 0 ? ((cp - ma) / ma) * 100 : 0
       const symbol = ind.market || ind.symbol
       
-      // ★★★ [추가] AI 가중치 적용 ★★★
+      // AI 가중치 적용
       const aiWeight = aiWeights[symbol] || 0
       const adjustedThreshold = bt + aiWeight  // 예: -6 + 0.3 = -5.7 (호재 시 완화)
       const aiAdjustedBuyPrice = ma * (1 + adjustedThreshold / 100)
@@ -1785,7 +1820,7 @@ const fetchIndicators = async () => {
         dropRate: dr,
         canBuy: dr <= adjustedThreshold,  // AI 가중치 적용된 기준으로 판단
         remainingDrop: adjustedThreshold - dr,
-        aiWeight: aiWeight  // ★★★ [추가] AI 가중치 저장 ★★★
+        aiWeight: aiWeight  // AI 가중치 저장
       }
     })
   } catch (e) {
@@ -1799,7 +1834,7 @@ const fetchIndicators = async () => {
 const fetchHoldings = async () => { try { const r = await transactionApi.getHoldings(); const h = r.data || []; const pc: Record<string, number> = {}; let up = 0, ti = 0; h.forEach((hh: any) => { const s = hh.coinSymbol?.replace('KRW-', '') || 'X'; pc[s] = (pc[s] || 0) + 1; up += hh.profitLoss || 0; ti += hh.totalAmount || 0 }); holdingsPerCoin.value = pc; profitSummary.value.unrealizedProfit = up; profitSummary.value.unrealizedProfitPct = ti > 0 ? (up / ti) * 100 : 0 } catch (e) { console.error(e) } }
 const fetchRecentTransactions = async () => {
   try {
-    // ★★★ [수정] 모든 거래 조회 - HOLDING + SOLD 모두 포함 ★★★
+    // 모든 거래 조회 - HOLDING + SOLD 모두 포함
     // 1. 전체 거래 조회 (최신순)
     const allRes = await transactionApi.getAll({ page: 0, size: 50, sort: 'createdAt,desc' })
     const allTransactions = allRes.data?.content || []
@@ -2100,6 +2135,7 @@ onMounted(async () => {
   generateSystemAlerts(); 
   startAutoRefresh() 
   fetchLatestReleaseNote()  
+  fetchTodayProfit()  
 })
 onUnmounted(() => { 
   stopAutoRefresh()

@@ -3,7 +3,7 @@
     <the-header @toggle-drawer="sidebarRef.drawer = !sidebarRef.drawer" />
     <the-sidebar ref="sidebarRef" />
 
-    <v-main>
+    <v-main class="bg-grey-lighten-3">
       <v-container fluid>
         <!-- 페이지 제목 -->
         <v-row class="mb-4">

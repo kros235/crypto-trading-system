@@ -3,7 +3,7 @@
     <the-header @toggle-drawer="sidebarRef.drawer = !sidebarRef.drawer" />
     <the-sidebar ref="sidebarRef" />
 
-    <v-main>
+    <v-main class="bg-grey-lighten-3">
       <v-container fluid>
         <v-row>
           <v-col cols="12">
@@ -11,7 +11,7 @@
           </v-col>
         </v-row>
 
-        <!-- ⭐ Day 30 개선: 검색 + 페이지당 건수 + 글 작성 버튼 -->
+        <!-- 검색 + 페이지당 건수 + 글 작성 버튼 -->
         <v-row class="mb-4" align="center">
           <v-col cols="12" md="4">
             <v-text-field

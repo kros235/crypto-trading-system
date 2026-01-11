@@ -3,7 +3,7 @@
     <the-header @toggle-drawer="sidebarRef.drawer = !sidebarRef.drawer" />
     <the-sidebar ref="sidebarRef" />
 
-    <v-main>
+    <v-main class="bg-grey-lighten-3">
       <v-container fluid>
         <v-row>
           <v-col cols="12">
@@ -11,56 +11,391 @@
           </v-col>
         </v-row>
 
+        <!-- ⭐ Day 31 개선: 상단 영역 - 기간별/코인별 수익 탭 -->
         <v-row>
-          <v-col cols="12" md="3">
-            <v-card>
-              <v-card-title>총 투자금액</v-card-title>
-              <v-card-text class="text-h5">
-                {{ formatCurrency(stats.totalHoldingAmount) }}
-              </v-card-text>
-            </v-card>
-          </v-col>
-          <v-col cols="12" md="3">
-            <v-card>
-              <v-card-title>현재 평가액</v-card-title>
-              <v-card-text class="text-h5">
-                {{ formatCurrency(stats.totalCurrentValue) }}
-              </v-card-text>
-            </v-card>
-          </v-col>
-          <v-col cols="12" md="3">
-            <v-card>
-              <v-card-title>평가 손익</v-card-title>
-              <v-card-text
-                class="text-h5"
-                :class="stats.totalProfitLoss >= 0 ? 'text-red' : 'text-blue'"
-              >
-                {{ formatCurrency(stats.totalProfitLoss) }}
-              </v-card-text>
-            </v-card>
-          </v-col>
-          <v-col cols="12" md="3">
-            <v-card>
-              <v-card-title>수익률</v-card-title>
-              <v-card-text
-                class="text-h5"
-                :class="stats.totalProfitLossPct >= 0 ? 'text-red' : 'text-blue'"
-              >
-                {{ stats.totalProfitLossPct.toFixed(2) }}%
-              </v-card-text>
+          <v-col cols="12">
+            <!-- ⭐ 수정: 탭을 카드 바깥으로 분리하여 빈 공간 제거 -->
+            <v-tabs 
+              v-model="profitTab" 
+              color="grey-darken-3" 
+              class="profit-tabs mb-0"
+              height="48"
+            >
+              <v-tab value="period" class="profit-tab text-body-1 font-weight-bold">
+                <v-icon start size="20">mdi-chart-timeline-variant</v-icon>
+                기간별 수익
+              </v-tab>
+              <v-tab value="coin" class="profit-tab text-body-1 font-weight-bold">
+                <v-icon start size="20">mdi-bitcoin</v-icon>
+                코인별 수익
+              </v-tab>
+            </v-tabs>
+
+            <v-card elevation="2" class="card-no-top-radius">
+              <v-window v-model="profitTab">
+                <!-- ========== 기간별 수익 탭 ========== -->
+                <v-window-item value="period">
+                  <!-- ⭐ 수정: 탭이 카드 바깥이므로 mt 제거 -->
+                  <v-card-title class="py-3 px-4 bg-indigo-darken-1 text-white d-flex align-center">
+                    <v-icon class="mr-2" size="20">mdi-chart-timeline-variant</v-icon>
+                    <span class="text-body-1 font-weight-bold">기간별 수익 분석</span>
+                    
+                    <v-spacer />
+                    
+                    <!-- 기간 선택 버튼 + 일자 선택 (우측 정렬, 1줄) -->
+                    <div class="d-flex align-center">
+                      <v-btn-toggle 
+                        v-model="selectedPeriod" 
+                        mandatory 
+                        density="compact"
+                        variant="outlined"
+                        divided
+                        class="period-toggle-header mr-3"
+                      >
+                        <v-btn value="today">오늘</v-btn>
+                        <v-btn value="month">이번달</v-btn>
+                        <v-btn value="year">올해</v-btn>
+                        <v-btn value="oneYear">1년</v-btn>
+                        <v-btn value="total">누적</v-btn>
+                      </v-btn-toggle>
+
+                      <input
+                        v-model="customStartDate"
+                        type="date"
+                        class="custom-date-input"
+                      />
+                      <span class="text-white mx-1">~</span>
+                      <input
+                        v-model="customEndDate"
+                        type="date"
+                        class="custom-date-input"
+                      />
+                      <v-btn 
+                        color="white" 
+                        variant="flat"
+                        class="ml-2 text-indigo-darken-2 custom-search-btn"
+                        @click="applyCustomPeriod"
+                        :loading="loadingProfit"
+                      >
+                        조회
+                      </v-btn>
+                    </div>
+                  </v-card-title>
+
+                  <v-card-text class="pa-4">
+
+                    <!-- 수익 요약 카드 (큰 카드 1개) -->
+                    <v-card variant="outlined" class="mb-4 profit-summary-card">
+                      <v-card-text class="pa-4">
+                        <v-row align="center">
+                          <v-col cols="12" md="4" class="text-center">
+                            <div class="text-caption text-grey-darken-1 mb-1">
+                              {{ getPeriodLabel(selectedPeriod) }} 수익
+                            </div>
+                            <div 
+                              class="text-h4 font-weight-bold"
+                              :class="currentPeriodProfit >= 0 ? 'text-teal-darken-2' : 'text-red-darken-2'"
+                            >
+                              {{ currentPeriodProfit >= 0 ? '+' : '' }}{{ formatCurrency(currentPeriodProfit) }}
+                            </div>
+                            <v-chip 
+                              :color="currentPeriodProfitPct >= 0 ? 'teal' : 'red'" 
+                              size="small" 
+                              variant="flat"
+                              class="mt-2"
+                            >
+                              {{ currentPeriodProfitPct >= 0 ? '+' : '' }}{{ currentPeriodProfitPct.toFixed(2) }}%
+                            </v-chip>
+                          </v-col>
+
+                          <v-divider vertical class="d-none d-md-block" />
+
+                          <v-col cols="12" md="8">
+                            <v-row dense>
+                              <v-col cols="6" sm="3">
+                                <div class="text-caption text-grey-darken-1">거래 건수</div>
+                                <div class="text-h6 font-weight-medium">{{ periodDetail?.tradeCount || 0 }}건</div>
+                              </v-col>
+                              <v-col cols="6" sm="3">
+                                <div class="text-caption text-grey-darken-1">익절 / 손절</div>
+                                <div class="text-body-1">
+                                  <span class="text-teal font-weight-medium">{{ periodDetail?.winCount || 0 }}</span>
+                                  <span class="mx-1">/</span>
+                                  <span class="text-red font-weight-medium">{{ periodDetail?.loseCount || 0 }}</span>
+                                </div>
+                              </v-col>
+                              <v-col cols="6" sm="3">
+                                <div class="text-caption text-grey-darken-1">승률</div>
+                                <div class="text-h6 font-weight-medium">{{ periodDetail?.winRate?.toFixed(1) || 0 }}%</div>
+                              </v-col>
+                              <v-col cols="6" sm="3">
+                                <div class="text-caption text-grey-darken-1">건당 평균</div>
+                                <div class="text-body-1 font-weight-medium" :class="(periodDetail?.avgProfit || 0) >= 0 ? 'text-teal' : 'text-red'">
+                                  {{ formatCurrency(periodDetail?.avgProfit || 0) }}
+                                </div>
+                              </v-col>
+                              <v-col cols="6" sm="3" class="mt-2">
+                                <div class="text-caption text-grey-darken-1">최대 수익</div>
+                                <div class="text-body-1 text-teal font-weight-medium">{{ formatCurrency(periodDetail?.maxProfit || 0) }}</div>
+                              </v-col>
+                              <v-col cols="6" sm="3" class="mt-2">
+                                <div class="text-caption text-grey-darken-1">최대 손실</div>
+                                <div class="text-body-1 text-red font-weight-medium">{{ formatCurrency(periodDetail?.maxLoss || 0) }}</div>
+                              </v-col>
+                              <v-col cols="12" sm="6" class="mt-2">
+                                <div class="text-caption text-grey-darken-1">조회 기간</div>
+                                <div class="text-body-2">{{ periodDetail?.startDate || '-' }} ~ {{ periodDetail?.endDate || '-' }}</div>
+                              </v-col>
+                            </v-row>
+                          </v-col>
+                        </v-row>
+                      </v-card-text>
+                    </v-card>
+
+                    <!-- 자산 변동 추이 차트 (백테스팅 스타일) -->
+                    <v-card variant="outlined">
+                      <v-card-title class="py-2 px-4 d-flex align-center">
+                        <v-icon class="mr-2" size="20">mdi-chart-line</v-icon>
+                        <span class="text-body-1">자산 변동 추이</span>
+                        <v-spacer />
+                        <!-- 전체보기/스크롤보기 토글 -->
+                        <v-btn-toggle 
+                          v-model="chartViewMode" 
+                          mandatory 
+                          density="compact"
+                          variant="outlined"
+                          divided
+                        >
+                          <v-btn value="full" size="x-small">
+                            <v-icon size="16" class="mr-1">mdi-fit-to-screen</v-icon>
+                            전체 보기
+                          </v-btn>
+                          <v-btn value="scroll" size="x-small">
+                            <v-icon size="16" class="mr-1">mdi-arrow-left-right</v-icon>
+                            스크롤 보기
+                          </v-btn>
+                        </v-btn-toggle>
+                      </v-card-title>
+
+                      <v-card-text class="pa-4">
+                        <div v-if="assetHistory.length > 0" class="chart-container">
+                          <div 
+                            class="chart-wrapper-backtest"
+                            :class="{ 'scroll-mode': chartViewMode === 'scroll' }"
+                            :style="chartViewMode === 'scroll' ? { width: dynamicChartWidth + 'px' } : {}"
+                            @mousemove="handleChartHover"
+                            @mouseleave="hoveredIndex = -1"
+                          >
+                            <svg 
+                              class="custom-chart"
+                              :viewBox="`0 0 ${chartViewMode === 'scroll' ? dynamicChartWidth : svgWidth} ${svgHeight}`"
+                              :preserveAspectRatio="chartViewMode === 'scroll' ? 'none' : 'xMidYMid meet'"
+                            >
+                              <!-- 그라데이션 정의 -->
+                              <defs>
+                                <linearGradient id="profitAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                  <stop offset="0%" style="stop-color:#42A5F5;stop-opacity:0.6" />
+                                  <stop offset="100%" style="stop-color:#42A5F5;stop-opacity:0.1" />
+                                </linearGradient>
+                              </defs>
+
+                              <!-- 영역 채우기 -->
+                              <path :d="areaPath" fill="url(#profitAreaGradient)" />
+
+                              <!-- 기준선들 -->
+                              <line 
+                                :x1="svgPadding" 
+                                :y1="getYPosition(initialAsset)" 
+                                :x2="effectiveWidth - svgPaddingRight" 
+                                :y2="getYPosition(initialAsset)"
+                                stroke="#FF9800" 
+                                stroke-width="2" 
+                                stroke-dasharray="6,4"
+                              />
+                              <line 
+                                :x1="svgPadding" 
+                                :y1="getYPosition(maxBalance)" 
+                                :x2="effectiveWidth - svgPaddingRight" 
+                                :y2="getYPosition(maxBalance)"
+                                stroke="#4CAF50" 
+                                stroke-width="2" 
+                                stroke-dasharray="6,4"
+                              />
+                              <line 
+                                :x1="svgPadding" 
+                                :y1="getYPosition(minBalance)" 
+                                :x2="effectiveWidth - svgPaddingRight" 
+                                :y2="getYPosition(minBalance)"
+                                stroke="#F44336" 
+                                stroke-width="2" 
+                                stroke-dasharray="6,4"
+                              />
+
+                              <!-- 라인 차트 -->
+                              <path :d="linePath" fill="none" stroke="#1976D2" stroke-width="2.5" />
+
+                              <!-- 데이터 포인트 -->
+                              <circle
+                                v-for="(point, index) in chartPoints"
+                                :key="index"
+                                :cx="point.x"
+                                :cy="point.y"
+                                :r="hoveredIndex === index ? 8 : 4"
+                                :fill="getPointColor(point.balance)"
+                                stroke="white"
+                                stroke-width="2"
+                                class="chart-point"
+                              />
+                            </svg>
+
+                            <!-- 기준선 라벨 -->
+                            <div class="chart-labels-backtest">
+                              <span class="chart-label label-max" :style="{ top: getLabelPosition(maxBalance) + '%' }">
+                                최고: {{ formatCurrency(maxBalance) }}
+                              </span>
+                              <span class="chart-label label-initial" :style="{ top: getLabelPosition(initialAsset) + '%' }">
+                                초기: {{ formatCurrency(initialAsset) }}
+                              </span>
+                              <span class="chart-label label-min" :style="{ top: getLabelPosition(minBalance) + '%' }">
+                                최저: {{ formatCurrency(minBalance) }}
+                              </span>
+                            </div>
+
+                            <!-- 툴팁 -->
+                            <div 
+                              v-if="hoveredIndex >= 0 && hoveredData"
+                              class="chart-tooltip-backtest"
+                              :style="{ 
+                                left: tooltipX + 'px',
+                                top: Math.max(10, tooltipY - 80) + 'px'
+                              }"
+                            >
+                              <div class="font-weight-bold">{{ hoveredData.date }}</div>
+                              <div>자산: {{ formatCurrency(hoveredData.balance) }}</div>
+                              <div :class="hoveredData.profitRate >= 0 ? 'text-success' : 'text-error'">
+                                수익률: {{ hoveredData.profitRate >= 0 ? '+' : '' }}{{ hoveredData.profitRate.toFixed(2) }}%
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- 날짜 표시 -->
+                          <div class="d-flex justify-space-between text-caption text-grey mt-2 px-4">
+                            <span>{{ assetHistory[0]?.date || '' }}</span>
+                            <span>{{ assetHistory[assetHistory.length - 1]?.date || '' }}</span>
+                          </div>
+                        </div>
+
+                        <div v-else class="text-center py-8 text-grey-darken-2">
+                          <v-icon size="48" class="mb-2">mdi-chart-line-variant</v-icon>
+                          <div>거래 이력이 없습니다</div>
+                        </div>
+                      </v-card-text>
+                    </v-card>
+                  </v-card-text>
+                </v-window-item>
+
+                <!-- ========== 코인별 수익 탭 ========== -->
+                <v-window-item value="coin">
+                  <!-- ⭐ 수정: 탭이 카드 바깥이므로 mt 제거 -->
+                  <v-card-title class="py-3 px-4 bg-indigo-darken-1 text-white d-flex align-center">
+                    <v-icon class="mr-2" size="20">mdi-bitcoin</v-icon>
+                    <span class="text-body-1 font-weight-bold">코인별 수익 분석</span>
+                    <v-spacer />
+                    <v-btn
+                      color="white"
+                      variant="text"
+                      @click="loadCoinProfits"
+                      :loading="loadingCoin"
+                      size="small"
+                    >
+                      <v-icon start>mdi-refresh</v-icon>
+                      새로고침
+                    </v-btn>
+                  </v-card-title>
+
+                  <v-card-text class="pa-0">
+                    <v-data-table
+                      :headers="coinHeaders"
+                      :items="coinProfits"
+                      :loading="loadingCoin"
+                      items-per-page="10"
+                      class="coin-profit-table"
+                    >
+                      <template v-slot:item.coinSymbol="{ item }">
+                        <div class="d-flex align-center">
+                          <strong>{{ item.coinSymbol.replace('KRW-', '') }}</strong>
+                          <span class="text-caption text-grey ml-2">{{ item.coinName }}</span>
+                        </div>
+                      </template>
+
+                      <template v-slot:item.totalProfit="{ item }">
+                        <span 
+                          class="font-weight-bold"
+                          :class="item.totalProfit >= 0 ? 'text-teal-darken-2' : 'text-red-darken-2'"
+                        >
+                          {{ formatCurrency(item.totalProfit) }}
+                        </span>
+                      </template>
+
+                      <template v-slot:item.profitPct="{ item }">
+                        <v-chip 
+                          :color="item.profitPct >= 0 ? 'teal' : 'red'" 
+                          size="small"
+                          variant="flat"
+                        >
+                          {{ item.profitPct >= 0 ? '+' : '' }}{{ item.profitPct?.toFixed(2) }}%
+                        </v-chip>
+                      </template>
+
+                      <template v-slot:item.winRate="{ item }">
+                        <div>
+                          <span class="text-teal">{{ item.winCount }}</span>
+                          <span class="mx-1">/</span>
+                          <span class="text-red">{{ item.loseCount }}</span>
+                          <span class="text-caption text-grey ml-1">({{ item.winRate?.toFixed(0) }}%)</span>
+                        </div>
+                      </template>
+
+                      <template v-slot:item.currentHoldingCount="{ item }">
+                        <v-chip 
+                          v-if="item.currentHoldingCount > 0"
+                          color="indigo" 
+                          size="small"
+                          variant="outlined"
+                        >
+                          {{ item.currentHoldingCount }}건 보유중
+                        </v-chip>
+                        <span v-else class="text-grey">-</span>
+                      </template>
+
+                      <template v-slot:item.actions="{ item }">
+                        <v-btn
+                          color="grey"
+                          size="small"
+                          @click="openCoinDetailDialog(item)"
+                        >
+                          상세
+                        </v-btn>
+                      </template>
+                    </v-data-table>
+                  </v-card-text>
+                </v-window-item>
+              </v-window>
             </v-card>
           </v-col>
         </v-row>
 
+        <!-- ⭐ Day 31 개선: 하단 영역 - 보유 현황 (분리) -->
         <v-row class="mt-4">
           <v-col cols="12">
-            <v-card>
-              <v-card-title>
-                <v-icon class="mr-2">mdi-wallet</v-icon>
-                보유 목록 ({{ holdings.length }}건)
+            <v-card elevation="2">
+              <v-card-title class="py-3 px-4 bg-indigo-darken-1 text-white d-flex align-center">
+                <v-icon class="mr-2" size="24">mdi-wallet</v-icon>
+                <span class="text-h6">보유 현황</span>
                 <v-spacer />
                 <v-btn
-                  color="primary"
+                  color="white"
+                  variant="text"
                   @click="loadHoldings"
                   :loading="loading"
                   size="small"
@@ -70,9 +405,48 @@
                 </v-btn>
               </v-card-title>
 
-              <v-card-text>
+              <!-- 통계 카드 -->
+              <v-card-text class="pa-4">
+                <v-row class="mb-4">
+                  <v-col cols="6" md="3">
+                    <v-card variant="outlined" class="text-center pa-3">
+                      <div class="text-caption text-grey-darken-1">총 투자금액</div>
+                      <div class="text-h6 font-weight-bold mt-1">{{ formatCurrency(stats.totalHoldingAmount) }}</div>
+                    </v-card>
+                  </v-col>
+                  <v-col cols="6" md="3">
+                    <v-card variant="outlined" class="text-center pa-3">
+                      <div class="text-caption text-grey-darken-1">현재 평가액</div>
+                      <div class="text-h6 font-weight-bold mt-1">{{ formatCurrency(stats.totalCurrentValue) }}</div>
+                    </v-card>
+                  </v-col>
+                  <v-col cols="6" md="3">
+                    <v-card variant="outlined" class="text-center pa-3">
+                      <div class="text-caption text-grey-darken-1">평가 손익</div>
+                      <div 
+                        class="text-h6 font-weight-bold mt-1"
+                        :class="stats.totalProfitLoss >= 0 ? 'text-teal-darken-2' : 'text-red-darken-2'"
+                      >
+                        {{ formatCurrency(stats.totalProfitLoss) }}
+                      </div>
+                    </v-card>
+                  </v-col>
+                  <v-col cols="6" md="3">
+                    <v-card variant="outlined" class="text-center pa-3 highlight-card">
+                      <div class="text-caption text-grey-darken-1">수익률</div>
+                      <div 
+                        class="text-h6 font-weight-bold mt-1"
+                        :class="stats.totalProfitLossPct >= 0 ? 'text-teal-darken-2' : 'text-red-darken-2'"
+                      >
+                        {{ stats.totalProfitLossPct >= 0 ? '+' : '' }}{{ stats.totalProfitLossPct.toFixed(2) }}%
+                      </div>
+                    </v-card>
+                  </v-col>
+                </v-row>
+
+                <!-- 보유 목록 테이블 -->
                 <v-data-table
-                  :headers="headers"
+                  :headers="holdingHeaders"
                   :items="holdings"
                   :loading="loading"
                   items-per-page="10"
@@ -94,27 +468,23 @@
                   </template>
 
                   <template v-slot:item.currentPrice="{ item }">
-                    <span v-if="item.currentPrice">
-                      {{ formatCurrency(item.currentPrice) }}
-                    </span>
+                    <span v-if="item.currentPrice">{{ formatCurrency(item.currentPrice) }}</span>
                     <span v-else class="text-grey">-</span>
                   </template>
 
                   <template v-slot:item.currentValue="{ item }">
-                    <span v-if="item.currentPrice">
-                      {{ formatCurrency(item.currentPrice * item.quantity) }}
-                    </span>
+                    <span v-if="item.currentPrice">{{ formatCurrency(item.currentPrice * item.quantity) }}</span>
                     <span v-else class="text-grey">-</span>
                   </template>
 
                   <template v-slot:item.profitLoss="{ item }">
                     <span
                       v-if="item.currentProfitLoss !== null && item.currentProfitLoss !== undefined"
-                      :class="item.currentProfitLoss >= 0 ? 'text-red' : 'text-blue'"
+                      :class="item.currentProfitLoss >= 0 ? 'text-teal-darken-2' : 'text-red-darken-2'"
                     >
                       {{ formatCurrency(item.currentProfitLoss) }}
                       <br>
-                      ({{ item.currentProfitLossPct?.toFixed(2) }}%)
+                      <span class="text-caption">({{ item.currentProfitLossPct?.toFixed(2) }}%)</span>
                     </span>
                     <span v-else class="text-grey">-</span>
                   </template>
@@ -124,21 +494,8 @@
                   </template>
 
                   <template v-slot:item.actions="{ item }">
-                    <v-btn
-                      color="orange"
-                      size="small"
-                      @click="openSellDialog(item)"
-                    >
-                      매도
-                    </v-btn>
-                    <v-btn
-                      color="grey"
-                      size="small"
-                      @click="viewDetail(item)"
-                      class="ml-1"
-                    >
-                      상세
-                    </v-btn>
+                    <v-btn color="orange" size="small" @click="openSellDialog(item)">매도</v-btn>
+                    <v-btn color="grey" size="small" @click="viewDetail(item)" class="ml-1">상세</v-btn>
                   </template>
                 </v-data-table>
               </v-card-text>
@@ -148,6 +505,7 @@
       </v-container>
     </v-main>
 
+    <!-- 매도 다이얼로그 -->
     <v-dialog v-model="sellDialog" max-width="500">
       <v-card>
         <v-card-title>매도 처리</v-card-title>
@@ -161,12 +519,11 @@
             </p>
             <p v-if="selectedHolding.currentProfitLoss !== null">
               <strong>예상 손익:</strong>
-              <span :class="selectedHolding.currentProfitLoss >= 0 ? 'text-red' : 'text-blue'">
+              <span :class="selectedHolding.currentProfitLoss >= 0 ? 'text-teal' : 'text-red'">
                 {{ formatCurrency(selectedHolding.currentProfitLoss) }}
                 ({{ selectedHolding.currentProfitLossPct?.toFixed(2) }}%)
               </span>
             </p>
-
             <v-text-field
               v-model.number="sellPrice"
               label="매도 가격"
@@ -179,17 +536,12 @@
         <v-card-actions>
           <v-spacer />
           <v-btn @click="sellDialog = false">취소</v-btn>
-          <v-btn
-            color="orange"
-            @click="confirmSell"
-            :loading="sellLoading"
-          >
-            매도 확인
-          </v-btn>
+          <v-btn color="orange" @click="confirmSell" :loading="sellLoading">매도 확인</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
+    <!-- 보유 상세 다이얼로그 -->
     <v-dialog v-model="detailDialog" max-width="600">
       <v-card>
         <v-card-title>보유 자산 상세</v-card-title>
@@ -220,12 +572,6 @@
                 <v-list-item-title>현재가</v-list-item-title>
                 <v-list-item-subtitle>{{ formatCurrency(selectedHolding.currentPrice) }}</v-list-item-subtitle>
               </v-list-item>
-              <v-list-item v-if="selectedHolding.currentPrice">
-                <v-list-item-title>현재 평가액</v-list-item-title>
-                <v-list-item-subtitle>
-                  {{ formatCurrency(selectedHolding.currentPrice * selectedHolding.quantity) }}
-                </v-list-item-subtitle>
-              </v-list-item>
               <v-list-item v-if="selectedHolding.targetSellPrice">
                 <v-list-item-title>목표 매도가</v-list-item-title>
                 <v-list-item-subtitle>{{ formatCurrency(selectedHolding.targetSellPrice) }}</v-list-item-subtitle>
@@ -238,16 +584,104 @@
                 <v-list-item-title>매수 시각</v-list-item-title>
                 <v-list-item-subtitle>{{ formatDateTime(selectedHolding.createdAt) }}</v-list-item-subtitle>
               </v-list-item>
-              <v-list-item v-if="selectedHolding.note">
-                <v-list-item-title>메모</v-list-item-title>
-                <v-list-item-subtitle>{{ selectedHolding.note }}</v-list-item-subtitle>
-              </v-list-item>
             </v-list>
           </div>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
           <v-btn @click="detailDialog = false">닫기</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- 코인별 상세 다이얼로그 -->
+    <v-dialog v-model="coinDetailDialog" max-width="700">
+      <v-card v-if="selectedCoin">
+        <v-card-title class="bg-amber-darken-2 text-white">
+          <v-icon class="mr-2">mdi-bitcoin</v-icon>
+          {{ selectedCoin.coinSymbol.replace('KRW-', '') }} 수익 상세
+          <span class="text-caption ml-2">({{ selectedCoin.coinName }})</span>
+        </v-card-title>
+        <v-card-text class="pa-4">
+          <v-row>
+            <v-col cols="6" md="4">
+              <div class="text-caption text-grey-darken-1">총 실현 수익</div>
+              <div 
+                class="text-h6 font-weight-bold"
+                :class="selectedCoin.totalProfit >= 0 ? 'text-teal-darken-2' : 'text-red-darken-2'"
+              >
+                {{ formatCurrency(selectedCoin.totalProfit) }}
+              </div>
+            </v-col>
+            <v-col cols="6" md="4">
+              <div class="text-caption text-grey-darken-1">수익률</div>
+              <div class="text-h6 font-weight-bold" :class="selectedCoin.profitPct >= 0 ? 'text-teal' : 'text-red'">
+                {{ selectedCoin.profitPct >= 0 ? '+' : '' }}{{ selectedCoin.profitPct?.toFixed(2) }}%
+              </div>
+            </v-col>
+            <v-col cols="6" md="4">
+              <div class="text-caption text-grey-darken-1">총 거래 건수</div>
+              <div class="text-h6 font-weight-bold">{{ selectedCoin.totalTradeCount }}건</div>
+            </v-col>
+          </v-row>
+
+          <v-divider class="my-4" />
+
+          <v-row>
+            <v-col cols="6" md="3">
+              <div class="text-caption text-grey-darken-1">익절</div>
+              <div class="text-body-1 font-weight-medium text-teal">{{ selectedCoin.winCount }}건</div>
+            </v-col>
+            <v-col cols="6" md="3">
+              <div class="text-caption text-grey-darken-1">손절</div>
+              <div class="text-body-1 font-weight-medium text-red">{{ selectedCoin.loseCount }}건</div>
+            </v-col>
+            <v-col cols="6" md="3">
+              <div class="text-caption text-grey-darken-1">승률</div>
+              <div class="text-body-1 font-weight-medium">{{ selectedCoin.winRate?.toFixed(1) }}%</div>
+            </v-col>
+            <v-col cols="6" md="3">
+              <div class="text-caption text-grey-darken-1">현재 보유</div>
+              <div class="text-body-1 font-weight-medium">{{ selectedCoin.currentHoldingCount }}건</div>
+            </v-col>
+          </v-row>
+
+          <v-divider class="my-4" />
+
+          <v-row>
+            <v-col cols="6">
+              <div class="text-caption text-grey-darken-1">총 매수 금액</div>
+              <div class="text-body-1">{{ formatCurrency(selectedCoin.totalBuyAmount) }}</div>
+            </v-col>
+            <v-col cols="6">
+              <div class="text-caption text-grey-darken-1">총 매도 금액</div>
+              <div class="text-body-1">{{ formatCurrency(selectedCoin.totalSellAmount) }}</div>
+            </v-col>
+            <v-col cols="6">
+              <div class="text-caption text-grey-darken-1">평균 매수가</div>
+              <div class="text-body-1">{{ formatCurrency(selectedCoin.avgBuyPrice) }}</div>
+            </v-col>
+            <v-col cols="6">
+              <div class="text-caption text-grey-darken-1">평균 매도가</div>
+              <div class="text-body-1">{{ formatCurrency(selectedCoin.avgSellPrice) }}</div>
+            </v-col>
+            <v-col cols="6">
+              <div class="text-caption text-grey-darken-1">최대 수익 거래</div>
+              <div class="text-body-1 text-teal font-weight-medium">{{ formatCurrency(selectedCoin.maxProfit) }}</div>
+            </v-col>
+            <v-col cols="6">
+              <div class="text-caption text-grey-darken-1">최대 손실 거래</div>
+              <div class="text-body-1 text-red font-weight-medium">{{ formatCurrency(selectedCoin.maxLoss) }}</div>
+            </v-col>
+          </v-row>
+
+          <div v-if="selectedCoin.lastTradeAt" class="mt-4 text-caption text-grey">
+            마지막 거래: {{ formatDateTime(selectedCoin.lastTradeAt) }}
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn color="amber-darken-2" variant="flat" @click="coinDetailDialog = false">닫기</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -259,14 +693,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { transactionApi } from '@/api'
+import { ref, computed, onMounted, watch } from 'vue'
+import { transactionApi, profitApi } from '@/api'
 import type { Transaction, DashboardStats } from '@/types'
+import type { ProfitSummary, PeriodProfit, CoinProfit } from '@/types/profit'
 import TheHeader from '@/components/TheHeader.vue'
 import TheSidebar from '@/components/TheSidebar.vue'
 
 const sidebarRef = ref()
 
+// 탭 상태
+const profitTab = ref('period')
+
+// 기존 보유 현황 상태
 const holdings = ref<Transaction[]>([])
 const stats = ref<DashboardStats>({
   totalHoldingAmount: 0,
@@ -288,17 +727,53 @@ const stats = ref<DashboardStats>({
 
 const loading = ref(false)
 const sellLoading = ref(false)
-
 const sellDialog = ref(false)
 const detailDialog = ref(false)
 const selectedHolding = ref<Transaction | null>(null)
 const sellPrice = ref(0)
+// 기간별 수익 상태
+const loadingProfit = ref(false)
+const profitSummary = ref<ProfitSummary>({
+  todayProfit: 0, todayProfitPct: 0, todayTradeCount: 0,
+  monthProfit: 0, monthProfitPct: 0, monthTradeCount: 0,
+  yearProfit: 0, yearProfitPct: 0, yearTradeCount: 0,
+  oneYearProfit: 0, oneYearProfitPct: 0, oneYearTradeCount: 0,
+  totalProfit: 0, totalProfitPct: 0, totalTradeCount: 0,
+  initialInvestment: 0
+})
+const selectedPeriod = ref<string>('total')
+const periodDetail = ref<PeriodProfit | null>(null)
+
+// 사용자 지정 기간
+const customStartDate = ref('')
+const customEndDate = ref('')
+
+// 차트 관련
+const chartViewMode = ref<'full' | 'scroll'>('full')
+const assetHistory = ref<any[]>([])
+const initialAsset = ref(1000000)
+const hoveredIndex = ref(-1)
+const tooltipX = ref(0)
+const tooltipY = ref(0)
+
+// 차트 상수
+const svgWidth = 800
+const svgHeight = 350
+const svgPadding = 30
+const svgPaddingRight = 100
+
+// 코인별 수익 상태
+const loadingCoin = ref(false)
+const coinProfits = ref<CoinProfit[]>([])
+const coinDetailDialog = ref(false)
+const selectedCoin = ref<CoinProfit | null>(null)
 
 const snackbar = ref(false)
 const snackbarMessage = ref('')
 const snackbarColor = ref('success')
 
-const headers = [
+// 보유 현황 테이블 헤더
+const holdingHeaders = [
   { title: '거래 ID', key: 'transactionId', align: 'center' },
   { title: '코인', key: 'coinSymbol', align: 'center' },
   { title: '수량', key: 'quantity', align: 'end' },
@@ -311,6 +786,202 @@ const headers = [
   { title: '액션', key: 'actions', align: 'center', sortable: false }
 ]
 
+// 코인별 수익 테이블 헤더
+const coinHeaders = [
+  { title: '코인', key: 'coinSymbol', align: 'start' },
+  { title: '실현 수익', key: 'totalProfit', align: 'end' },
+  { title: '수익률', key: 'profitPct', align: 'center' },
+  { title: '거래', key: 'totalTradeCount', align: 'center' },
+  { title: '익절/손절 (승률)', key: 'winRate', align: 'center' },
+  { title: '보유 현황', key: 'currentHoldingCount', align: 'center' },
+  { title: '', key: 'actions', align: 'center', sortable: false }
+]
+
+// 차트 computed
+const effectiveWidth = computed(() => chartViewMode.value === 'scroll' ? dynamicChartWidth.value : svgWidth)
+
+const dynamicChartWidth = computed(() => {
+  const pointCount = assetHistory.value.length
+  return Math.max(svgWidth, pointCount * 25 + svgPadding + svgPaddingRight)
+})
+
+const maxBalance = computed(() => {
+  if (!assetHistory.value.length) return initialAsset.value
+  return Math.max(...assetHistory.value.map(d => d.balance), initialAsset.value)
+})
+
+const minBalance = computed(() => {
+  if (!assetHistory.value.length) return initialAsset.value
+  return Math.min(...assetHistory.value.map(d => d.balance), initialAsset.value)
+})
+
+const chartPoints = computed(() => {
+  if (!assetHistory.value.length) return []
+  const total = assetHistory.value.length
+  const width = effectiveWidth.value - svgPadding - svgPaddingRight
+  return assetHistory.value.map((d, index) => ({
+    x: svgPadding + (index / (total - 1 || 1)) * width,
+    y: getYPosition(d.balance),
+    balance: d.balance
+  }))
+})
+
+const linePath = computed(() => {
+  if (!chartPoints.value.length) return ''
+  return chartPoints.value.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
+})
+
+const areaPath = computed(() => {
+  if (!chartPoints.value.length) return ''
+  const points = chartPoints.value
+  const bottomY = svgHeight - svgPadding
+  return `M ${points[0].x} ${bottomY} L ${points.map(p => `${p.x} ${p.y}`).join(' L ')} L ${points[points.length - 1].x} ${bottomY} Z`
+})
+
+const hoveredData = computed(() => hoveredIndex.value >= 0 ? assetHistory.value[hoveredIndex.value] : null)
+
+const currentPeriodProfit = computed(() => {
+  switch (selectedPeriod.value) {
+    case 'today': return profitSummary.value.todayProfit
+    case 'month': return profitSummary.value.monthProfit
+    case 'year': return profitSummary.value.yearProfit
+    case 'oneYear': return profitSummary.value.oneYearProfit
+    case 'total': return profitSummary.value.totalProfit
+    default: return periodDetail.value?.totalProfit || 0
+  }
+})
+
+const currentPeriodProfitPct = computed(() => {
+  switch (selectedPeriod.value) {
+    case 'today': return profitSummary.value.todayProfitPct
+    case 'month': return profitSummary.value.monthProfitPct
+    case 'year': return profitSummary.value.yearProfitPct
+    case 'oneYear': return profitSummary.value.oneYearProfitPct
+    case 'total': return profitSummary.value.totalProfitPct
+    default: return periodDetail.value?.profitPct || 0
+  }
+})
+
+// 함수들
+const getYPosition = (balance: number) => {
+  const max = maxBalance.value
+  const min = minBalance.value
+  const range = max - min || 1
+  return svgPadding + ((max - balance) / range) * (svgHeight - svgPadding * 2)
+}
+
+const getLabelPosition = (balance: number) => {
+  const max = maxBalance.value
+  const min = minBalance.value
+  const range = max - min || 1
+  const paddingPercent = (svgPadding / svgHeight) * 100
+  const usableHeight = 100 - paddingPercent * 2
+  return paddingPercent + ((max - balance) / range) * usableHeight
+}
+
+const getPointColor = (balance: number) => {
+  if (balance > initialAsset.value * 1.01) return '#4CAF50'
+  if (balance < initialAsset.value * 0.99) return '#F44336'
+  return '#1976D2'
+}
+
+const handleChartHover = (event: MouseEvent) => {
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  const x = event.clientX - rect.left
+  const y = event.clientY - rect.top
+  
+  const currentWidth = chartViewMode.value === 'scroll' ? dynamicChartWidth.value : svgWidth
+  const svgX = (x / rect.width) * currentWidth
+  const chartWidth = currentWidth - svgPadding - svgPaddingRight
+  
+  const total = assetHistory.value.length
+  if (total === 0) return
+  
+  const index = Math.floor(((svgX - svgPadding) / chartWidth) * total)
+  hoveredIndex.value = Math.max(0, Math.min(total - 1, index))
+  tooltipX.value = x
+  
+  if (chartPoints.value[hoveredIndex.value]) {
+    tooltipY.value = chartPoints.value[hoveredIndex.value].y * (rect.height / svgHeight)
+  }
+}
+
+const getPeriodLabel = (period: string) => {
+  const labels: Record<string, string> = {
+    today: '오늘',
+    month: '이번달',
+    year: '올해',
+    oneYear: '1년',
+    total: '누적',
+    custom: '사용자 지정'
+  }
+  return labels[period] || period
+}
+
+// 사용자 지정 기간 조회 - 차트도 함께 갱신
+const applyCustomPeriod = async () => {
+  if (!customStartDate.value || !customEndDate.value) {
+    showSnackbar('시작일과 종료일을 입력해주세요', 'warning')
+    return
+  }
+  
+  loadingProfit.value = true
+  try {
+    selectedPeriod.value = 'custom'
+    await loadPeriodDetail('custom')
+    await loadAssetHistoryByCustomPeriod(customStartDate.value, customEndDate.value)
+  } finally {
+    loadingProfit.value = false
+  }
+}
+
+// 사용자 지정 기간 자산 이력 로드
+const loadAssetHistoryByCustomPeriod = async (startDateStr: string, endDateStr: string) => {
+  try {
+    const response = await transactionApi.search({ status: 'SOLD', page: 0, size: 1000 })
+    const transactions = response.data?.content || []
+    
+    if (transactions.length === 0) {
+      assetHistory.value = []
+      return
+    }
+    
+    const startDate = new Date(startDateStr)
+    const endDate = new Date(endDateStr)
+    endDate.setHours(23, 59, 59, 999)
+    
+    const filteredTxs = transactions.filter((tx: any) => {
+      const txDate = new Date(tx.soldAt || tx.createdAt)
+      return txDate >= startDate && txDate <= endDate
+    })
+    
+    const sortedTxs = [...filteredTxs].sort((a: any, b: any) => 
+      new Date(a.soldAt || a.createdAt).getTime() - new Date(b.soldAt || b.createdAt).getTime()
+    )
+    
+    const dailyMap = new Map<string, number>()
+    let runningBalance = initialAsset.value
+    
+    sortedTxs.forEach((tx: any) => {
+      const dateKey = new Date(tx.soldAt || tx.createdAt).toISOString().split('T')[0]
+      if (tx.profitLoss) {
+        runningBalance += tx.profitLoss
+      }
+      dailyMap.set(dateKey, runningBalance)
+    })
+    
+    assetHistory.value = Array.from(dailyMap.entries()).map(([date, balance]) => ({
+      date,
+      balance,
+      profitRate: ((balance - initialAsset.value) / initialAsset.value) * 100
+    }))
+  } catch (error) {
+    console.error('사용자 지정 기간 자산 이력 조회 실패:', error)
+    assetHistory.value = []
+  }
+}
+
+// API 호출 함수들
 const loadHoldings = async () => {
   loading.value = true
   try {
@@ -318,13 +989,162 @@ const loadHoldings = async () => {
       transactionApi.getHoldings(),
       transactionApi.getStats()
     ])
-
     holdings.value = holdingsResponse.data
     stats.value = statsResponse.data
   } catch (error: any) {
     showSnackbar(error.response?.data?.message || '보유 자산 조회 실패', 'error')
   } finally {
     loading.value = false
+  }
+}
+
+const loadProfitSummary = async () => {
+  loadingProfit.value = true
+  try {
+    const response = await profitApi.getSummary()
+    profitSummary.value = response.data?.data || response.data || {}
+    
+    // 초기 자산 설정
+    initialAsset.value = profitSummary.value.initialInvestment || 1000000
+    
+    // 자산 이력 생성 (전체 기간)
+    await loadAssetHistory()
+  } catch (error: any) {
+    console.error('수익 요약 조회 실패:', error)
+    showSnackbar('수익 요약 조회 실패', 'error')
+  } finally {
+    loadingProfit.value = false
+  }
+}
+
+const loadPeriodDetail = async (period: string) => {
+  try {
+    if (period === 'custom') {
+      // 사용자 지정 기간은 별도 API 필요 (현재는 미구현)
+      showSnackbar('사용자 지정 기간 조회 완료', 'success')
+      return
+    }
+    const response = await profitApi.getByPeriod(period)
+    periodDetail.value = response.data?.data || response.data || null
+  } catch (error: any) {
+    console.error('기간별 수익 조회 실패:', error)
+  }
+}
+
+const loadAssetHistory = async () => {
+  try {
+    // 전체 거래 이력으로 자산 변동 추이 생성
+    const response = await transactionApi.search({ status: 'SOLD', page: 0, size: 1000 })
+    const transactions = response.data?.content || []
+    
+    if (transactions.length === 0) {
+      assetHistory.value = []
+      return
+    }
+    
+    // 날짜별 그룹화
+    const sortedTxs = [...transactions].sort((a: any, b: any) => 
+      new Date(a.soldAt || a.createdAt).getTime() - new Date(b.soldAt || b.createdAt).getTime()
+    )
+    
+    const dailyMap = new Map<string, number>()
+    let runningBalance = initialAsset.value
+    
+    sortedTxs.forEach((tx: any) => {
+      const dateKey = new Date(tx.soldAt || tx.createdAt).toISOString().split('T')[0]
+      if (tx.profitLoss) {
+        runningBalance += tx.profitLoss
+      }
+      dailyMap.set(dateKey, runningBalance)
+    })
+    
+    assetHistory.value = Array.from(dailyMap.entries()).map(([date, balance]) => ({
+      date,
+      balance,
+      profitRate: ((balance - initialAsset.value) / initialAsset.value) * 100
+    }))
+  } catch (error) {
+    console.error('자산 이력 조회 실패:', error)
+    assetHistory.value = []
+  }
+}
+
+// 기간별 자산 이력 로드 함수
+const loadAssetHistoryByPeriod = async (period: string) => {
+  try {
+    const response = await transactionApi.search({ status: 'SOLD', page: 0, size: 1000 })
+    const transactions = response.data?.content || []
+    
+    if (transactions.length === 0) {
+      assetHistory.value = []
+      return
+    }
+    
+    // 기간에 따른 필터링
+    const now = new Date()
+    let startDate: Date
+    
+    switch (period) {
+      case 'today':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        break
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+        break
+      case 'year':
+        startDate = new Date(now.getFullYear(), 0, 1)
+        break
+      case 'oneYear':
+        startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())
+        break
+      case 'total':
+      default:
+        startDate = new Date(2020, 0, 1) // 전체 기간
+        break
+    }
+    
+    // 날짜별 그룹화 및 필터링
+    const filteredTxs = transactions.filter((tx: any) => {
+      const txDate = new Date(tx.soldAt || tx.createdAt)
+      return txDate >= startDate
+    })
+    
+    const sortedTxs = [...filteredTxs].sort((a: any, b: any) => 
+      new Date(a.soldAt || a.createdAt).getTime() - new Date(b.soldAt || b.createdAt).getTime()
+    )
+    
+    const dailyMap = new Map<string, number>()
+    let runningBalance = initialAsset.value
+    
+    sortedTxs.forEach((tx: any) => {
+      const dateKey = new Date(tx.soldAt || tx.createdAt).toISOString().split('T')[0]
+      if (tx.profitLoss) {
+        runningBalance += tx.profitLoss
+      }
+      dailyMap.set(dateKey, runningBalance)
+    })
+    
+    assetHistory.value = Array.from(dailyMap.entries()).map(([date, balance]) => ({
+      date,
+      balance,
+      profitRate: ((balance - initialAsset.value) / initialAsset.value) * 100
+    }))
+  } catch (error) {
+    console.error('기간별 자산 이력 조회 실패:', error)
+    assetHistory.value = []
+  }
+}
+
+const loadCoinProfits = async () => {
+  loadingCoin.value = true
+  try {
+    const response = await profitApi.getByCoin()
+    coinProfits.value = response.data?.data || response.data || []
+  } catch (error: any) {
+    console.error('코인별 수익 조회 실패:', error)
+    showSnackbar('코인별 수익 조회 실패', 'error')
+  } finally {
+    loadingCoin.value = false
   }
 }
 
@@ -342,10 +1162,7 @@ const confirmSell = async () => {
 
   sellLoading.value = true
   try {
-    await transactionApi.sell(selectedHolding.value.transactionId, {
-      soldPrice: sellPrice.value
-    })
-
+    await transactionApi.sell(selectedHolding.value.transactionId, { soldPrice: sellPrice.value })
     showSnackbar('매도가 완료되었습니다', 'success')
     sellDialog.value = false
     loadHoldings()
@@ -361,18 +1178,22 @@ const viewDetail = (holding: Transaction) => {
   detailDialog.value = true
 }
 
+const openCoinDetailDialog = (coin: CoinProfit) => {
+  selectedCoin.value = coin
+  coinDetailDialog.value = true
+}
+
 const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('ko-KR', {
-    style: 'currency',
-    currency: 'KRW'
-  }).format(value)
+  if (value === undefined || value === null) return '₩0'
+  return '₩' + value.toLocaleString('ko-KR', { maximumFractionDigits: 0 })
 }
 
 const formatNumber = (value: number, decimals: number) => {
-  return value.toFixed(decimals)
+  return value?.toFixed(decimals) || '0'
 }
 
 const formatDateTime = (dateString: string) => {
+  if (!dateString) return '-'
   return new Date(dateString).toLocaleString('ko-KR')
 }
 
@@ -382,23 +1203,235 @@ const showSnackbar = (message: string, color: string) => {
   snackbar.value = true
 }
 
+// 기간 선택 변경 감지 - 차트도 함께 갱신
+watch(selectedPeriod, async (newPeriod) => {
+  if (newPeriod !== 'custom') {
+    await loadPeriodDetail(newPeriod)
+    await loadAssetHistoryByPeriod(newPeriod)
+  }
+})
+
+// 탭 변경 시 데이터 로드
+watch(profitTab, (newTab) => {
+  if (newTab === 'coin' && coinProfits.value.length === 0) {
+    loadCoinProfits()
+  }
+})
+
 onMounted(() => {
   loadHoldings()
+  loadProfitSummary()
+  loadPeriodDetail('total')
 })
 </script>
 
 <style scoped>
-.text-red {
-  color: #f44336;
-  font-weight: bold;
+/* 배경색 통일 */
+.bg-grey-lighten-3 {
+  background-color: #EEEEEE !important;
 }
 
-.text-blue {
-  color: #2196f3;
-  font-weight: bold;
+/* ⭐ 수정: 탭 스타일 - 하단 줄/배경 완전 제거 */
+.profit-tabs {
+  border-bottom: none !important;
+  background-color: transparent !important;
+  flex-grow: 0 !important;
+  width: auto !important;
 }
 
-.text-grey {
-  color: #9e9e9e;
+.profit-tabs :deep(.v-tabs__container) {
+  flex-grow: 0 !important;
+}
+
+/* ⭐ 탭 하단 인디케이터(파란 줄) 제거 */
+.profit-tabs :deep(.v-tabs-slider-wrapper),
+.profit-tabs :deep(.v-tab__slider) {
+  display: none !important;
+}
+
+/* ⭐ v-card 내부 탭 영역 배경 투명 처리 */
+.profit-tabs :deep(.v-slide-group__content) {
+  background-color: transparent !important;
+}
+
+.profit-tab {
+  min-width: 150px;
+  max-width: 150px;
+  border: 1px solid #CFD8DC;
+  border-bottom: 1px solid #CFD8DC;
+  margin-right: 4px;
+  border-radius: 8px 8px 0 0;
+  background-color: #B0BEC5 !important;
+  color: #37474F !important;
+  flex-grow: 0 !important;
+}
+
+.profit-tab.v-tab--selected {
+  background-color: #546E7A !important;
+  color: white !important;
+  border-color: #546E7A;
+}
+
+/* 기간 선택 토글 */
+.period-toggle .v-btn {
+  min-width: 70px;
+}
+
+.period-toggle .v-btn--active {
+  background-color: #3949AB !important;
+  color: white !important;
+}
+
+/* 수익 요약 카드 */
+.profit-summary-card {
+  border: 2px solid #3949AB;
+  background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%);
+}
+
+/* 하이라이트 카드 */
+.highlight-card {
+  border: 2px solid #333 !important;
+  background-color: #E8F5E9 !important;
+}
+
+/* 차트 스타일 */
+.chart-container {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.chart-wrapper-backtest {
+  position: relative;
+  cursor: crosshair;
+  height: 350px;
+  min-width: 100%;
+}
+
+.chart-wrapper-backtest.scroll-mode {
+  overflow-x: auto;
+}
+
+.custom-chart {
+  width: 100%;
+  height: 100%;
+}
+
+.chart-point {
+  cursor: pointer;
+  transition: r 0.15s ease;
+}
+
+.chart-labels-backtest {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.chart-label {
+  position: absolute;
+  right: 5px;
+  font-size: 11px;
+  padding: 2px 6px;
+  background: white;
+  border-radius: 3px;
+  font-weight: 500;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.label-max { color: #4CAF50; }
+.label-initial { color: #FF9800; }
+.label-min { color: #F44336; }
+
+.chart-tooltip-backtest {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 100;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  transform: translateX(-50%);
+}
+
+.text-success { color: #4CAF50 !important; }
+.text-error { color: #F44336 !important; }
+.text-teal { color: #009688; }
+.text-teal-darken-2 { color: #00796b; }
+.text-red { color: #f44336; }
+.text-red-darken-2 { color: #d32f2f; }
+.text-grey { color: #9e9e9e; }
+
+/* 코인별 수익 테이블 */
+.coin-profit-table {
+  border-top: 1px solid #e0e0e0;
+}
+
+/* 제목 영역 기간 선택 토글 - 미선택 시 옅은 회색 */
+.period-toggle-header {
+  background-color: transparent;
+  border-radius: 4px;
+  height: 32px;
+}
+
+.period-toggle-header .v-btn {
+  background-color: #B0BEC5 !important;
+  color: #37474F !important;
+  min-width: 50px;
+  font-size: 12px;
+  height: 32px !important;
+  padding: 0 10px;
+  border: none !important;
+}
+
+.period-toggle-header .v-btn--active {
+  background-color: #FFC107 !important;
+  color: #333 !important;
+}
+
+/* 날짜 입력 박스 크기 조정 - 높이 통일 */
+.custom-date-input {
+  width: 130px;
+  height: 32px;
+  padding: 4px 8px;
+  font-size: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.95);
+  color: #333;
+}
+
+.custom-date-input:focus {
+  outline: none;
+  border-color: #FFC107;
+}
+
+/* 조회 버튼 높이 통일 */
+.custom-search-btn {
+  height: 32px !important;
+  min-width: 50px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* 조회 버튼 높이 통일 */
+.custom-search-btn {
+  height: 32px !important;
+  min-width: 50px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ⭐ 수정: 카드 상단 둥근 모서리 제거 (탭과 연결) */
+.card-no-top-radius {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
 }
 </style>

@@ -3,7 +3,7 @@
     <the-header @toggle-drawer="sidebarRef.drawer = !sidebarRef.drawer" />
     <the-sidebar ref="sidebarRef" />
     
-    <v-main>
+    <v-main class="bg-grey-lighten-3">
       <v-container>
         <v-row>
           <v-col cols="12">
@@ -11,7 +11,7 @@
           </v-col>
         </v-row>
 
-        <!-- ★★★ 변경: 기본정보 + (비밀번호 + Discord) 레이아웃 ★★★ -->
+        <!-- 기본정보 + (비밀번호 + Discord) 레이아웃  -->
         <v-row class="equal-height-row">
           <!-- 왼쪽: 기본 정보 카드 -->
           <v-col cols="12" md="6" class="d-flex">

@@ -2621,6 +2621,11 @@ ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE COMMENT '2FA 활성화 여�
   - 계정 보안: `v-container fluid` 적용, 부제목 추가
   - 모든 페이지 제목 `text-h4` 크기로 통일
   - 기준 페이지(관리자, 릴리즈 노트, 코인 뉴스, 백테스팅, 일일 리포트, 봇 모니터링, 코인 목록)와 동일한 스타일 적용
+- Swagger UI 404 오류 수정 (운영 환경)
+  - 문제: https://crypto-trading-prd.duckdns.org/swagger-ui/index.html 접속 시 CSS/JS 파일 404 오류
+  - 원인: nginx.ssl.conf에 `/swagger-ui`, `/v3/api-docs` location 블록 중복 정의
+  - 해결: 중복된 location 블록 (100-121번 줄) 삭제
+  - 수정 파일: `frontend/nginx.ssl.conf`
 
 **API 엔드포인트:**
 | Method | Endpoint | 인증 | 설명 |
@@ -2651,6 +2656,7 @@ ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE COMMENT '2FA 활성화 여�
 - `views/TradingSettingsView.vue` - `v-container fluid`, `mdi-cog-outline` 아이콘, 부제목 추가
 - `views/ProfileView.vue` - `v-container fluid`, `mdi-account-cog` 아이콘, 부제목 추가
 - `views/AccountSecurityView.vue` - `v-container fluid`, 부제목 추가
+- `frontend/nginx.ssl.conf` - Swagger location 중복 블록 삭제 (운영 환경 404 오류 수정)
 
 **by-period API period 파라미터:**
 | 값 | 설명 |
@@ -2682,6 +2688,7 @@ ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE COMMENT '2FA 활성화 여�
 - ✅ UI 통일성 개선 - 거래 설정 fluid/아이콘/부제목 추가 - 브라우저
 - ✅ UI 통일성 개선 - 프로필 설정 fluid/아이콘/부제목 추가 - 브라우저
 - ✅ UI 통일성 개선 - 계정 보안 fluid/부제목 추가 - 브라우저
+- ✅ Swagger UI 정상 접속 (운영 환경) - 브라우저
 
 ---
 

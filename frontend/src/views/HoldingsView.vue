@@ -5,9 +5,13 @@
 
     <v-main class="bg-grey-lighten-3">
       <v-container fluid>
-        <v-row>
-          <v-col cols="12">
-            <h1 class="text-h4 mb-4">보유 자산</h1>
+        <v-row class="mb-4">
+          <v-col>
+            <h1 class="text-h4">
+              <v-icon class="mr-2">mdi-wallet</v-icon>
+              보유 자산
+            </h1>
+            <p class="text-subtitle-1 text-grey">기간별/코인별 수익 분석 및 보유 현황을 확인하세요</p>
           </v-col>
         </v-row>
 

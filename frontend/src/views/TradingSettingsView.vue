@@ -4,12 +4,16 @@
     <the-sidebar ref="sidebarRef" />
     
     <v-main class="bg-grey-lighten-3">
-      <v-container>
-        <v-row>
-      <v-col cols="12">
-        <h1 class="text-h4 mb-6">거래 설정</h1>
-      </v-col>
-    </v-row>
+      <v-container fluid>
+        <v-row class="mb-4">
+          <v-col>
+            <h1 class="text-h4">
+              <v-icon class="mr-2">mdi-cog-outline</v-icon>
+              거래 설정
+            </h1>
+            <p class="text-subtitle-1 text-grey">자동매매 전략 및 거래 조건을 설정하세요</p>
+          </v-col>
+        </v-row>
 
     <v-row>
       <v-col cols="12">

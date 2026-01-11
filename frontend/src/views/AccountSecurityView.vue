@@ -4,13 +4,14 @@
     <the-sidebar ref="sidebarRef" />
     
     <v-main class="bg-grey-lighten-3">
-      <v-container>
-        <v-row>
-          <v-col cols="12">
-            <h1 class="text-h4 mb-6">
+    <v-container fluid>
+        <v-row class="mb-4">
+          <v-col>
+            <h1 class="text-h4">
               <v-icon class="mr-2">mdi-shield-account</v-icon>
               계정 보안
             </h1>
+            <p class="text-subtitle-1 text-grey">2단계 인증 및 IP 화이트리스트를 관리하세요</p>
           </v-col>
         </v-row>
 

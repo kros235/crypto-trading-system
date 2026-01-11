@@ -5,9 +5,13 @@
 
     <v-main class="bg-grey-lighten-3">
       <v-container fluid>
-        <v-row>
-          <v-col cols="12">
-            <h1 class="text-h4 mb-4">거래 내역</h1>
+        <v-row class="mb-4">
+          <v-col>
+            <h1 class="text-h4">
+              <v-icon class="mr-2">mdi-history</v-icon>
+              거래 내역
+            </h1>
+            <p class="text-subtitle-1 text-grey">매수/매도 거래 기록을 확인하세요</p>
           </v-col>
         </v-row>
 

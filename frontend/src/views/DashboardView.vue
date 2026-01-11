@@ -8,7 +8,10 @@
         <!-- 페이지 타이틀 -->
         <v-row class="mb-2">
           <v-col cols="12" class="d-flex align-center py-2">
-            <h1 class="text-h5">대시보드</h1>
+            <h1 class="text-h4">
+              <v-icon class="mr-2">mdi-view-dashboard</v-icon>
+              대시보드
+            </h1>
             <v-btn icon variant="text" class="ml-1" @click="refreshAll" :loading="isRefreshing" size="small">
               <v-icon size="20">mdi-refresh</v-icon>
             </v-btn>

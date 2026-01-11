@@ -2612,6 +2612,15 @@ ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE COMMENT '2FA 활성화 여�
   - 기간 버튼: 미선택 #B0BEC5, 선택 #FFC107 (노란색)
   - 탭 하단 인디케이터 제거
   - 탭-카드 자연스럽게 연결 (카드 상단 모서리 제거)
+- UI 통일성 개선 (추가 작업)**
+  - 대시보드: `text-h5` → `text-h4`, `mdi-view-dashboard` 아이콘 추가
+  - 보유 자산: `mdi-wallet` 아이콘 추가, 부제목 추가
+  - 거래 내역: `mdi-history` 아이콘 추가, 부제목 추가
+  - 거래 설정: `v-container fluid` 적용, `mdi-cog-outline` 아이콘 추가, 부제목 추가
+  - 프로필 설정: `v-container fluid` 적용, `mdi-account-cog` 아이콘 추가, 부제목 추가
+  - 계정 보안: `v-container fluid` 적용, 부제목 추가
+  - 모든 페이지 제목 `text-h4` 크기로 통일
+  - 기준 페이지(관리자, 릴리즈 노트, 코인 뉴스, 백테스팅, 일일 리포트, 봇 모니터링, 코인 목록)와 동일한 스타일 적용
 
 **API 엔드포인트:**
 | Method | Endpoint | 인증 | 설명 |
@@ -2636,6 +2645,12 @@ ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE COMMENT '2FA 활성화 여�
 - `api/index.ts` - profitApi 객체 추가 (3개 API 함수)
 - `views/HoldingsView.vue` - 2탭 구조 + 하단 보유현황 분리, UI 전면 재구성
 - `config/SecurityConfig.java` - /api/profit/** 인증 설정 추가
+- `views/DashboardView.vue` - 제목 `text-h5` → `text-h4`, `mdi-view-dashboard` 아이콘 추가
+- `views/HoldingsView.vue` - `mdi-wallet` 아이콘 추가, 부제목 추가
+- `views/TransactionHistoryView.vue` - `mdi-history` 아이콘 추가, 부제목 추가
+- `views/TradingSettingsView.vue` - `v-container fluid`, `mdi-cog-outline` 아이콘, 부제목 추가
+- `views/ProfileView.vue` - `v-container fluid`, `mdi-account-cog` 아이콘, 부제목 추가
+- `views/AccountSecurityView.vue` - `v-container fluid`, 부제목 추가
 
 **by-period API period 파라미터:**
 | 값 | 설명 |
@@ -2661,6 +2676,12 @@ ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE COMMENT '2FA 활성화 여�
 - ✅ 코인별 상세 다이얼로그 - 브라우저
 - ✅ 하단 보유 현황 카드 - 브라우저
 - ✅ 탭 스타일 (색상, 인디케이터 제거) - 브라우저
+- ✅ UI 통일성 개선 - 대시보드 제목 아이콘 추가 - 브라우저**
+- ✅ UI 통일성 개선 - 보유 자산 제목 아이콘/부제목 추가 - 브라우저
+- ✅ UI 통일성 개선 - 거래 내역 제목 아이콘/부제목 추가 - 브라우저
+- ✅ UI 통일성 개선 - 거래 설정 fluid/아이콘/부제목 추가 - 브라우저
+- ✅ UI 통일성 개선 - 프로필 설정 fluid/아이콘/부제목 추가 - 브라우저
+- ✅ UI 통일성 개선 - 계정 보안 fluid/부제목 추가 - 브라우저
 
 ---
 
@@ -2831,13 +2852,14 @@ ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE COMMENT '2FA 활성화 여�
 #### ✅ Day 31: 기간별/코인별 수익 분석 UI 구현 (2026-01-11 완료)
 | 시간 | 작업 | 상세 | 상태 |
 |------|------|------|------|
-| 오전 | **기간별/코인별 수익 분석** | **HoldingsView 2탭 + 하단 보유현황 구조** | ✅ 완료 |
-| 오전 | **├ Backend API** | **기간별 수익 집계 엔드포인트 (3개)** | ✅ 완료 |
-| 오전 | **├ Frontend 탭1** | **기간별 수익 분석 (오늘/이번달/올해/1년/누적 + 사용자지정)** | ✅ 완료 |
-| 오전 | **├ Frontend 탭2** | **코인별 수익 분석 (테이블 + 상세 다이얼로그)** | ✅ 완료 |
-| 오전 | **└ 하단 보유현황** | **보유 현황 (기존 유지, 별도 카드 분리)** | ✅ 완료 |
-| 오후 | **자산 변동 추이 차트** | **백테스팅 스타일 SVG 차트 + 전체/스크롤 보기** | ✅ 완료 |
-| 오후 | **UI 스타일 개선** | **탭 색상, 인디케이터 제거, 카드 연결** | ✅ 완료 |
+| 오전 | 기간별/코인별 수익 분석 | HoldingsView 2탭 + 하단 보유현황 구조 | ✅ 완료 |
+| 오전 | ├ Backend API | 기간별 수익 집계 엔드포인트 (3개) | ✅ 완료 |
+| 오전 | ├ Frontend 탭1 | 기간별 수익 분석 (오늘/이번달/올해/1년/누적 + 사용자지정) | ✅ 완료 |
+| 오전 | ├ Frontend 탭2 | 코인별 수익 분석 (테이블 + 상세 다이얼로그) | ✅ 완료 |
+| 오전 | └ 하단 보유현황 | 보유 현황 (기존 유지, 별도 카드 분리) | ✅ 완료 |
+| 오후 | 자산 변동 추이 차트 | 백테스팅 스타일 SVG 차트 + 전체/스크롤 보기 | ✅ 완료 |
+| 오후 | UI 스타일 개선 | 탭 색상, 인디케이터 제거, 카드 연결 | ✅ 완료 |
+| 오후 | UI 통일성 개선 | 6개 페이지 제목 아이콘/부제목/fluid 통일 | ✅ 완료 |
 
 ---
 
@@ -3144,7 +3166,7 @@ UPDATE users SET allowed_ips = '["192.168.1.100", "10.0.0.50"]' WHERE user_id = 
 | 28 | ✅ 대시보드 재구성, 코인 목록 페이지, bulk API 수정, MATIC 비활성화, 시간대 KST 통일, AdminDashboard 오류 수정, 시간 표시 함수 개선 | ✅ 완료 |
 | 29 | ✅ 급락장 보호 기능 3종, HTTPS 적용 (DuckDNS + Let's Encrypt), CORS 수정, SSL 자동 갱신 | **✅ 완료** |
 | 30 | ✅ 릴리즈 노트 게시판 (CRUD + 검색 + 페이징), IP 화이트리스트, 2FA 인증, 대시보드 연동, 뉴스 페이지 개선 | **🔄 진행중** |
-| 31 | ✅ HoldingsView 2탭+보유현황 (수익 분석), 자산 변동 차트, UI 스타일 개선 | ✅ 완료 |
+| 31 | ✅ HoldingsView 2탭+보유현황 (수익 분석), 자산 변동 차트, UI 스타일 개선, UI 통일성 개선 (6개 페이지) | ✅ 완료 |
 | 32 | 최종 보안 점검, 전체 시스템 테스트, 운영 문서 작성, 장애 대응 매뉴얼, v1.0 릴리즈 | 🔴 필수 |
 
 ---

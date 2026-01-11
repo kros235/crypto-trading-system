@@ -98,6 +98,12 @@ const router = createRouter({
       name: 'account-security',
       component: () => import('../views/AccountSecurityView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/help',
+      name: 'help',
+      component: () => import('../views/HelpView.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })

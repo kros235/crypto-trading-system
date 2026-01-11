@@ -85,6 +85,11 @@
         title="릴리즈 노트"
         @click="$router.push('/release-notes')"
       />
+     <v-list-item
+        prepend-icon="mdi-help-circle"
+        title="도움말"
+        @click="$router.push('/help')"
+      />
     </v-list>
   </v-navigation-drawer>
 </template>

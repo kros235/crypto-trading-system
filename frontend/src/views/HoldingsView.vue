@@ -43,6 +43,12 @@
                   <v-card-title class="py-3 px-4 bg-indigo-darken-1 text-white d-flex align-center">
                     <v-icon class="mr-2" size="20">mdi-chart-timeline-variant</v-icon>
                     <span class="text-body-1 font-weight-bold">기간별 수익 분석</span>
+                    <!-- 도움말 버튼  -->
+                    <HelpButton 
+                      use-dialog 
+                      :dialog-title="helpContents.periodProfit.title"
+                      :dialog-content="helpContents.periodProfit.content"
+                    />
                     
                     <v-spacer />
                     
@@ -300,10 +306,15 @@
 
                 <!-- ========== 코인별 수익 탭 ========== -->
                 <v-window-item value="coin">
-                  <!-- ⭐ 수정: 탭이 카드 바깥이므로 mt 제거 -->
-                  <v-card-title class="py-3 px-4 bg-indigo-darken-1 text-white d-flex align-center">
+                  <v-card-title class="py-3 px-4 bg-teal-darken-1 text-white d-flex align-center">
                     <v-icon class="mr-2" size="20">mdi-bitcoin</v-icon>
                     <span class="text-body-1 font-weight-bold">코인별 수익 분석</span>
+                    <!-- 도움말 버튼 -->
+                    <HelpButton 
+                      use-dialog 
+                      :dialog-title="helpContents.coinProfit.title"
+                      :dialog-content="helpContents.coinProfit.content"
+                    />
                     <v-spacer />
                     <v-btn
                       color="white"
@@ -389,13 +400,19 @@
           </v-col>
         </v-row>
 
-        <!-- ⭐ Day 31 개선: 하단 영역 - 보유 현황 (분리) -->
+         <!-- ========== 하단: 보유 현황 ========== -->
         <v-row class="mt-4">
           <v-col cols="12">
             <v-card elevation="2">
-              <v-card-title class="py-3 px-4 bg-indigo-darken-1 text-white d-flex align-center">
-                <v-icon class="mr-2" size="24">mdi-wallet</v-icon>
-                <span class="text-h6">보유 현황</span>
+              <v-card-title class="py-3 px-4 bg-blue-grey-darken-1 text-white d-flex align-center">
+                <v-icon class="mr-2" size="20">mdi-safe</v-icon>
+                <span class="text-body-1 font-weight-bold">보유 현황</span>
+                <!-- ★★★ [추가] 도움말 버튼 ★★★ -->
+                <HelpButton 
+                  use-dialog 
+                  :dialog-title="helpContents.holdings.title"
+                  :dialog-content="helpContents.holdings.content"
+                />
                 <v-spacer />
                 <v-btn
                   color="white"
@@ -703,8 +720,68 @@ import type { Transaction, DashboardStats } from '@/types'
 import type { ProfitSummary, PeriodProfit, CoinProfit } from '@/types/profit'
 import TheHeader from '@/components/TheHeader.vue'
 import TheSidebar from '@/components/TheSidebar.vue'
+import HelpButton from '@/components/HelpButton.vue'
 
 const sidebarRef = ref()
+// 도움말 콘텐츠
+const helpContents = {
+  periodProfit: {
+    title: '📅 기간별 수익 분석',
+    content: `
+      <div class="help-box">
+        <p><strong>📖 쉬운 설명:</strong> 선택한 기간 동안의 거래 수익을 분석합니다.</p>
+        <p style="margin-top: 8px;"><strong>📆 기간 선택:</strong></p>
+        <p>• <strong>오늘</strong>: 당일 00:00~현재까지의 수익</p>
+        <p>• <strong>이번달</strong>: 이번 달 1일~현재까지</p>
+        <p>• <strong>올해</strong>: 올해 1월 1일~현재까지</p>
+        <p>• <strong>1년</strong>: 최근 365일간</p>
+        <p>• <strong>누적</strong>: 첫 거래~현재까지 전체</p>
+        <p style="margin-top: 8px;"><strong>📊 주요 지표:</strong></p>
+        <p>• <strong>총 수익</strong>: 해당 기간 실현 손익 합계</p>
+        <p>• <strong>거래 건수</strong>: 매도 완료된 거래 수</p>
+        <p>• <strong>승률</strong>: 익절 거래 / 전체 거래 × 100%</p>
+        <p style="margin-top: 8px;"><strong>💡 팁:</strong> 사용자 지정 기간으로 원하는 기간을 분석할 수 있습니다.</p>
+      </div>
+    `
+  },
+  coinProfit: {
+    title: '💰 코인별 수익 분석',
+    content: `
+      <div class="help-box">
+        <p><strong>📖 쉬운 설명:</strong> 각 코인별로 거래 성과를 분석합니다.</p>
+        <p style="margin-top: 8px;"><strong>📊 주요 지표:</strong></p>
+        <p>• <strong>실현 수익</strong>: 해당 코인에서 실현된 총 손익</p>
+        <p>• <strong>수익률</strong>: 투자 대비 수익 비율</p>
+        <p>• <strong>익절/손절</strong>: 수익 거래 수 / 손실 거래 수</p>
+        <p>• <strong>승률</strong>: 익절 거래 / 전체 거래 × 100%</p>
+        <p style="margin-top: 8px;"><strong>💡 활용법:</strong></p>
+        <p>• 승률이 낮아도 평균 수익이 높으면 좋은 전략입니다.</p>
+        <p>• 특정 코인에서 계속 손실이 나면 거래 종목에서 제외를 고려하세요.</p>
+        <p>• "상세" 버튼으로 코인별 세부 통계를 확인할 수 있습니다.</p>
+      </div>
+    `
+  },
+  holdings: {
+    title: '📦 보유 현황',
+    content: `
+      <div class="help-box">
+        <p><strong>📖 쉬운 설명:</strong> 현재 보유 중인 코인의 평가 손익을 보여줍니다.</p>
+        <p style="margin-top: 8px;"><strong>📊 용어 설명:</strong></p>
+        <p>• <strong>투자금액</strong>: 매수 시 사용한 금액 (매수가 × 수량)</p>
+        <p>• <strong>평가액</strong>: 현재가 × 보유수량</p>
+        <p>• <strong>평가 손익</strong>: 평가액 - 투자금액</p>
+        <p>• <strong>수익률</strong>: (현재가 - 매수가) / 매수가 × 100%</p>
+        <p style="margin-top: 8px;"><strong>⚠️ 주의:</strong></p>
+        <p>• 평가 손익은 <strong>미실현 손익</strong>입니다.</p>
+        <p>• 매도하기 전까지는 확정된 수익/손실이 아닙니다.</p>
+        <p>• 현재가는 실시간으로 변동됩니다.</p>
+        <p style="margin-top: 8px;"><strong>💡 팁:</strong></p>
+        <p>• "매도" 버튼으로 수동 매도가 가능합니다.</p>
+        <p>• "상세" 버튼으로 목표가, 손절가 등을 확인할 수 있습니다.</p>
+      </div>
+    `
+  }
+}
 
 // 탭 상태
 const profitTab = ref('period')

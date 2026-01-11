@@ -5,6 +5,13 @@
 
     <v-main class="bg-grey-lighten-3">
       <v-container fluid>
+        <!-- 시작 가이드 위젯-->
+        <OnboardingGuide 
+          :has-api-key="hasApiKey"
+          :has-settings="hasSettings"
+          :has-transactions="hasTransactions"
+        />
+        
         <!-- 페이지 타이틀 -->
         <v-row class="mb-2">
           <v-col cols="12" class="d-flex align-center py-2">
@@ -16,7 +23,7 @@
               <v-icon size="20">mdi-refresh</v-icon>
             </v-btn>
             <v-spacer />
-            <!-- ★★★ 수정: 실시간 시간 표시 (BOLD체, 검정색) ★★★ -->
+            <!-- 실시간 시간 표시 (BOLD체, 검정색)  -->
             <span class="text-body-1 font-weight-bold text-grey-darken-4">{{ currentTime }}</span>
           </v-col>
         </v-row>
@@ -26,7 +33,7 @@
           <v-col cols="12" md="9">
             <v-card elevation="2" class="fill-height">
               <v-card-text class="pa-3">
-                <!-- ★★★ 1행: 사용자 정보 + 4개 통계 카드 ★★★ -->
+                <!--  1행: 사용자 정보 + 4개 통계 카드  -->
                 <v-row dense align="center">
                   <v-col cols="12" sm="4">
                     <div class="d-flex align-center">
@@ -49,7 +56,7 @@
                         <div class="text-caption text-grey-darken-1" :class="{ 'mt-1': !authStore.user?.discordUserId }">
                           <v-icon size="12" class="mr-1">mdi-email-outline</v-icon>{{ authStore.user?.email }}
                         </div>
-                        <!-- ★★★ 수정: 마지막 로그인 2줄 표시 ★★★ -->
+                        <!-- 수정: 마지막 로그인 2줄 표시 -->
                         <div class="text-caption text-grey-darken-4 font-weight-bold mt-1">
                           <v-icon size="12" class="mr-1">mdi-clock-outline</v-icon>
                           마지막 로그인:
@@ -89,7 +96,7 @@
                     </v-card>
                   </v-col>
                 </v-row>
-                <!-- ★★★ 2행: 투자기간(좌) + 시스템 상태(우) - 마지막 로그인과 같은 높이 ★★★ -->
+                <!-- 2행: 투자기간(좌) + 시스템 상태(우) - 마지막 로그인과 같은 높이 -->
                 <v-row dense>
                   <v-col cols="12" sm="4">
                     <!-- 빈 공간 -->
@@ -1134,6 +1141,7 @@ import TheHeader from '@/components/TheHeader.vue'
 import TheSidebar from '@/components/TheSidebar.vue'
 import { useAuthStore } from '@/stores/auth'
 import api, { coinApi, transactionApi, tradingApi, botApi } from '@/api'
+import OnboardingGuide from '@/components/OnboardingGuide.vue'
 
 const authStore = useAuthStore()
 const sidebarRef = ref()
@@ -1146,6 +1154,11 @@ const showAllIndicators = ref(false)
 // 카드 도움말 시스템
 const showHelpDialog = ref(false)
 const currentHelp = ref({ title: '', content: '' })
+
+// 온보딩 가이드 상태
+const hasApiKey = computed(() => authStore.user?.hasApiKey || false)
+const hasSettings = computed(() => tradingSettings.value !== null && tradingSettings.value?.coinSymbols?.length > 0)
+const hasTransactions = computed(() => recentTransactions.value?.length > 0)
 
 // 상세 보기 다이얼로그 관련 변수
 const showIndicatorDetailDialog = ref(false)

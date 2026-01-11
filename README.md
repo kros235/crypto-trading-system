@@ -2692,6 +2692,76 @@ ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE COMMENT '2FA 활성화 여�
 
 ---
 
+### ✅ Day 32 (2026-01-12) - 도움말 시스템 + 초보자 온보딩 가이드
+**완료 항목:**
+- HelpButton 컴포넌트 (재사용 가능한 도움말 아이콘)
+  - 툴팁 모드: 마우스 호버 시 짧은 설명 표시
+  - 다이얼로그 모드: 클릭 시 상세 설명 팝업
+  - HTML 렌더링 지원 (표, 예시, 이모지 등)
+- OnboardingGuide 위젯 (대시보드 상단 온보딩 스텝)
+  - Step 1: API 키 등록 안내 (업비트 발급 링크 포함)
+  - Step 2: 거래 설정 완료 안내
+  - Step 3: 소액 테스트 권장 안내
+  - 사용자별 숨김 상태 localStorage 저장 (userId 기반)
+  - "닫기" (세션 동안 숨김) / "다시 보지 않기" (영구 숨김) 버튼
+- HelpView 페이지 (도움말/FAQ 페이지)
+  - 4개 탭: 시작 가이드 / 용어 사전 / FAQ / 문제 해결
+  - 용어 사전: 검색 기능 + 카테고리별 확장 패널 + 검색 시 자동 패널 열기
+  - FAQ: 검색 기능 + 확장 패널 (15개 질문)
+  - 모바일 탭 가로 스크롤 지원
+- TradingSettingsView 상세 도움말 (7개 섹션)
+  - 거래 종목 선택, 기술적 지표 설정 (라디오), 매수 조건 설정
+  - 매도 조건 설정, 기술적 지표 설정 카드, 리스크 관리, 급락장 보호
+  - 마트 할인/용돈/계란 비유 등 초보자 친화적 설명 포함
+  - 표(table) 형식 비교 정보 포함
+- BacktestView 상세 도움말 (14개 지표)
+  - 기본 설정, 고급 설정, 결과 해석 도움말
+  - 이동평균선, 매수 기준, 목표 수익률, 손절매, 종목당 최대 보유
+  - 트레일링 스톱, RSI, 볼린저 밴드, 거래량 급증
+  - 일일 거래 한도, 단일 종목 비중, 긴급 정지, 급락장 보호
+  - 각 지표에 HelpButton 추가 (고급 설정 패널 내)
+- HoldingsView 도움말 보강 (3개 섹션)
+  - 기간별 수익 분석: 5가지 기간 선택 설명, 주요 지표 의미
+  - 코인별 수익 분석: 4가지 지표 설명, 활용법 3가지
+  - 보유 현황: 용어 설명, 미실현 손익 주의사항
+
+**생성된 파일 (Frontend: 3개):**
+- `components/HelpButton.vue` - 재사용 가능한 도움말 버튼 컴포넌트
+- `components/OnboardingGuide.vue` - 대시보드 온보딩 가이드 위젯
+- `views/HelpView.vue` - 도움말/FAQ 페이지 (4개 탭)
+
+**수정된 파일 (Frontend: 6개):**
+- `views/DashboardView.vue` - OnboardingGuide 컴포넌트 추가
+- `views/TradingSettingsView.vue` - HelpButton 7개 섹션 + 상세 도움말 내용
+- `views/BacktestView.vue` - HelpButton 14개 지표 + helpContents 확장
+- `views/HoldingsView.vue` - helpContents 3개 내용 보강
+- `router/index.ts` - /help 라우트 추가
+- `components/TheSidebar.vue` - 도움말 메뉴 추가 (mdi-help-circle)
+
+**버그 수정:**
+- OnboardingGuide 사용자별 숨김: localStorage 키에 userId 포함
+- HelpView 용어 검색 자동 패널 열기: watch로 검색어 감지 시 패널 확장
+- TradingSettingsView 중복 코드 제거: 130줄 중복 삭제로 빌드 에러 해결
+- 모바일 탭 스크롤: CSS overflow-x: auto 적용
+
+**테스트 완료:**
+- ✅ HelpButton 툴팁 모드 - 브라우저
+- ✅ HelpButton 다이얼로그 모드 - 브라우저
+- ✅ OnboardingGuide 3단계 표시 - 브라우저
+- ✅ OnboardingGuide 사용자별 숨김 - 브라우저
+- ✅ OnboardingGuide 닫기/다시보지않기 - 브라우저
+- ✅ HelpView 4개 탭 전환 - 브라우저
+- ✅ HelpView 용어 검색 + 자동 패널 열기 - 브라우저
+- ✅ HelpView FAQ 검색 - 브라우저
+- ✅ HelpView 모바일 탭 스크롤 - 브라우저
+- ✅ TradingSettingsView 7개 섹션 도움말 - 브라우저
+- ✅ BacktestView 14개 지표 도움말 - 브라우저
+- ✅ HoldingsView 3개 섹션 도움말 - 브라우저
+- ✅ 사이드바 도움말 메뉴 - 브라우저
+- ✅ 빌드 테스트 통과 - npm run build
+
+---
+
 ## 📊 현재 진행 상황
 - **전체 진척도**: 약 **100%**
 - **Phase 1 (핵심 기능)**: 100% 완료 ✅
@@ -2709,7 +2779,7 @@ ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE COMMENT '2FA 활성화 여�
 | Phase 2 (고도화) | Day 10~16 | ✅ 완료 |
 | Phase 3 (안정화) | Day 17~21 | ✅ 완료 |
 | Phase 4 (운영 준비) | Day 22~31 | ✅ 완료 |
-| Phase 5 (UX 개선) | Day 32 | 🎯 진행 예정 |
+| Phase 5 (UX 개선) | Day 32 | ✅ 완료|
 | v1.0 릴리즈 | Day 33 | 🎯 목표 |
 ---
 
@@ -3348,7 +3418,7 @@ UPDATE users SET allowed_ips = '["192.168.1.100", "10.0.0.50"]' WHERE user_id = 
 | 29 | ✅ 급락장 보호 기능 3종, HTTPS 적용 (DuckDNS + Let's Encrypt), CORS 수정, SSL 자동 갱신 | **✅ 완료** |
 | 30 | ✅ 릴리즈 노트 게시판 (CRUD + 검색 + 페이징), IP 화이트리스트, 2FA 인증, 대시보드 연동, 뉴스 페이지 개선 | ✅ 완료 |
 | 31 | ✅ HoldingsView 2탭+보유현황 (수익 분석), 자산 변동 차트, UI 스타일 개선, UI 통일성 개선 (6개 페이지) | ✅ 완료 |
-| 32 | 도움말 시스템 (카드별 ? 아이콘), 시작 가이드 위젯, 도움말/FAQ 페이지 | 🟡 권장 |
+| 32 | ✅ 도움말 시스템 (HelpButton, OnboardingGuide, HelpView, 페이지별 상세 도움말) | ✅ 완료 |
 | 33 | 최종 보안 점검, 전체 시스템 테스트, 운영 문서 작성, 장애 대응 매뉴얼, v1.0 릴리즈 | 🔴 필수 |
 
 ---
@@ -3624,7 +3694,7 @@ DELETE FROM coin_news_analysis WHERE created_at < DATE_SUB(NOW(), INTERVAL 7 DAY
 | 2FA 인증 | Google Authenticator 연동 | 🟢 선택 | ✅ Day 30 완료 |
 | IP 화이트리스트 | 접속 IP 제한 기능 | 🟢 선택 | ✅ Day 30 완료 |
 | 기간별/코인별 수익 분석 | HoldingsView 2탭+보유현황 구조 | 🔴 필수 | ✅ Day 31 완료 |
-| 도움말 시스템 | 카드별 ? 아이콘, 시작 가이드, FAQ 페이지 | 🟡 권장 | Day 32 예정 |
+| 도움말 시스템 | HelpButton, OnboardingGuide, HelpView, 페이지별 상세 도움말 | ✅ 완료 | Day 32 완료 |
 
 ---
 
@@ -3896,7 +3966,9 @@ crypto-trading-system/
 │   │   ├── components/           # 공통 컴포넌트
 │   │   │   ├── TheHeader.vue
 │   │   │   ├── TheSidebar.vue                    # ⭐ Day 30: 릴리즈 노트 메뉴 추가
-│   │   │   └── GlobalSnackbar.vue
+│   │   │   ├── GlobalSnackbar.vue
+│   │   │   ├── HelpButton.vue                    # ⭐ Day 32: 도움말 버튼 컴포넌트
+│   │   │   └── OnboardingGuide.vue           # ⭐ Day 32: 온보딩 가이드 위젯
 │   │   ├── composables/          # Composition API 유틸
 │   │   │   ├── useErrorHandler.ts
 │   │   │   └── useSnackbar.ts
@@ -3915,6 +3987,7 @@ crypto-trading-system/
 │   │   │   ├── NewsView.vue                      # ⭐ Day 26: 코인 뉴스 페이지
 │   │   │   ├── AdminDashboardView.vue
 │   │   │   ├── ReleaseNotesView.vue               # ⭐ Day 30: 릴리즈 노트 페이지
+│   │   │   ├── HelpView.vue                      # ⭐ Day 32: 도움말/FAQ 페이지
 │   │   │   └── AccountSecurityView.vue           # ⭐ Day 30: 보안 설정 페이지
 │   │   ├── stores/               # Pinia 상태 관리
 │   │   │   ├── auth.ts

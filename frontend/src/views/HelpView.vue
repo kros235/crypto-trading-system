@@ -73,7 +73,7 @@
                       <p class="mb-0 text-grey-darken-4">• API 키는 타인과 절대 공유하지 마세요.</p>
                     </v-alert>
 
-                    <v-stepper :items="apiKeySteps" alt-labels class="mb-4" color="indigo">
+                    <v-stepper :items="apiKeySteps" alt-labels class="mb-4 api-stepper" color="indigo">
                       <template v-slot:item.1>
                         <v-card flat>
                           <v-card-text class="text-grey-darken-3">
@@ -1268,5 +1268,47 @@ const getCategoryColor = (category: string) => {
     max-width: 120px;
     padding: 0 12px;
   }
+}
+
+/* ⭐ Day 32 추가: Stepper 스타일 개선 */
+.api-stepper :deep(.v-stepper-header) {
+  background-color: #B0BEC5 !important;
+  border-radius: 8px;
+  padding: 12px 0;
+}
+
+.api-stepper :deep(.v-stepper-item__title) {
+  color: #263238 !important;
+  font-weight: 600;
+}
+
+.api-stepper :deep(.v-stepper-item__subtitle) {
+  color: #455A64 !important;
+}
+
+.api-stepper :deep(.v-stepper__wrapper) {
+  background-color: transparent;
+}
+
+.api-stepper :deep(.v-stepper-item__avatar) {
+  background-color: #5C6BC0 !important;
+  color: white !important;
+}
+
+.api-stepper :deep(.v-stepper-item--complete .v-stepper-item__avatar) {
+  background-color: #43A047 !important;
+}
+
+.api-stepper :deep(.v-stepper-item--selected .v-stepper-item__avatar) {
+  background-color: #3949AB !important;
+}
+
+.api-stepper :deep(.v-stepper-actions .v-btn) {
+  background-color: #5C6BC0 !important;
+  color: white !important;
+}
+
+.api-stepper :deep(.v-stepper-actions .v-btn:hover) {
+  background-color: #3F51B5 !important;
 }
 </style>

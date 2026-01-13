@@ -22,11 +22,11 @@
     </v-card-title>
 
     <v-card-text class="pa-4">
-      <v-row>
+      <v-row align="stretch">
         <!-- Step 1: API 키 등록 -->
-        <v-col cols="12" md="4">
+        <v-col cols="12" md="4" class="d-flex">
           <div 
-            class="step-item pa-3 rounded-lg cursor-pointer"
+            class="step-item pa-3 rounded-lg cursor-pointer d-flex flex-column flex-grow-1"
             :class="step1Complete ? 'step-complete' : 'step-pending'"
             @click="goToProfile"
           >
@@ -58,7 +58,7 @@
                 필요
               </v-chip>
             </div>
-            <p class="text-body-2 text-grey-darken-1 mb-2">
+            <p class="text-body-2 text-grey-darken-1 mb-2 flex-grow-1">
               업비트에서 API 키를 발급받아 등록하세요.
             </p>
             <a 
@@ -74,9 +74,9 @@
         </v-col>
 
         <!-- Step 2: 거래 설정 -->
-        <v-col cols="12" md="4">
+        <v-col cols="12" md="4" class="d-flex">
           <div 
-            class="step-item pa-3 rounded-lg cursor-pointer"
+            class="step-item pa-3 rounded-lg cursor-pointer d-flex flex-column flex-grow-1"
             :class="step2Complete ? 'step-complete' : (step1Complete ? 'step-pending' : 'step-locked')"
             @click="goToSettings"
           >
@@ -116,16 +116,16 @@
                 대기
               </v-chip>
             </div>
-            <p class="text-body-2 text-grey-darken-1 mb-0">
+            <p class="text-body-2 text-grey-darken-1 mb-0 flex-grow-1">
               거래할 코인과 매수/매도 조건을 설정하세요.
             </p>
           </div>
         </v-col>
 
         <!-- Step 3: 소액 테스트 -->
-        <v-col cols="12" md="4">
+        <v-col cols="12" md="4" class="d-flex">
           <div 
-            class="step-item pa-3 rounded-lg"
+            class="step-item pa-3 rounded-lg d-flex flex-column flex-grow-1"
             :class="step3Complete ? 'step-complete' : (step2Complete ? 'step-pending' : 'step-locked')"
           >
             <div class="d-flex align-center mb-2">
@@ -164,7 +164,7 @@
                 대기
               </v-chip>
             </div>
-            <p class="text-body-2 text-grey-darken-1 mb-0">
+            <p class="text-body-2 text-grey-darken-1 mb-0 flex-grow-1">
               10만원 이하로 1~2일간 테스트 후 본격 운영하세요.
             </p>
           </div>

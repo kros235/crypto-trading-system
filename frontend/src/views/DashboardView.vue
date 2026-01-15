@@ -12,19 +12,22 @@
           :has-transactions="hasTransactions"
         />
         
-        <!-- 페이지 타이틀 -->
+<!-- 페이지 타이틀 -->
         <v-row class="mb-2">
-          <v-col cols="12" class="d-flex align-center py-2">
-            <h1 class="text-h4">
-              <v-icon class="mr-2">mdi-view-dashboard</v-icon>
-              대시보드
-            </h1>
-            <v-btn icon variant="text" class="ml-1" @click="refreshAll" :loading="isRefreshing" size="small">
-              <v-icon size="20">mdi-refresh</v-icon>
-            </v-btn>
-            <v-spacer />
-            <!-- 실시간 시간 표시 (BOLD체, 검정색)  -->
-            <span class="text-body-1 font-weight-bold text-grey-darken-4">{{ currentTime }}</span>
+          <v-col cols="12" class="py-2">
+            <div class="d-flex align-center">
+              <h1 class="text-h4">
+                <v-icon class="mr-2">mdi-view-dashboard</v-icon>
+                대시보드
+              </h1>
+              <v-btn icon variant="text" class="ml-1" @click="refreshAll" :loading="isRefreshing" size="small">
+                <v-icon size="20">mdi-refresh</v-icon>
+              </v-btn>
+              <v-spacer />
+              <!-- 실시간 시간 표시 (BOLD체, 검정색)  -->
+              <span class="text-body-1 font-weight-bold text-grey-darken-4">{{ currentTime }}</span>
+            </div>
+            <p class="text-subtitle-1 text-grey mt-1">투자 현황과 자동매매 상태를 한눈에 확인하세요</p>
           </v-col>
         </v-row>
 

@@ -23,7 +23,7 @@
                 검색 필터
               </v-card-title>
               <v-card-text>
-                <v-row>
+                <v-row align="center">
                   <v-col cols="12" md="3">
                     <v-select
                       v-model="filters.coinSymbol"
@@ -31,6 +31,7 @@
                       label="코인 선택"
                       clearable
                       density="compact"
+                      hide-details
                     />
                   </v-col>
                   <v-col cols="12" md="3">
@@ -40,6 +41,7 @@
                       label="상태"
                       clearable
                       density="compact"
+                      hide-details
                     />
                   </v-col>
                   <v-col cols="12" md="2">
@@ -49,6 +51,7 @@
                       label="시작일"
                       density="compact"
                       clearable
+                      hide-details
                     />
                   </v-col>
                   <v-col cols="12" md="2">
@@ -58,9 +61,10 @@
                       label="종료일"
                       density="compact"
                       clearable
+                      hide-details
                     />
                   </v-col>
-                  <v-col cols="12" md="2" class="d-flex align-center">
+                  <v-col cols="12" md="2">
                     <v-btn
                       color="primary"
                       @click="searchTransactions"
@@ -80,7 +84,7 @@
         <v-row class="mt-4">
           <v-col cols="12">
             <v-card>
-              <v-card-title>
+              <v-card-title class="d-flex align-center">
                 <v-icon class="mr-2">mdi-history</v-icon>
                 거래 목록
                 <v-spacer />
@@ -158,23 +162,24 @@
                     {{ formatDateTime(item.createdAt) }}
                   </template>
 
-                  <template v-slot:item.actions="{ item }">
-                    <v-btn
-                      v-if="item.status === 'HOLDING'"
-                      color="orange"
-                      size="small"
-                      @click="openSellDialog(item)"
-                    >
-                      매도
-                    </v-btn>
-                    <v-btn
-                      color="grey"
-                      size="small"
-                      @click="viewDetail(item)"
-                      class="ml-1"
-                    >
-                      상세
-                    </v-btn>
+             <template v-slot:item.actions="{ item }">
+                    <div class="d-flex align-center justify-center ga-1">
+                      <v-btn
+                        v-if="item.status === 'HOLDING'"
+                        color="orange"
+                        size="small"
+                        @click="openSellDialog(item)"
+                      >
+                        매도
+                      </v-btn>
+                      <v-btn
+                        color="grey"
+                        size="small"
+                        @click="viewDetail(item)"
+                      >
+                        상세
+                      </v-btn>
+                    </div>
                   </template>
                 </v-data-table>
 

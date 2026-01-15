@@ -20,9 +20,17 @@
           <!-- 왼쪽: 기본 정보 카드 -->
           <v-col cols="12" md="6" class="d-flex">
             <v-card class="flex-grow-1">
-              <v-card-title class="bg-primary text-white">
+              <v-card-title class="bg-primary text-white d-flex align-center">
                 <v-icon icon="mdi-account-circle" class="mr-2" />
                 기본 정보
+                <v-spacer />
+                <HelpButton
+  	    :useDialog="true"
+                  :dialogTitle="helpContents.profile.title"
+                  :dialogContent="helpContents.profile.content"
+                  iconColor="white"
+                  size="24"
+                />
               </v-card-title>
 
               <v-card-text class="pt-4">
@@ -111,9 +119,17 @@
           <v-col cols="12" md="6" class="d-flex flex-column">
             <!-- 비밀번호 변경 카드 -->
             <v-card class="mb-4">
-              <v-card-title class="bg-secondary text-white">
+              <v-card-title class="bg-secondary text-white d-flex align-center">
                 <v-icon icon="mdi-lock-reset" class="mr-2" />
                 비밀번호 변경
+                <v-spacer />
+                <HelpButton
+                  :useDialog="true"
+                  :dialogTitle="helpContents.password.title"
+                  :dialogContent="helpContents.password.content"
+                  iconColor="white"
+                  size="28"
+                />
               </v-card-title>
 
               <v-card-text class="pt-4">
@@ -183,9 +199,17 @@
 
             <!-- Discord DM 알림 설정 카드 -->
             <v-card class="flex-grow-1">
-              <v-card-title class="bg-deep-purple text-white">
-                <v-icon icon="mdi-discord" class="mr-2" />
-                Discord DM 알림 설정
+              <v-card-title class="bg-deep-purple text-white d-flex align-center">
+              <v-icon icon="mdi-robot" class="mr-2" />
+              Discord DM 알림 설정
+                <v-spacer />
+                <HelpButton
+                  :useDialog="true"
+                  :dialogTitle="helpContents.discord.title"
+                  :dialogContent="helpContents.discord.content"
+                  iconColor="white"
+                  size="28"
+                />
               </v-card-title>
 
               <v-card-text class="pt-4">
@@ -264,9 +288,17 @@
         <v-row>
           <v-col cols="12">
             <v-card>
-              <v-card-title class="bg-success text-white">
+              <v-card-title class="bg-success text-white d-flex align-center">
                 <v-icon icon="mdi-key-variant" class="mr-2" />
                 업비트 API 키 설정
+                <v-spacer />
+                 <HelpButton
+                  :useDialog="true"
+                  :dialogTitle="helpContents.apiKey.title"
+                  :dialogContent="helpContents.apiKey.content"
+                  iconColor="white"
+                  size="28"
+                />
               </v-card-title>
 
               <v-card-text class="pt-4">
@@ -344,18 +376,38 @@
                   </div>
                 </v-form>
 
+                <!-- API 키 발급 가이드 -->
                 <v-alert
                   type="info"
+                  variant="tonal"
                   class="mt-4"
-                  icon="mdi-information"
+                  icon="mdi-lightbulb-on"
+                >
+                  <div class="text-body-2 text-black">
+                    <strong>API 키 발급 가이드</strong>
+                    <ol class="mt-2 mb-0">
+                      <li>
+                        <a href="https://upbit.com/mypage/open_api_management" target="_blank" class="text-primary font-weight-bold">
+                          업비트 Open API 관리 페이지
+                        </a> 접속
+                      </li>
+                      <li>"Open API 키 발급" 버튼 클릭</li>
+                      <li>권한 선택: <strong>자산 조회, 주문 조회, 주문</strong> (출금 권한 제외!)</li>
+                      <li>IP 설정 후 발급받은 키를 위 입력란에 붙여넣기</li>
+                    </ol>
+                  </div>
+                </v-alert>
+
+                <v-alert
+                  type="warning"
+                  class="mt-3"
+                  icon="mdi-shield-alert"
                 >
                   <div class="text-body-2">
-                    <strong>⚠️ API 키 보안 주의사항</strong>
-                    <ul class="mt-2">
+                    <strong>API 키 보안 주의사항</strong>
+                    <ul class="mt-2 mb-0">
                       <li>API 키는 AES-256 암호화되어 안전하게 저장됩니다</li>
                       <li>API 키를 타인과 절대 공유하지 마세요</li>
-                      <li>업비트에서 IP 화이트리스트 설정을 권장합니다</li>
-                      <li>출금 권한은 부여하지 마세요 (자산 조회, 주문 권한만 부여)</li>
                     </ul>
                   </div>
                 </v-alert>
@@ -411,11 +463,99 @@ import { useAuthStore } from '@/stores/auth'
 import { userApi } from '@/api'
 import TheHeader from '@/components/TheHeader.vue'
 import TheSidebar from '@/components/TheSidebar.vue'
+import HelpButton from '@/components/HelpButton.vue'
 import { notificationApi } from '@/api'
+
+
 
 const authStore = useAuthStore()
 
-// ★★★ 추가: Discord 관련 상태 ★★★
+// ⭐ 도움말 내용 추가
+const helpContents = {
+  profile: {
+    title: '기본 정보 안내',
+    content: `
+      <p><strong>사용자 ID</strong></p>
+      <p style="padding-left: 20px; margin-top: 4px;">로그인에 사용되는 고유 식별자입니다. 변경할 수 없습니다.</p>
+      <p><strong>이메일</strong></p>
+      <p style="padding-left: 20px; margin-top: 4px;">시스템 알림 및 일일 리포트를 받을 이메일 주소입니다.</p>
+      <p><strong>전화번호</strong></p>
+      <p style="padding-left: 20px; margin-top: 4px;">선택 사항이며, 010-XXXX-XXXX 형식으로 입력합니다.</p>
+      <p style="margin-top: 16px;">💡 이메일 주소를 정확히 입력해야 거래 알림을 받을 수 있습니다.</p>
+    `
+  },
+  password: {
+    title: '비밀번호 변경 안내',
+    content: `
+      <p><strong>비밀번호 요구사항:</strong></p>
+      <ul style="padding-left: 40px; margin-top: 8px;">
+        <li>8~30자 길이</li>
+        <li>대문자 1개 이상</li>
+        <li>소문자 1개 이상</li>
+        <li>숫자 1개 이상</li>
+        <li>특수문자(@$!%*?&) 1개 이상</li>
+      </ul>
+      <p style="margin-top: 16px;">⚠️ 비밀번호 변경 후 다시 로그인해야 할 수 있습니다.</p>
+    `
+  },
+  discord: {
+    title: 'Discord DM 알림 설정 안내',
+    content: `
+      <p><strong>Discord User ID 확인 방법:</strong></p>
+      <ol style="padding-left: 40px; margin-top: 8px;">
+        <li>Discord 앱 → 설정(톱니바퀴) 클릭</li>
+        <li>고급 → <strong>개발자 모드</strong> 활성화</li>
+        <li>자신의 프로필 우클릭 → <strong>ID 복사</strong></li>
+      </ol>
+      <p style="margin-top: 16px;"><strong>알림 종류:</strong></p>
+      <ul style="padding-left: 40px; margin-top: 8px;">
+        <li>매수/매도 체결 알림</li>
+        <li>손절매 발생 알림</li>
+        <li>일일 리포트</li>
+        <li>AI 가중치 변경 알림</li>
+      </ul>
+      <p style="margin-top: 16px;">💡 Bot이 활성화되어 있어야 DM을 받을 수 있습니다.</p>
+    `
+  },
+  apiKey: {
+    title: '업비트 API 키 설정 안내',
+    content: `
+      <p><strong>API 키 발급 방법:</strong></p>
+      <ol style="padding-left: 40px; margin-top: 8px;">
+        <li><a href="https://upbit.com/mypage/open_api_management" target="_blank" style="color: #1976D2;">업비트 Open API 관리</a> 페이지 접속</li>
+        <li>"Open API 키 발급" 클릭</li>
+        <li><strong>필수 권한</strong>: 자산 조회, 주문 조회, 주문</li>
+        <li><strong>IP 설정</strong>: 서버 IP 입력 또는 "모든 IP 허용"</li>
+        <li>발급된 Access Key와 Secret Key 복사</li>
+      </ol>
+      <p style="margin-top: 16px;">⚠️ <strong>절대 출금 권한은 부여하지 마세요!</strong></p>
+      <table style="width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px;">
+        <tr style="background-color: #E3F2FD;">
+          <th style="padding: 8px 12px; border: 1px solid #ddd; text-align: left;">권한</th>
+          <th style="padding: 8px 12px; border: 1px solid #ddd; text-align: left;">필요 여부</th>
+        </tr>
+        <tr>
+          <td style="padding: 8px 12px; border: 1px solid #ddd;">자산 조회</td>
+          <td style="padding: 8px 12px; border: 1px solid #ddd;">✅ 필수</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 12px; border: 1px solid #ddd;">주문 조회</td>
+          <td style="padding: 8px 12px; border: 1px solid #ddd;">✅ 필수</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 12px; border: 1px solid #ddd;">주문</td>
+          <td style="padding: 8px 12px; border: 1px solid #ddd;">✅ 필수</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 12px; border: 1px solid #ddd;">출금</td>
+          <td style="padding: 8px 12px; border: 1px solid #ddd;">❌ 절대 불가</td>
+        </tr>
+      </table>
+    `
+  }
+}
+
+// Discord 관련 상태 
 const discordLoading = ref(false)
 const discordTestLoading = ref(false)
 const discordMessage = ref('')
@@ -839,4 +979,21 @@ onMounted(() => {
   width: 100%;
 }
 
+/* 도움말 테이블 스타일 */
+:deep(.help-table) {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+:deep(.help-table th),
+:deep(.help-table td) {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+:deep(.help-table th) {
+  background-color: #f5f5f5;
+}
 </style>

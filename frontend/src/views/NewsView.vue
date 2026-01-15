@@ -5,9 +5,10 @@
 
     <v-main class="bg-grey-lighten-3">
       <v-container fluid>
-        <v-row>
+         <v-row>
           <v-col cols="12">
-            <h1 class="text-h4 mb-4">📰 코인 뉴스</h1>
+            <h1 class="text-h4">📰 코인 뉴스</h1>
+            <p class="text-subtitle-1 text-grey mb-4">AI가 분석한 코인별 최신 뉴스를 확인하세요</p>
           </v-col>
         </v-row>
 

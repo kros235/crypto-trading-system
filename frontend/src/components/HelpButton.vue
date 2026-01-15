@@ -29,8 +29,14 @@
       <v-icon :size="iconSize">mdi-help-circle-outline</v-icon>
     </v-btn>
 
-    <v-dialog v-model="showDialog" :max-width="dialogWidth">
-      <v-card>
+     <v-dialog 
+      v-model="showDialog" 
+      :width="dialogWidth"
+      max-width="90vw"
+      persistent
+      scrim="rgba(0,0,0,0.5)"
+    >
+      <v-card class="help-dialog-card">
         <v-card-title class="bg-indigo-darken-2 text-white d-flex align-center">
           <v-icon class="mr-2">mdi-help-circle</v-icon>
           {{ dialogTitle }}
@@ -39,7 +45,7 @@
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </v-card-title>
-        <v-card-text class="pa-4">
+        <v-card-text class="pa-8">
           <div v-html="dialogContent" class="help-content"></div>
         </v-card-text>
         <v-card-actions>
@@ -70,7 +76,7 @@ const props = withDefaults(defineProps<Props>(), {
   useDialog: false,
   dialogTitle: '도움말',
   dialogContent: '',
-  dialogWidth: 700,
+  dialogWidth: 620,
   size: 'x-small',
   iconSize: 14,
   color: 'white'
@@ -131,5 +137,18 @@ const showDialog = ref(false)
   border-radius: 4px;
   color: #5D4037;
   font-size: 13px;
+}
+
+/* 다이얼로그 카드 스타일 */
+.help-dialog-card {
+  min-width: 680px;
+  max-width: 90vw;
+  margin: 0 auto;
+}
+
+@media (max-width: 600px) {
+  .help-dialog-card {
+    min-width: 90vw;
+  }
 }
 </style>

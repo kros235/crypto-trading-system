@@ -5,9 +5,10 @@
 
     <v-main class="bg-grey-lighten-3">
       <v-container fluid>
-        <v-row>
+         <v-row>
           <v-col cols="12">
-            <h1 class="text-h4 mb-4">📢 릴리즈 노트</h1>
+            <h1 class="text-h4">📢 릴리즈 노트</h1>
+            <p class="text-subtitle-1 text-grey mb-4">시스템 업데이트 및 변경 사항을 확인하세요</p>
           </v-col>
         </v-row>
 
@@ -22,6 +23,7 @@
               density="compact"
               hide-details
               variant="outlined"
+              bg-color="white"
               @keyup.enter="loadReleaseNotes"
               @click:clear="clearSearch"
             />
@@ -34,11 +36,12 @@
               density="compact"
               hide-details
               variant="outlined"
+              bg-color="white"
               @update:model-value="loadReleaseNotes"
             />
           </v-col>
           <v-col cols="6" md="6" class="d-flex justify-end">
-            <v-btn color="secondary" variant="outlined" class="mr-2" @click="loadReleaseNotes">
+            <v-btn color="secondary" variant="flat" class="mr-2 bg-white" @click="loadReleaseNotes">
               <v-icon start>mdi-magnify</v-icon>
               검색
             </v-btn>

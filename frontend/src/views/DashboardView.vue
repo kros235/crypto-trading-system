@@ -2257,6 +2257,8 @@ const cardHelps = {
         <span class="help-desc">원하는 기간을 선택하여 조회할 수 있습니다.</span></p>
       <p class="help-item"><span class="help-bullet">•</span> <strong>차트 호버</strong><br/>
         <span class="help-desc">차트의 점을 호버하면 해당 일자의 자산과 수익률을 확인할 수 있습니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>기록 시작일</strong><br/>
+        <span class="help-desc">자산 변동 추이는 최초 거래일로부터 기록이 시작됩니다. 거래 이전 기간은 조회되지 않습니다.</span></p>
     `
   },
   coinPerformance: {

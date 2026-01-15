@@ -517,30 +517,42 @@
                   <v-btn value="year" size="x-small" :class="chartPeriod === 'year' ? 'active-period' : ''">올해</v-btn>
                   <v-btn value="all" size="x-small" :class="chartPeriod === 'all' ? 'active-period' : ''">전체 투자기간</v-btn>
                 </v-btn-toggle>
-                <v-btn size="x-small" variant="text" color="white" class="ml-2" @click="showCustomDateDialog = true">
-                  <v-icon size="16">mdi-calendar-range</v-icon>
-                </v-btn>
-                <!-- ★★★ 수정: 전체보기/스크롤보기 토글 - 동일 스타일 + 구분선 ★★★ -->
-                <div 
-                  v-if="assetHistory.length > 30 || emptyPeriodDates.length > 30"
-                  class="d-flex align-center ml-2"
-                >
+                <!-- ★★★ [수정] 사용자 지정 기간 입력 필드 - 높이 통일 ★★★ -->
+                <div class="d-flex align-center ml-3 chart-control-group">
+                  <input 
+                    type="date" 
+                    v-model="customStartDate" 
+                    class="custom-date-input"
+                    @change="applyCustomDateRange"
+                  />
+                  <span class="mx-1 text-white">~</span>
+                  <input 
+                    type="date" 
+                    v-model="customEndDate" 
+                    class="custom-date-input"
+                    @change="applyCustomDateRange"
+                  />
+                </div>
+                <!-- ★★★ [수정] 전체보기/스크롤보기 토글 - 높이 통일 ★★★ -->
+                <div class="d-flex align-center ml-2 chart-control-group">
                   <v-btn 
                     size="x-small" 
                     :color="dashboardChartViewMode === 'full' ? 'amber' : 'grey-lighten-1'"
                     variant="flat"
                     :class="dashboardChartViewMode === 'full' ? 'text-grey-darken-4' : 'text-grey-darken-2'"
+                    class="chart-view-btn"
                     @click="dashboardChartViewMode = 'full'"
                   >
                     <v-icon size="14" class="mr-1">mdi-fit-to-screen</v-icon>
                     전체 보기
                   </v-btn>
-                  <v-divider vertical class="mx-1" style="border-color: #333; height: 20px;" />
+                  <v-divider vertical class="mx-1 chart-divider" />
                   <v-btn 
                     size="x-small"
                     :color="dashboardChartViewMode === 'scroll' ? 'amber' : 'grey-lighten-1'"
                     variant="flat"
                     :class="dashboardChartViewMode === 'scroll' ? 'text-grey-darken-4' : 'text-grey-darken-2'"
+                    class="chart-view-btn"
                     @click="dashboardChartViewMode = 'scroll'"
                   >
                     <v-icon size="14" class="mr-1">mdi-arrow-left-right</v-icon>
@@ -549,16 +561,18 @@
                 </div>
               </v-card-title>
                 <v-card-text class="pa-3">
-                <!-- ★★★ [수정] 백테스팅 스타일 자산 변동 추이 차트 ★★★ -->
+                <!-- ★★★ [수정] HoldingsView 스타일 자산 변동 추이 차트 ★★★ -->
                 <div v-if="assetHistory.length > 0 || upbitAccount.totalAsset > 0" class="chart-container">
                   <div 
                     class="chart-wrapper-backtest"
+                    :class="{ 'scroll-mode': dashboardChartViewMode === 'scroll' }"
+                    :style="dashboardChartViewMode === 'scroll' ? { width: dynamicChartWidth + 'px' } : {}"
                     @mousemove="handleChartHover"
                     @mouseleave="hoveredIndex = -1; showEmptyTooltip = false"
                   >
                     <svg 
                       class="custom-chart"
-                      :viewBox="`0 0 ${svgWidth} ${svgHeightBacktest}`"
+                      :viewBox="`0 0 ${effectiveWidth} ${svgHeightBacktest}`"
                       preserveAspectRatio="none"
                     >
                       <!-- 그라데이션 정의 -->
@@ -574,11 +588,11 @@
                         <!-- 영역 채우기 -->
                         <path :d="areaPathBacktest" fill="url(#dashboardAreaGradient)" />
                         
-                        <!-- 기준선들 - 우측 여백 적용 -->
+                        <!-- ★★★ [수정] 기준선들 - effectiveWidth 사용 ★★★ -->
                         <line 
                           :x1="svgPadding" 
                           :y1="getYPositionBacktest(initialAsset)" 
-                          :x2="svgWidth - svgPaddingRight" 
+                          :x2="effectiveWidth - svgPaddingRight" 
                           :y2="getYPositionBacktest(initialAsset)"
                           stroke="#FF9800" 
                           stroke-width="2" 
@@ -587,7 +601,7 @@
                         <line 
                           :x1="svgPadding" 
                           :y1="getYPositionBacktest(maxBalanceBacktest)" 
-                          :x2="svgWidth - svgPaddingRight" 
+                          :x2="effectiveWidth - svgPaddingRight" 
                           :y2="getYPositionBacktest(maxBalanceBacktest)"
                           stroke="#4CAF50" 
                           stroke-width="2" 
@@ -596,7 +610,7 @@
                         <line 
                           :x1="svgPadding" 
                           :y1="getYPositionBacktest(minBalanceBacktest)" 
-                          :x2="svgWidth - svgPaddingRight" 
+                          :x2="effectiveWidth - svgPaddingRight" 
                           :y2="getYPositionBacktest(minBalanceBacktest)"
                           stroke="#F44336" 
                           stroke-width="2" 
@@ -620,34 +634,34 @@
                         />
                       </template>
                       
-                      <!-- 거래 데이터 없을 때 - 기간 내 모든 날짜 점 표시 -->
+                      <!-- ★★★ [수정] 거래 데이터 없을 때 - effectiveWidth 사용 ★★★ -->
                       <template v-else>
-                        <!-- 영역 채우기 (현재 자산 수평선) - 우측 여백 적용 -->
+                        <!-- 영역 채우기 (현재 자산 수평선) -->
                         <rect 
                           :x="svgPadding" 
                           :y="svgHeightBacktest / 2 - 2"
-                          :width="svgWidth - svgPadding - svgPaddingRight"
+                          :width="effectiveWidth - svgPadding - svgPaddingRight"
                           :height="4"
                           fill="url(#dashboardAreaGradient)"
                           opacity="0.3"
                         />
                         
-                        <!-- 초기 자산 기준선 (주황색 점선) - 우측 여백 적용 -->
+                        <!-- 초기 자산 기준선 (주황색 점선) -->
                         <line 
                           :x1="svgPadding" 
                           :y1="svgHeightBacktest / 2" 
-                          :x2="svgWidth - svgPaddingRight" 
+                          :x2="effectiveWidth - svgPaddingRight" 
                           :y2="svgHeightBacktest / 2"
                           stroke="#FF9800" 
                           stroke-width="2" 
                           stroke-dasharray="6,4"
                         />
                         
-                        <!-- 현재 자산 라인 (파란색 실선) - 우측 여백 적용 -->
+                        <!-- 현재 자산 라인 (파란색 실선) -->
                         <line 
                           :x1="svgPadding" 
                           :y1="svgHeightBacktest / 2" 
-                          :x2="svgWidth - svgPaddingRight" 
+                          :x2="effectiveWidth - svgPaddingRight" 
                           :y2="svgHeightBacktest / 2" 
                           stroke="#1976D2" 
                           stroke-width="2.5"
@@ -688,14 +702,14 @@
                       </template>
                     </div>
                     
-                    <!-- 툴팁 (백테스팅 스타일) - 점 바로 위에 표시 -->
+                    <!-- ★★★ [수정] 툴팁 - 점 옆에 표시 (점을 가리지 않도록) ★★★ -->
                     <div 
                       v-if="hoveredIndex >= 0 && hoveredData && assetHistory.length > 0"
                       class="chart-tooltip-backtest"
                       :style="{ 
-                        left: getTooltipPosition() + 'px',
-                        top: Math.max(10, tooltipY - 80) + 'px',
-                        transform: pointX > chartWrapperWidth * 0.75 ? 'translateX(-100%)' : 'translateX(-50%)'
+                        left: (tooltipX > chartWrapperWidth * 0.5 ? tooltipX - 10 : tooltipX + 10) + 'px',
+                        top: tooltipY + 'px',
+                        transform: tooltipX > chartWrapperWidth * 0.5 ? 'translateX(-100%) translateY(-50%)' : 'translateY(-50%)'
                       }"
                     >
                       <div class="font-weight-bold">{{ hoveredData.date }}</div>
@@ -705,14 +719,14 @@
                       </div>
                     </div>
                     
-                    <!-- 거래 이력 없을 때 호버 툴팁 - 점 바로 위에 표시 -->
+                    <!-- ★★★ [수정] 거래 이력 없을 때 호버 툴팁 - 점 옆에 표시 ★★★ -->
                     <div 
                       v-if="showEmptyTooltip && assetHistory.length === 0 && emptyHoveredData"
                       class="chart-tooltip-backtest"
                       :style="{ 
-                        left: getTooltipPosition() + 'px',
-                        top: Math.max(10, tooltipY - 80) + 'px',
-                        transform: pointX > chartWrapperWidth * 0.75 ? 'translateX(-100%)' : 'translateX(-50%)'
+                        left: (tooltipX > chartWrapperWidth * 0.5 ? tooltipX - 10 : tooltipX + 10) + 'px',
+                        top: tooltipY + 'px',
+                        transform: tooltipX > chartWrapperWidth * 0.5 ? 'translateX(-100%) translateY(-50%)' : 'translateY(-50%)'
                       }"
                     >
                       <div class="font-weight-bold">{{ emptyHoveredData.date }}</div>
@@ -721,11 +735,6 @@
                     </div>
                   </div>
                   
-                  <!-- 날짜 라벨 -->
-                  <div v-if="assetHistory.length > 0" class="d-flex justify-space-between text-caption text-grey mt-2">
-                    <span>{{ assetHistory[0]?.date || '' }}</span>
-                    <span>{{ assetHistory[assetHistory.length - 1]?.date || '' }}</span>
-                  </div>
                   <!-- 차트 하단 날짜 표시 -->
                   <div class="chart-dates d-flex justify-space-between mt-2 px-4">
                     <span class="text-caption text-grey-darken-1">
@@ -1139,7 +1148,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import TheHeader from '@/components/TheHeader.vue'
 import TheSidebar from '@/components/TheSidebar.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -1213,8 +1222,16 @@ const customEndDate = ref('')
 const applyCustomDate = () => {
   chartPeriod.value = 'custom'
   showCustomDateDialog.value = false
-  // TODO: customStartDate, customEndDate로 차트 데이터 필터링
+  fetchAssetHistory()
   showSnackbar(`${customStartDate.value} ~ ${customEndDate.value} 기간 적용`, 'success')
+}
+
+// ★★★ [추가] 날짜 입력 필드 변경 시 자동 적용 ★★★
+const applyCustomDateRange = () => {
+  if (customStartDate.value && customEndDate.value) {
+    chartPeriod.value = 'custom'
+    fetchAssetHistory()
+  }
 }
 
 // 투자기간 계산
@@ -1255,7 +1272,15 @@ const recentTransactions = ref<any[]>([])
 const snackbar = ref({ show: false, message: '', color: 'success' })
 
 const svgWidth = 800, svgHeight = 200, svgPadding = 30
-const svgPaddingRight = 65 // 우측 라벨 영역을 위한 여백 (절반으로 축소)
+const svgPaddingRight = 120 // ★★★ [수정] 우측 라벨 영역 여백 확대 (65 → 120) ★★★
+
+// HoldingsView 스타일 동적 차트 너비 계산
+const effectiveWidth = computed(() => dashboardChartViewMode.value === 'scroll' ? dynamicChartWidth.value : svgWidth)
+
+const dynamicChartWidth = computed(() => {
+  const pointCount = assetHistory.value.length || emptyPeriodDates.value.length
+  return Math.max(svgWidth, pointCount * 25 + svgPadding + svgPaddingRight)
+})
 
 const maxBalance = computed(() => assetHistory.value.length ? Math.max(...assetHistory.value.map(d => d.balance)) : 0)
 const minBalance = computed(() => assetHistory.value.length ? Math.min(...assetHistory.value.map(d => d.balance)) : 0)
@@ -1424,11 +1449,11 @@ const emptyPeriodDates = computed(() => {
   return dates
 })
 
-// 빈 기간 차트 포인트 계산 (우측 여백 적용)
+// 스크롤 모드 지원 - effectiveWidth 사용
 const emptyChartPoints = computed(() => {
   if (!emptyPeriodDates.value.length) return []
   const total = emptyPeriodDates.value.length
-  const chartWidth = svgWidth - svgPadding - svgPaddingRight // 우측 여백 적용
+  const chartWidth = effectiveWidth.value - svgPadding - svgPaddingRight
   return emptyPeriodDates.value.map((d, index) => ({
     x: svgPadding + (index / (total - 1 || 1)) * chartWidth,
     y: svgHeightBacktest / 2,
@@ -1464,24 +1489,20 @@ const fetchTodayProfit = async () => {
 }
 
 
-
-
-
-
-
-
-// 백테스팅 스타일 차트용 상수 및 computed
 // 백테스팅 스타일 차트용 상수 및 computed 
 const svgHeightBacktest = 350
 
+// ★★★ [수정] 초기자산을 항상 포함하여 Y축 범위 계산 (여유 공간 없이 정확히) ★★★
 const maxBalanceBacktest = computed(() => {
   if (!assetHistory.value.length) return initialAsset.value
-  return Math.max(...assetHistory.value.map(d => d.balance), initialAsset.value)
+  const maxFromData = Math.max(...assetHistory.value.map(d => d.balance))
+  return Math.max(maxFromData, initialAsset.value)
 })
 
 const minBalanceBacktest = computed(() => {
   if (!assetHistory.value.length) return initialAsset.value
-  return Math.min(...assetHistory.value.map(d => d.balance), initialAsset.value)
+  const minFromData = Math.min(...assetHistory.value.map(d => d.balance))
+  return Math.min(minFromData, initialAsset.value)
 })
 
 const getYPositionBacktest = (balance: number) => {
@@ -1491,11 +1512,11 @@ const getYPositionBacktest = (balance: number) => {
   return svgPadding + ((max - balance) / range) * (svgHeightBacktest - svgPadding * 2)
 }
 
-// 우측 여백 적용
+// 스크롤 모드 지원 - effectiveWidth 사용
 const chartPointsBacktest = computed(() => {
   if (!assetHistory.value.length) return []
   const total = assetHistory.value.length
-  const chartWidth = svgWidth - svgPadding - svgPaddingRight // 우측 여백 적용
+  const chartWidth = effectiveWidth.value - svgPadding - svgPaddingRight
   return assetHistory.value.map((d, index) => ({
     x: svgPadding + (index / (total - 1 || 1)) * chartWidth,
     y: getYPositionBacktest(d.balance),
@@ -1520,7 +1541,16 @@ const areaPathBacktest = computed(() => {
   return `M ${firstX} ${bottomY} L ${points.map(p => `${p.x} ${p.y}`).join(' L ')} L ${lastX} ${bottomY} Z`
 })
 
+// ★★★ [수정] 여유 공간 제거한 실제 값으로 라벨 위치 계산 ★★★
 const getLabelPositionBacktest = (balance: number) => {
+  // 라벨 위치 계산 시에는 여유 공간 없이 실제 데이터 범위 사용
+  const dataMax = assetHistory.value.length 
+    ? Math.max(...assetHistory.value.map(d => d.balance), initialAsset.value)
+    : initialAsset.value
+  const dataMin = assetHistory.value.length 
+    ? Math.min(...assetHistory.value.map(d => d.balance), initialAsset.value)
+    : initialAsset.value
+  
   const max = maxBalanceBacktest.value
   const min = minBalanceBacktest.value
   const range = max - min || 1
@@ -1663,43 +1693,89 @@ const getPointColor = (balance: number) => {
 }
 
 const handleChartHover = (event: MouseEvent) => {
-  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
-  const x = event.clientX - rect.left
-  const y = event.clientY - rect.top
+  const wrapper = event.currentTarget as HTMLElement
+  const rect = wrapper.getBoundingClientRect()
   
-  chartWrapperWidth.value = rect.width
+  // 마우스 위치 (wrapper 내 상대 좌표)
+  const mouseX = event.clientX - rect.left
   
-  const svgX = (x / rect.width) * svgWidth
-  tooltipX.value = x
+  // 스크롤 모드 확인
+  const isScrollMode = dashboardChartViewMode.value === 'scroll'
   
-  const chartWidth = svgWidth - svgPadding - svgPaddingRight
-  
+  // ★★★ [핵심 수정] 스크롤 모드에서의 계산 방식 완전 변경 ★★★
+  let targetIndex = 0
   const total = assetHistory.value.length
+  
   if (total === 0) {
     const emptyTotal = emptyPeriodDates.value.length
     if (emptyTotal > 0) {
-      const index = Math.floor(((svgX - svgPadding) / chartWidth) * emptyTotal)
-      hoveredIndex.value = Math.max(0, Math.min(emptyTotal - 1, index))
-      tooltipY.value = (svgHeightBacktest / 2) * (rect.height / svgHeightBacktest)
-      // 점의 실제 X 좌표 계산
-      if (emptyChartPoints.value[hoveredIndex.value]) {
-        pointX.value = emptyChartPoints.value[hoveredIndex.value].x * (rect.width / svgWidth)
+      if (isScrollMode) {
+        // 스크롤 모드: SVG의 실제 너비 기준으로 계산
+        const svgElement = wrapper.querySelector('svg')
+        if (svgElement) {
+          const svgRect = svgElement.getBoundingClientRect()
+          const svgMouseX = event.clientX - svgRect.left
+          const chartWidth = effectiveWidth.value - svgPadding - svgPaddingRight
+          const ratio = Math.max(0, Math.min(1, (svgMouseX - svgPadding * (svgRect.width / effectiveWidth.value)) / (chartWidth * (svgRect.width / effectiveWidth.value))))
+          targetIndex = Math.round(ratio * (emptyTotal - 1))
+        }
+      } else {
+        const chartWidth = effectiveWidth.value - svgPadding - svgPaddingRight
+        const ratio = Math.max(0, Math.min(1, (mouseX - svgPadding) / chartWidth))
+        targetIndex = Math.round(ratio * (emptyTotal - 1))
       }
+      hoveredIndex.value = Math.max(0, Math.min(emptyTotal - 1, targetIndex))
+      tooltipY.value = svgHeightBacktest / 2
     }
     showEmptyTooltip.value = true
+    tooltipX.value = mouseX
+    chartWrapperWidth.value = rect.width
     return
   }
   
   showEmptyTooltip.value = false
-  const index = Math.floor(((svgX - svgPadding) / chartWidth) * total)
-  hoveredIndex.value = Math.max(0, Math.min(total - 1, index))
   
-  if (chartPointsBacktest.value[hoveredIndex.value]) {
-    const pointY = chartPointsBacktest.value[hoveredIndex.value].y
-    tooltipY.value = pointY * (rect.height / svgHeightBacktest)
-    // 점의 실제 X 좌표 계산
-    pointX.value = chartPointsBacktest.value[hoveredIndex.value].x * (rect.width / svgWidth)
+  if (isScrollMode) {
+    // ★★★ [핵심] 스크롤 모드: 각 점의 화면상 위치와 마우스 위치 비교 ★★★
+    const svgElement = wrapper.querySelector('svg')
+    if (svgElement) {
+      const svgRect = svgElement.getBoundingClientRect()
+      const scaleX = svgRect.width / effectiveWidth.value
+      
+      // 마우스와 가장 가까운 점 찾기
+      let minDistance = Infinity
+      let closestIndex = 0
+      
+      chartPointsBacktest.value.forEach((point, index) => {
+        // 점의 화면상 X 위치 계산
+        const pointScreenX = svgRect.left + (point.x * scaleX) - rect.left
+        const distance = Math.abs(mouseX - pointScreenX)
+        
+        if (distance < minDistance) {
+          minDistance = distance
+          closestIndex = index
+        }
+      })
+      
+      targetIndex = closestIndex
+    }
+  } else {
+    // 전체 보기 모드: 기존 방식
+    const chartWidth = effectiveWidth.value - svgPadding - svgPaddingRight
+    const ratio = Math.max(0, Math.min(1, (mouseX - svgPadding * (rect.width / effectiveWidth.value)) / (chartWidth * (rect.width / effectiveWidth.value))))
+    targetIndex = Math.round(ratio * (total - 1))
   }
+  
+  hoveredIndex.value = Math.max(0, Math.min(total - 1, targetIndex))
+  
+  // 호버된 점의 Y 위치
+  if (chartPointsBacktest.value[hoveredIndex.value]) {
+    tooltipY.value = chartPointsBacktest.value[hoveredIndex.value].y
+  }
+  
+  // 툴팁 X 위치
+  tooltipX.value = mouseX
+  chartWrapperWidth.value = rect.width
 }
 
 // 점의 실제 위치에 툴팁 표시
@@ -1922,40 +1998,122 @@ const fetchRecentTransactions = async () => {
 }
 const fetchAssetHistory = async () => {
   try {
-    // 초기 자산 설정
-    initialAsset.value = tradingSettings.value?.dailyLimitAmount || upbitAccount.value.totalAsset || 1000000
+    // 초기 자산을 1,000,000으로 고정
+    initialAsset.value = 1000000
     
-    // 거래 이력이 있으면 날짜별로 그룹화하여 자산 변동 추이 생성
-    if (recentTransactions.value.length > 0) {
-      const sortedTxs = [...recentTransactions.value].sort((a, b) => 
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-      )
+    // 매도 완료된 거래만 별도 조회
+    const response = await transactionApi.search({ status: 'SOLD', page: 0, size: 1000 })
+    const transactions = response.data?.content || []
+    
+    if (transactions.length === 0) {
+      assetHistory.value = []
+      return
+    }
+    
+    // 기간에 따른 필터링
+    const now = new Date()
+    let startDate: Date
+    let endDate: Date = now
+    
+    switch (chartPeriod.value) {
+      case '7':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7)
+        break
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+        break
+      case 'year':
+        startDate = new Date(now.getFullYear(), 0, 1)
+        break
+      case 'custom':
+        startDate = customStartDate.value ? new Date(customStartDate.value) : new Date(2020, 0, 1)
+        endDate = customEndDate.value ? new Date(customEndDate.value) : now
+        break
+      case 'all':
+      default:
+        startDate = new Date(2020, 0, 1)
+        break
+    }
+    
+    // 기간 필터링 적용
+    const filteredTxs = transactions.filter((tx: any) => {
+      const txDate = new Date(tx.soldAt || tx.createdAt)
+      return txDate >= startDate
+    })
+    
+    if (filteredTxs.length === 0) {
+      assetHistory.value = []
+      return
+    }
+    
+    // 날짜순 정렬
+    const sortedTxs = [...filteredTxs].sort((a: any, b: any) => 
+      new Date(a.soldAt || a.createdAt).getTime() - new Date(b.soldAt || b.createdAt).getTime()
+    )
+    
+    // ★★★ [핵심 수정] 거래별로 누적 잔액 계산 (날짜별 그룹화) ★★★
+    const dailyBalanceMap = new Map<string, number>()
+    let runningBalance = initialAsset.value
+    
+    sortedTxs.forEach((tx: any) => {
+      const dateKey = new Date(tx.soldAt || tx.createdAt).toISOString().split('T')[0]
+      if (tx.profitLoss) {
+        runningBalance += tx.profitLoss
+      }
+      dailyBalanceMap.set(dateKey, runningBalance)
+    })
+    
+    // ★★★ [수정] 첫 거래일부터 오늘까지 모든 날짜에 데이터 포인트 생성 ★★★
+    const sortedDates = Array.from(dailyBalanceMap.keys()).sort()
+    const firstDate = new Date(sortedDates[0])
+    firstDate.setHours(0, 0, 0, 0)
+    
+    // ★★★ [핵심 수정] 오늘 날짜를 KST 기준으로 정확히 계산 ★★★
+    const nowDate = new Date()
+    const today = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate())
+    
+    // ★★★ [수정] 모든 기간에서 오늘까지 표시 (custom 제외) ★★★
+    let lastDate: Date
+    if (chartPeriod.value === 'custom' && customEndDate.value) {
+      lastDate = new Date(customEndDate.value)
+    } else {
+      // 7일, 이번달, 올해, 전체 투자기간 모두 오늘까지 표시
+      lastDate = new Date(today.getTime())
+    }
+    
+    const allDates: Array<{ date: string, balance: number, profitRate: number }> = []
+    let currentBalance = initialAsset.value
+    const currentDate = new Date(firstDate)
+    currentDate.setHours(12, 0, 0, 0)  // ★★★ [수정] 정오로 설정하여 시간대 문제 방지 ★★★
+    lastDate.setHours(12, 0, 0, 0)     // ★★★ [수정] 정오로 설정 ★★★
+    
+    // ★★★ [수정] 날짜 문자열 비교로 변경하여 정확한 포함 보장 ★★★
+    const lastDateStr = `${lastDate.getFullYear()}-${String(lastDate.getMonth() + 1).padStart(2, '0')}-${String(lastDate.getDate()).padStart(2, '0')}`
+    
+    while (true) {
+      const dateKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`
       
-      // 날짜별 그룹화
-      const dailyMap = new Map<string, { balance: number, profitRate: number }>()
-      let runningBalance = initialAsset.value
+      // 해당 날짜에 거래가 있으면 그 잔액 사용, 없으면 이전 잔액 유지
+      if (dailyBalanceMap.has(dateKey)) {
+        currentBalance = dailyBalanceMap.get(dateKey)!
+      }
       
-      sortedTxs.forEach(tx => {
-        const dateKey = new Date(tx.soldAt || tx.createdAt).toISOString().split('T')[0]
-        
-        if (tx.status === 'SOLD' && tx.profitLoss) {
-          runningBalance += tx.profitLoss
-        }
-        
-        const profitRate = ((runningBalance - initialAsset.value) / initialAsset.value) * 100
-        dailyMap.set(dateKey, { balance: runningBalance, profitRate })
+      allDates.push({
+        date: dateKey,
+        balance: currentBalance,
+        profitRate: ((currentBalance - initialAsset.value) / initialAsset.value) * 100
       })
       
-      // Map을 배열로 변환
-      assetHistory.value = Array.from(dailyMap.entries()).map(([date, data]) => ({
-        date,
-        balance: data.balance,
-        profitRate: data.profitRate
-      }))
-    } else {
-      // 거래 이력이 없으면 빈 배열 (현재 자산만 표시)
-      assetHistory.value = []
+      // ★★★ [수정] 마지막 날짜 포함 후 종료 ★★★
+      if (dateKey >= lastDateStr) {
+        break
+      }
+      
+      currentDate.setDate(currentDate.getDate() + 1)
     }
+    
+    assetHistory.value = allDates
+    
   } catch (e) {
     console.error('자산 이력 생성 실패:', e)
     assetHistory.value = []
@@ -1975,6 +2133,11 @@ const refreshAll = async () => {
         isRefreshing.value = false 
     } 
 }
+
+// ★★★ [추가] 기간 변경 시 자산 이력 다시 로드 ★★★
+watch(chartPeriod, async () => {
+  await fetchAssetHistory()
+})
 
 let refreshInterval: number | null = null
 const startAutoRefresh = () => { refreshInterval = window.setInterval(() => { fetchDashboardStats(); fetchUpbitAccount(); fetchBotStatus() }, 60000) }
@@ -2144,6 +2307,17 @@ const openHelp = (helpKey: string) => {
   }
 }
 
+// ★★★ [추가] 기간 변경 시 자산 이력 다시 로드 ★★★
+watch(chartPeriod, async () => {
+  await fetchAssetHistory()
+})
+
+// ★★★ [추가] 사용자 지정 기간 적용 시 자산 이력 다시 로드 ★★★
+watch([customStartDate, customEndDate], async () => {
+  if (chartPeriod.value === 'custom' && customStartDate.value && customEndDate.value) {
+    await fetchAssetHistory()
+  }
+})
 onMounted(async () => { 
   // 실시간 시간 업데이트 시작
   updateCurrentTime()
@@ -2390,5 +2564,68 @@ onUnmounted(() => {
 
 .chart-label.label-min {
   color: #F44336;
+}
+
+.chart-container {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.chart-wrapper-backtest.scroll-mode {
+  min-width: 100%;
+}
+
+/* ★★★ [추가] 사용자 지정 기간 입력 필드 스타일 ★★★ */
+.custom-date-input {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: #333;
+  width: 110px;
+  height: 24px;
+}
+
+.custom-date-input:focus {
+  outline: none;
+  border-color: #FFC107;
+}
+
+/* ★★★ [추가] 차트 컨트롤 버튼 높이 통일 (7일~전체투자기간 버튼 기준) ★★★ */
+.chart-control-group {
+  height: 28px;  /* v-btn-toggle과 동일한 높이 */
+}
+
+.custom-date-input {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: #333;
+  width: 110px;
+  height: 28px;  /* ★★★ [수정] 버튼과 높이 통일 ★★★ */
+  line-height: 20px;
+}
+
+.chart-view-btn {
+  height: 28px !important;  /* ★★★ [추가] 버튼 높이 통일 ★★★ */
+  min-height: 28px !important;
+}
+
+.chart-divider {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  height: 20px !important;
+  align-self: center;
+}
+
+.chart-period-toggle {
+  height: 28px;
+}
+
+.chart-period-toggle .v-btn {
+  height: 28px !important;
+  min-height: 28px !important;
 }
 </style>

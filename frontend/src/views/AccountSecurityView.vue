@@ -24,13 +24,20 @@
                 2단계 인증 (2FA)
                 <v-chip 
                   v-if="twoFactorEnabled" 
-                  color="success" 
+                  color="grey-lighten-1" 
+                  variant="flat"
                   size="small" 
-                  class="ml-2"
+                  class="ml-2 text-black"
                 >
                   활성화
                 </v-chip>
-                <v-chip v-else color="blue-grey-darken-1" size="small" class="ml-2">
+                <v-chip 
+                  v-else 
+                  color="grey-lighten-2" 
+                  variant="flat"
+                  size="small" 
+                  class="ml-2 text-black"
+                >
                   비활성화
                 </v-chip>
                 <v-spacer />
@@ -180,13 +187,20 @@
                 IP 화이트리스트
                 <v-chip 
                   v-if="ipWhitelistEnabled" 
-                  color="success" 
+                  color="grey-lighten-1" 
+                  variant="flat"
                   size="small" 
-                  class="ml-2"
+                  class="ml-2 text-black"
                 >
                   활성화
                 </v-chip>
-                <v-chip v-else color="blue-grey-darken-1" size="small" class="ml-2">
+                <v-chip 
+                  v-else 
+                  color="grey-lighten-2" 
+                  variant="flat"
+                  size="small" 
+                  class="ml-2 text-black"
+                >
                   비활성화
                 </v-chip>
                 <v-spacer />

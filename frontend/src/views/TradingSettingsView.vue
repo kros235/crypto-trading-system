@@ -226,12 +226,20 @@
                 </v-row>
 	  <v-row class="mt-2">
                   <v-col cols="12" md="4">
-                    <v-checkbox
-                      v-model="settings.useTrailingStop"
-                      label="트레일링 스톱 사용"
-                      color="primary"
-                      hide-details
-                    />
+                    <div class="d-flex align-center">
+                      <v-checkbox
+                        v-model="settings.useTrailingStop"
+                        label="트레일링 스톱 사용"
+                        color="primary"
+                        hide-details
+                      />
+                      <HelpButton 
+                        use-dialog 
+                        :dialog-title="helpContents.trailingStop.title"
+                        :dialog-content="helpContents.trailingStop.content"
+                        color="grey-darken-1"
+                      />
+                    </div>
                   </v-col>
                   <v-col cols="12" md="4" v-if="settings.useTrailingStop">
                     <v-text-field
@@ -252,205 +260,237 @@
 
               <v-divider class="my-6" />
 
-
-              <!-- 기술적 지표 설정 -->
-              <v-card class="mb-4">
-                <v-card-title class="d-flex align-center">
-                  <v-icon class="mr-2">mdi-chart-bell-curve-cumulative</v-icon>
+              <div class="mb-6">
+                <h3 class="text-h6 mb-3 d-flex align-center">
+                  <v-icon icon="mdi-chart-bell-curve-cumulative" class="mr-2" />
                   기술적 지표 설정
-                  <!-- 도움말 버튼 -->
+                </h3>
+
+                <!-- RSI 설정 -->
+                <div class="d-flex align-center mb-2">
+                  <v-icon size="small" class="mr-1">mdi-chart-line</v-icon>
+                  <span class="text-subtitle-2 text-grey">RSI (상대강도지수)</span>
                   <HelpButton 
                     use-dialog 
-                    :dialog-title="helpContents.technicalIndicator.title"
-                    :dialog-content="helpContents.technicalIndicator.content"
+                    :dialog-title="helpContents.rsiIndicator.title"
+                    :dialog-content="helpContents.rsiIndicator.content"
+                    color="grey-darken-1"
+                  />
+                </div>
+                <v-row>
+                  <v-col cols="12" md="4">
+                    <v-text-field
+                      v-model.number="settings.rsiPeriod"
+                      label="RSI 기간 (일)"
+                      type="number"
+                      :rules="[v => v >= 5 && v <= 50 || '5~50 사이 입력']"
+                      hint="기본값: 14일"
+                      persistent-hint
+                      density="compact"
+                    />
+                  </v-col>
+                  <v-col cols="12" md="4">
+                    <v-text-field
+                      v-model.number="settings.rsiBuyThreshold"
+                      label="매수 신호 (이하)"
+                      type="number"
+                      :rules="[v => v >= 10 && v <= 50 || '10~50 사이 입력']"
+                      hint="기본값: 30 이하"
+                      persistent-hint
+                      density="compact"
+                    />
+                  </v-col>
+                  <v-col cols="12" md="4">
+                    <v-text-field
+                      v-model.number="settings.rsiSellThreshold"
+                      label="매도 신호 (이상)"
+                      type="number"
+                      :rules="[v => v >= 50 && v <= 90 || '50~90 사이 입력']"
+                      hint="기본값: 70 이상"
+                      persistent-hint
+                      density="compact"
+                    />
+                  </v-col>
+                </v-row>
+
+                <v-divider class="my-4" />
+
+                <!-- 볼린저 밴드 설정 -->
+                <div class="d-flex align-center mb-2">
+                  <v-icon size="small" class="mr-1">mdi-chart-bell-curve</v-icon>
+                  <span class="text-subtitle-2 text-grey">볼린저 밴드</span>
+                  <HelpButton 
+                    use-dialog 
+                    :dialog-title="helpContents.bbIndicator.title"
+                    :dialog-content="helpContents.bbIndicator.content"
                     :dialog-width="700"
                     color="grey-darken-1"
                   />
-                </v-card-title>
-                <v-card-text>
-                  <!-- RSI 설정 -->
-                  <div class="text-subtitle-2 text-grey mb-2">
-                    <v-icon size="small" class="mr-1">mdi-chart-line</v-icon>
-                    RSI (상대강도지수)
-                  </div>
-                  <v-row>
-                    <v-col cols="12" md="4">
-                      <v-text-field
-                        v-model.number="settings.rsiPeriod"
-                        label="RSI 기간 (일)"
-                        type="number"
-                        :rules="[v => v >= 5 && v <= 50 || '5~50 사이 입력']"
-                        hint="기본값: 14일"
-                        persistent-hint
-                        density="compact"
-                      />
-                    </v-col>
-                    <v-col cols="12" md="4">
-                      <v-text-field
-                        v-model.number="settings.rsiBuyThreshold"
-                        label="매수 신호 (이하)"
-                        type="number"
-                        :rules="[v => v >= 10 && v <= 50 || '10~50 사이 입력']"
-                        hint="기본값: 30 이하"
-                        persistent-hint
-                        density="compact"
-                      />
-                    </v-col>
-                    <v-col cols="12" md="4">
-                      <v-text-field
-                        v-model.number="settings.rsiSellThreshold"
-                        label="매도 신호 (이상)"
-                        type="number"
-                        :rules="[v => v >= 50 && v <= 90 || '50~90 사이 입력']"
-                        hint="기본값: 70 이상"
-                        persistent-hint
-                        density="compact"
-                      />
-                    </v-col>
-                  </v-row>
+                </div>
+                <v-row>
+                  <v-col cols="12" md="6">
+                    <v-text-field
+                      v-model.number="settings.bbPeriod"
+                      label="볼린저 밴드 기간 (일)"
+                      type="number"
+                      :rules="[v => v >= 10 && v <= 50 || '10~50 사이 입력']"
+                      hint="기본값: 20일"
+                      persistent-hint
+                      density="compact"
+                    />
+                  </v-col>
+                  <v-col cols="12" md="6">
+                    <v-select
+                      v-model="settings.bbMultiplier"
+                      :items="[1, 2, 3, 4]"
+                      label="표준편차 승수"
+                      hint="기본값: 2배"
+                      persistent-hint
+                      density="compact"
+                    />
+                  </v-col>
+                </v-row>
 
-                  <v-divider class="my-4" />
+                <v-divider class="my-4" />
 
-                  <!-- 볼린저 밴드 설정 -->
-                  <div class="text-subtitle-2 text-grey mb-2">
-                    <v-icon size="small" class="mr-1">mdi-chart-bell-curve</v-icon>
-                    볼린저 밴드
-                  </div>
-                  <v-row>
-                    <v-col cols="12" md="6">
-                      <v-text-field
-                        v-model.number="settings.bbPeriod"
-                        label="볼린저 밴드 기간 (일)"
-                        type="number"
-                        :rules="[v => v >= 10 && v <= 50 || '10~50 사이 입력']"
-                        hint="기본값: 20일"
-                        persistent-hint
-                        density="compact"
-                      />
-                    </v-col>
-                    <v-col cols="12" md="6">
-                      <v-select
-                        v-model="settings.bbMultiplier"
-                        :items="[1, 2, 3, 4]"
-                        label="표준편차 승수"
-                        hint="기본값: 2배"
-                        persistent-hint
-                        density="compact"
-                      />
-                    </v-col>
-                  </v-row>
-
-                  <v-divider class="my-4" />
-
-                  <!-- 거래량 설정 -->
-                  <div class="text-subtitle-2 text-grey mb-2">
-                    <v-icon size="small" class="mr-1">mdi-chart-bar</v-icon>
-                    거래량 분석
-                  </div>
-                  <v-row>
-                    <v-col cols="12">
-                      <v-slider
-                        v-model="settings.volumeThreshold"
-                        label="거래량 급증 기준 (%)"
-                        :min="100"
-                        :max="500"
-                        :step="10"
-                        thumb-label
-                        class="mt-2"
-                      >
-                        <template v-slot:append>
-                          <v-chip size="small" color="primary">
-                            {{ settings.volumeThreshold }}%
-                          </v-chip>
-                        </template>
-                      </v-slider>
-                      <p class="text-caption text-grey">
-                        평균 거래량 대비 {{ settings.volumeThreshold }}% 이상일 때 거래량 급증으로 판단합니다.
-                      </p>
-                    </v-col>
-                  </v-row>
-                </v-card-text>
-              </v-card>
+                <!-- 거래량 설정 -->
+                <div class="d-flex align-center mb-2">
+                  <v-icon size="small" class="mr-1">mdi-chart-bar</v-icon>
+                  <span class="text-subtitle-2 text-grey">거래량 분석</span>
+                  <HelpButton 
+                    use-dialog 
+                    :dialog-title="helpContents.volumeIndicator.title"
+                    :dialog-content="helpContents.volumeIndicator.content"
+                    color="grey-darken-1"
+                  />
+                </div>
+                <v-row>
+                  <v-col cols="12">
+                    <v-slider
+                      v-model="settings.volumeThreshold"
+                      label="거래량 급증 기준 (%)"
+                      :min="100"
+                      :max="500"
+                      :step="10"
+                      thumb-label
+                      class="mt-2"
+                    >
+                      <template v-slot:append>
+                        <v-chip size="small" color="primary">
+                          {{ settings.volumeThreshold }}%
+                        </v-chip>
+                      </template>
+                    </v-slider>
+                    <p class="text-caption text-grey">
+                      평균 거래량 대비 {{ settings.volumeThreshold }}% 이상일 때 거래량 급증으로 판단합니다.
+                    </p>
+                  </v-col>
+                </v-row>
+              </div>
 
               <v-divider class="my-6" />
 
-              <!-- 리스크 관리 설정 -->
+              <!-- ★★★ 수정: 리스크 관리 - 기존 도움말 제거, 개별 도움말 버튼 추가 ★★★ -->
               <div class="mb-6">
                 <h3 class="text-h6 mb-3 d-flex align-center">
                   <v-icon icon="mdi-shield-alert" class="mr-2" />
                   리스크 관리
-                  <!-- 도움말 버튼 -->
-                  <HelpButton 
-                    use-dialog 
-                    :dialog-title="helpContents.riskManagement.title"
-                    :dialog-content="helpContents.riskManagement.content"
-                    color="grey-darken-1"
-                  />
                 </h3>
 
-                <!-- 일일 거래 한도 -->
-                <div class="text-caption text-grey mb-2">일일 최대 거래금액 (초기 자본 대비)</div>
+                <!-- 일일 최대 거래금액 -->
+                <div class="d-flex align-center mb-2">
+                  <v-icon size="small" class="mr-1">mdi-cash-multiple</v-icon>
+                  <span class="text-subtitle-2 text-grey">일일 최대 거래금액 (초기 자본 대비)</span>
+                  <HelpButton 
+                    use-dialog 
+                    :dialog-title="helpContents.dailyTradeLimit.title"
+                    :dialog-content="helpContents.dailyTradeLimit.content"
+                    color="grey-darken-1"
+                  />
+                </div>
                 <v-slider
                   v-model="settings.dailyTradeLimitPct"
+                  label="일일 최대 거래금액 (%)"
                   :min="10"
                   :max="100"
                   :step="10"
                   thumb-label
-                  hide-details
-                  class="mb-1"
+                  class="mt-2"
                 >
                   <template v-slot:append>
-                    <span class="text-body-2" style="min-width: 80px">
+                    <v-chip size="small" color="primary">
                       {{ settings.dailyTradeLimitPct === 100 ? '제한없음' : `${settings.dailyTradeLimitPct}%` }}
-                    </span>
+                    </v-chip>
                   </template>
                 </v-slider>
-                <div class="text-caption text-grey-darken-1 mb-4">
+                <p class="text-caption text-grey">
                   일일 한도 금액 기준으로 하루 최대 매수 가능 금액을 제한합니다 ({{ formatCurrency(settings.dailyLimitAmount * settings.dailyTradeLimitPct / 100) }})
-                </div>
+                </p>
 
-                <!-- 단일 종목 비중 제한 -->
-                <div class="text-caption text-grey mb-2 mt-4">단일 종목 최대 비중 (총 자본 대비)</div>
+                <v-divider class="my-4" />
+
+                <!-- 단일 종목 최대 비중 -->
+                <div class="d-flex align-center mb-2">
+                  <v-icon size="small" class="mr-1">mdi-chart-pie</v-icon>
+                  <span class="text-subtitle-2 text-grey">단일 종목 최대 비중 (총 자본 대비)</span>
+                  <HelpButton 
+                    use-dialog 
+                    :dialog-title="helpContents.maxPosition.title"
+                    :dialog-content="helpContents.maxPosition.content"
+                    color="grey-darken-1"
+                  />
+                </div>
                 <v-slider
                   v-model="settings.maxPositionPct"
+                  label="단일 종목 최대 비중 (%)"
                   :min="10"
                   :max="100"
                   :step="5"
                   thumb-label
-                  hide-details
-                  class="mb-1"
+                  class="mt-2"
                 >
                   <template v-slot:append>
-                    <span class="text-body-2" style="min-width: 80px">
+                    <v-chip size="small" color="primary">
                       {{ settings.maxPositionPct === 100 ? '제한없음' : `${settings.maxPositionPct}%` }}
-                    </span>
+                    </v-chip>
                   </template>
                 </v-slider>
-                <div class="text-caption text-grey-darken-1 mb-4">
+                <p class="text-caption text-grey">
                   한 코인에 최대 투자 가능 금액을 제한합니다 ({{ formatCurrency(settings.dailyLimitAmount * settings.maxPositionPct / 100) }})
-                </div>
+                </p>
 
-                <!-- 긴급 정지 조건 -->
-                <div class="text-caption text-grey mb-2 mt-4">긴급 정지 (일일 손실률)</div>
+                <v-divider class="my-4" />
+
+                <!-- 긴급 정지 (일일 손실률) -->
+                <div class="d-flex align-center mb-2">
+                  <v-icon size="small" class="mr-1">mdi-alert-octagon</v-icon>
+                  <span class="text-subtitle-2 text-grey">긴급 정지 (일일 손실률)</span>
+                  <HelpButton 
+                    use-dialog 
+                    :dialog-title="helpContents.dailyStopLoss.title"
+                    :dialog-content="helpContents.dailyStopLoss.content"
+                    color="grey-darken-1"
+                  />
+                </div>
                 <v-slider
                   v-model="settings.dailyStopLossPct"
+                  label="긴급 정지 (%)"
                   :min="-50"
                   :max="0"
                   :step="5"
                   thumb-label
-                  hide-details
                   color="error"
-                  class="mb-1"
+                  class="mt-2"
                 >
                   <template v-slot:append>
-                    <span class="text-body-2" style="min-width: 80px">
+                    <v-chip size="small" color="error">
                       {{ settings.dailyStopLossPct === 0 ? '사용안함' : `${settings.dailyStopLossPct}%` }}
-                    </span>
+                    </v-chip>
                   </template>
                 </v-slider>
-                <div class="text-caption text-grey-darken-1 mb-2">
+                <p class="text-caption text-grey">
                   당일 손실이 이 값에 도달하면 거래를 자동 중단합니다
-                </div>
+                </p>
               </div>
 
 	<!-- 급락장 보호 기능 -->
@@ -458,93 +498,123 @@
                 <h3 class="text-h6 mb-3 d-flex align-center">
                   <v-icon icon="mdi-alert-octagon" class="mr-2" />
                   급락장 보호 기능
-                  <!-- 도움말 버튼 -->
-                  <HelpButton 
-                    use-dialog 
-                    :dialog-title="helpContents.crashProtection.title"
-                    :dialog-content="helpContents.crashProtection.content"
-                    color="grey-darken-1"
-                  />
                 </h3>
           
-          <!-- 시장 추세 필터 -->
-          <v-switch
-            v-model="settings.useMarketTrendFilter"
-            label="시장 추세 필터 사용"
-            hint="BTC가 20일 이동평균선 아래로 하락하면 전체 매수를 중단합니다"
-            persistent-hint
-            color="primary"
-            class="mb-4"
-          ></v-switch>
+                <!-- 시장 추세 필터 -->
+                <div class="d-flex align-center mb-2">
+                  <v-icon size="small" class="mr-1">mdi-weather-cloudy</v-icon>
+                  <span class="text-subtitle-2 text-grey">시장 추세 필터</span>
+                  <HelpButton 
+                    use-dialog 
+                    :dialog-title="helpContents.marketTrendFilter.title"
+                    :dialog-content="helpContents.marketTrendFilter.content"
+                    color="grey-darken-1"
+                  />
+                </div>
+                <v-switch
+                  v-model="settings.useMarketTrendFilter"
+                  label="시장 추세 필터 사용"
+                  hint="BTC가 20일 이동평균선 아래로 하락하면 전체 매수를 중단합니다"
+                  persistent-hint
+                  color="primary"
+                  class="mb-4"
+                ></v-switch>
+
           
-          <!-- 누적 손실 한도 -->
-          <v-slider
-            v-model="settings.cumulativeLossLimitPct"
-            :min="-50"
-            :max="0"
-            :step="5"
-            label="누적 손실 한도"
-            thumb-label="always"
-            color="error"
-            class="mb-2"
-          >
-            <template v-slot:thumb-label="{ modelValue }">
-              {{ modelValue }}%
-            </template>
-          </v-slider>
-          <div class="text-caption text-grey mb-4">
-            초기 자본 대비 누적 손실이 이 수치에 도달하면 모든 거래를 중단합니다 (현재: {{ settings.cumulativeLossLimitPct }}%)
-          </div>
+                <v-divider class="my-4" />
+
+                <!-- 누적 손실 한도 -->
+                <div class="d-flex align-center mb-2">
+                  <v-icon size="small" class="mr-1">mdi-stop-circle</v-icon>
+                  <span class="text-subtitle-2 text-grey">누적 손실 한도</span>
+                  <HelpButton 
+                    use-dialog 
+                    :dialog-title="helpContents.cumulativeLossLimit.title"
+                    :dialog-content="helpContents.cumulativeLossLimit.content"
+                    color="grey-darken-1"
+                  />
+                </div>
+                <v-slider
+                  v-model="settings.cumulativeLossLimitPct"
+                  label="누적 손실 한도 (%)"
+                  :min="-50"
+                  :max="0"
+                  :step="5"
+                  thumb-label
+                  color="error"
+                  class="mt-2"
+                >
+                  <template v-slot:append>
+                    <v-chip size="small" color="error">
+                      {{ settings.cumulativeLossLimitPct }}%
+                    </v-chip>
+                  </template>
+                </v-slider>
+                <p class="text-caption text-grey">
+                  초기 자본 대비 누적 손실이 이 수치에 도달하면 모든 거래를 중단합니다 (현재: {{ settings.cumulativeLossLimitPct }}%)
+                </p>
+
+                <v-divider class="my-4" />
           
-          <!-- 연속 손절 제한 -->
-          <v-slider
-            v-model="settings.consecutiveStopLossLimit"
-            :min="1"
-            :max="10"
-            :step="1"
-            label="연속 손절 제한"
-            thumb-label="always"
-            color="warning"
-            class="mb-2"
-          >
-            <template v-slot:thumb-label="{ modelValue }">
-              {{ modelValue }}회
-            </template>
-          </v-slider>
-          <div class="text-caption text-grey mb-4">
-            동일 코인에서 {{ settings.consecutiveStopLossLimit }}회 연속 손절 시 해당 코인 24시간 매수를 금지합니다
-          </div>
+                <!-- 연속 손절 제한 -->
+                <div class="d-flex align-center mb-2">
+                  <v-icon size="small" class="mr-1">mdi-timer-sand</v-icon>
+                  <span class="text-subtitle-2 text-grey">연속 손절 제한</span>
+                  <HelpButton 
+                    use-dialog 
+                    :dialog-title="helpContents.consecutiveStopLossLimit.title"
+                    :dialog-content="helpContents.consecutiveStopLossLimit.content"
+                    color="grey-darken-1"
+                  />
+                </div>
+                <v-slider
+                  v-model="settings.consecutiveStopLossLimit"
+                  label="연속 손절 제한 (회)"
+                  :min="1"
+                  :max="10"
+                  :step="1"
+                  thumb-label
+                  color="warning"
+                  class="mt-2"
+                >
+                  <template v-slot:append>
+                    <v-chip size="small" color="warning">
+                      {{ settings.consecutiveStopLossLimit }}회
+                    </v-chip>
+                  </template>
+                </v-slider>
+                <p class="text-caption text-grey">
+                  동일 코인에서 {{ settings.consecutiveStopLossLimit }}회 연속 손절 시 해당 코인 24시간 매수를 금지합니다
+                </p>
               </div>
 
               <v-divider class="my-6" />
 
-              <!-- 추가 옵션 -->
               <div class="mb-6">
                 <h3 class="text-h6 mb-3">
                   <v-icon icon="mdi-brain" class="mr-2" />
                   추가 옵션
                 </h3>
 
-                <v-checkbox
-                  v-model="settings.useAiAnalysis"
-                  label="AI 뉴스 분석 사용"
-                  color="primary"
-                  hint="ChatGPT/Claude API를 통한 뉴스 분석으로 매수/매도 판단에 활용"
-                />
-
-                <v-alert
-                  v-if="settings.useAiAnalysis"
-                  type="info"
-                  class="mt-3"
-                  icon="mdi-information"
-                >
-                  <div class="text-body-2">
-                    AI 뉴스 분석은 실시간 뉴스를 분석하여 호재/악재 여부를 판단합니다.
-                    판단 결과는 매수 기준가(buyThresholdPct)에 ±0.5% 범위 내에서 조정됩니다.
-                  </div>
-                </v-alert>
+                <div class="d-flex align-center">
+                  <v-checkbox
+                    v-model="settings.useAiAnalysis"
+                    label="AI 뉴스 분석 사용"
+                    color="primary"
+                    hint="ChatGPT/Claude API를 통한 뉴스 분석으로 매수/매도 판단에 활용"
+                    hide-details
+                  />
+                  <HelpButton 
+                    use-dialog 
+                    :dialog-title="helpContents.aiAnalysis.title"
+                    :dialog-content="helpContents.aiAnalysis.content"
+                    color="grey-darken-1"
+                  />
+                </div>
+                <div class="text-caption text-grey ml-8 mt-1">
+                  ChatGPT/Claude API를 통한 뉴스 분석으로 매수/매도 판단에 활용
+                </div>
               </div>
-
               <v-divider class="my-6" />
 
               <!-- 버튼 -->
@@ -711,251 +781,745 @@ const resetDialog = ref(false)
 
 // 도움말 콘텐츠 
 const helpContents = {
-  // 기술적 지표 카드 도움말
-  technicalIndicator: {
-    title: '📊 기술적 지표 설정',
-    content: `
-      <div class="help-section">
-        <h4 style="color: #1565C0; margin-bottom: 12px;">📈 RSI (상대강도지수)</h4>
-        <div class="help-box">
-          <p><strong>📖 쉬운 설명:</strong> "지금 너무 많이 올랐나? 많이 떨어졌나?" 판단 지표</p>
-          <p>0~100 사이 숫자로 표현</p>
-          <div class="help-visual" style="background: #263238; padding: 12px; border-radius: 8px; margin: 12px 0; font-family: monospace; color: #fff;">
-            <p style="margin: 4px 0;">100 ── 🔥 극도로 과열 (팔아야 할 때)</p>
-            <p style="margin: 4px 0;"> 70 ── ⚠️ 과열 (매도 신호) ← <span style="color: #4CAF50;">매도 ≥ 68</span></p>
-            <p style="margin: 4px 0;"> 50 ── 😐 보통</p>
-            <p style="margin: 4px 0;"> 30 ── ❄️ 냉각 (매수 신호) ← <span style="color: #2196F3;">매수 ≤ 32</span></p>
-            <p style="margin: 4px 0;">  0 ── 🥶 극도로 냉각 (사야 할 때)</p>
-          </div>
-          <p><strong>🎯 현재 설정:</strong></p>
-          <p>• RSI ≤ 32: "충분히 떨어졌다, 매수!"</p>
-          <p>• RSI ≥ 68: "충분히 올랐다, 매도!"</p>
-        </div>
-      </div>
-      <div class="help-section" style="margin-top: 16px;">
-        <h4 style="color: #1565C0; margin-bottom: 12px;">📉 볼린저 밴드</h4>
-        <div class="help-box">
-          <p><strong>📖 쉬운 설명:</strong> 가격이 움직이는 "정상 범위"를 보여주는 밴드</p>
-          <p>• <strong>상단 밴드</strong>: 이 위로 가면 "너무 비싸다"</p>
-          <p>• <strong>중심선</strong>: 평균 가격 (이동평균선)</p>
-          <p>• <strong>하단 밴드</strong>: 이 아래로 가면 "너무 싸다" → 매수 기회!</p>
-          <p style="margin-top: 8px;"><strong>🎯 현재 설정:</strong> 20일 기준, 표준편차 2배</p>
-        </div>
-      </div>
-      <div class="help-section" style="margin-top: 16px;">
-        <h4 style="color: #1565C0; margin-bottom: 12px;">📊 거래량 급증 기준</h4>
-        <div class="help-box">
-          <p><strong>📖 쉬운 설명:</strong> "평소보다 거래가 얼마나 활발해야 진짜 신호로 볼 것인가?"</p>
-          <p><strong>🏪 가게 비유:</strong></p>
-          <p>• 평소 하루 100명 오는 가게에</p>
-          <p>• 오늘 140명 왔다 → "뭔가 있네! 관심 가져볼까?"</p>
-          <p>• 오늘 200명 왔다 → "대박 터졌다!"</p>
-          <p>• 오늘 80명 왔다 → "오늘은 조용하네..."</p>
-          <p style="margin-top: 8px;"><strong>💡 왜 중요한가?</strong></p>
-          <p>• 거래량 없이 가격만 움직이면 → 세력의 조작일 수 있음</p>
-          <p>• 거래량 터지면서 움직이면 → 진짜 시장 반응!</p>
-        </div>
-      </div>
-    `
-  },
   coinSelect: {
-    title: '📊 거래 종목 선택',
+    title: '💰 거래 종목 선택',
     content: `
-      <p class="help-intro">자동매매 대상이 되는 코인을 선택합니다.</p>
-      <p class="help-item"><span class="help-bullet">•</span> <strong>권장 코인 수</strong>: 3~5개 (분산 투자 효과)<br/>
-        <span class="help-desc">너무 많으면 관리가 어렵고, 너무 적으면 기회가 줄어듭니다.</span></p>
-      <p class="help-item"><span class="help-bullet">•</span> <strong>우선순위</strong>: BTC, ETH 등 시가총액 상위 코인 권장<br/>
-        <span class="help-desc">변동성이 크거나 거래량이 적은 코인은 리스크가 높습니다.</span></p>
-      <p class="help-note">💡 시가총액 순위가 높은 코인일수록 안정적인 거래가 가능합니다.</p>
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"어떤 코인을 자동으로 사고 팔 것인가?"</p>
+          </div>
+        </div>
+        
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">📋 선택 가이드</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            <strong style="color: #4CAF50;">추천:</strong> 시가총액 상위 코인 3~5개 선택<br/><br/>
+            <strong style="color: #4CAF50;">이유:</strong><br/>
+            - 거래량이 많아 주문 체결이 빠름<br/>
+            - 급격한 가격 변동 위험이 상대적으로 낮음<br/>
+            - 시장 정보가 풍부해 분석이 용이함<br/><br/>
+            📊 <strong style="color: #4CAF50;">기본 추천 코인:</strong><br/>
+            BTC, ETH, XRP, SOL
+          </div>
+        </div>
+      </div>
     `
   },
+
+  // 기술적 지표 설정 (이동평균선)
   indicator: {
-    title: '📈 이동평균선 기간 선택',
+    title: '📊 MA (이동평균선)',
     content: `
-      <p class="help-intro">매수/매도 판단의 기준이 되는 이동평균선 기간을 선택합니다.</p>
-      <p class="help-item"><span class="help-bullet">•</span> <strong>7일</strong>: 단기 추세, 잦은 거래, 빠른 반응</p>
-      <p class="help-item"><span class="help-bullet">•</span> <strong>14일</strong>: 단기~중기, 균형잡힌 설정</p>
-      <p class="help-item"><span class="help-bullet">•</span> <strong>20일</strong>: 중기 추세, 가장 일반적 (권장 ✅)</p>
-      <p class="help-item"><span class="help-bullet">•</span> <strong>30일</strong>: 장기 추세, 신중한 거래</p>
-      <p class="help-note">💡 기본값 20일은 백테스팅으로 검증된 최적의 설정입니다.</p>
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"최근 며칠간의 평균 가격"</p>
+          </div>
+        </div>
+        
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">🛒 마트 예시</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            사과 가격이 매일 바뀐다고 생각해보세요.<br/>
+            - 어제: 1,000원<br/>
+            - 그제: 1,200원<br/>
+            - 3일 전: 800원<br/>
+            → <strong style="color: #4CAF50;">3일 이동평균: (1000+1200+800) ÷ 3 = 1,000원</strong><br/><br/>
+            <strong style="color: #4CAF50;">20일 이동평균 = 최근 20일간 평균 가격</strong><br/><br/>
+            📊 <strong style="color: #4CAF50;">코인 예시:</strong><br/>
+            비트코인 20일 이동평균이 1억원인데<br/>
+            오늘 가격이 9,400만원이면?<br/>
+            → "평균보다 6% 싸네! 살까?"
+          </div>
+        </div>
+        
+        <div class="mb-2">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">📋 설정값 안내</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #E0E0E0; border-radius: 8px; overflow: hidden; font-size: 13px;">
+              <thead>
+                <tr style="background-color: #ECEFF1;">
+                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">설정값</th>
+                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">의미</th>
+                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">적합한 사람</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE;">7~10일</td>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE;">단기 추세</td>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE;">자주 거래하고 싶은 사람</td>
+                </tr>
+                <tr style="background-color: #E3F2FD;">
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE; color: #1565C0;"><strong>20일</strong></td>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE; color: #1565C0;">중기 추세</td>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE; color: #1565C0;">초보자 추천 ✅</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 12px;">30일</td>
+                  <td style="padding: 8px 12px;">장기 추세</td>
+                  <td style="padding: 8px 12px;">느긋한 투자자</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     `
   },
+
+  // 매수 조건 설정
   buyCondition: {
-    title: '🛒 매수 조건 설정',
+    title: '🏷️ 매수 조건 설정',
     content: `
-      <div class="help-section">
-        <h4 style="color: #1565C0; margin-bottom: 12px;">1. 매수 기준 - MA 대비 % (현재: -6%)</h4>
-        <div class="help-box">
-          <p><strong>📖 쉬운 설명:</strong> "평균 가격보다 얼마나 떨어지면 살 것인가?"</p>
-          <p><strong>🛒 마트 예시:</strong></p>
-          <p>평소 10,000원 하는 운동화가 있어요.</p>
-          <p>• -3% 설정: 9,700원 되면 구매</p>
-          <p>• -6% 설정: 9,400원 되면 구매</p>
-          <p>• -10% 설정: 9,000원 되면 구매</p>
-          <p style="margin-top: 8px;"><strong>숫자가 클수록(음수가 클수록)</strong></p>
-          <p>→ 더 많이 떨어져야 삼</p>
-          <p>→ 거래 횟수 적어짐</p>
-          <p>→ 더 신중한 투자</p>
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"언제, 얼마나 살 것인가?"</p>
+          </div>
         </div>
-        <table style="width: 100%; margin-top: 12px; border-collapse: collapse; font-size: 14px;">
-          <tr style="border-bottom: 1px solid #ddd;">
-            <th style="text-align: left; padding: 8px;">설정값</th>
-            <th style="text-align: left; padding: 8px;">의미</th>
-            <th style="text-align: left; padding: 8px;">거래 빈도</th>
-          </tr>
-          <tr><td style="padding: 8px;">-3%</td><td>조금만 떨어져도 삼</td><td>많음 (공격적)</td></tr>
-          <tr style="background: #E8F5E9;"><td style="padding: 8px;"><strong>-6%</strong></td><td>적당히 떨어지면 삼</td><td>보통 ✅</td></tr>
-          <tr><td style="padding: 8px;">-10%</td><td>많이 떨어져야 삼</td><td>적음 (신중)</td></tr>
-        </table>
-      </div>
-      <div class="help-section" style="margin-top: 16px;">
-        <h4 style="color: #1565C0; margin-bottom: 12px;">2. 종목당 최대 보유 (현재: 2건)</h4>
-        <div class="help-box">
-          <p><strong>📖 쉬운 설명:</strong> "한 코인을 최대 몇 번까지 나눠서 살 것인가?"</p>
-          <p><strong>🛍️ 쇼핑 예시:</strong></p>
-          <p>맘에 드는 가방이 있는데 가격이 계속 떨어져요.</p>
-          <p>• 1회 설정: 한 번만 사고 끝</p>
-          <p>• 2회 설정: 더 떨어지면 한 번 더 삼 (2번까지)</p>
-          <p>• 3회 설정: 최대 3번까지 나눠서 삼</p>
-          <p style="margin-top: 8px;"><strong>장점:</strong> 물타기로 평균 단가 낮출 수 있음</p>
-          <p><strong>단점:</strong> 계속 떨어지면 손실 커짐</p>
+        
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">🏷️ 마트 할인 예시</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            <strong style="color: #4CAF50;">기준가 대비 하락률 (이격도):</strong><br/>
+            평소 10,000원 하는 운동화가 있어요.<br/>
+            - -3% 설정: 9,700원 되면 구매<br/>
+            - -6% 설정: 9,400원 되면 구매<br/>
+            - -10% 설정: 9,000원 되면 구매<br/><br/>
+            숫자가 클수록(음수가 클수록)<br/>
+            → 더 많이 떨어져야 삼<br/>
+            → 거래 횟수 적어짐<br/>
+            → 더 신중한 투자<br/><br/>
+            📊 <strong style="color: #4CAF50;">코인 예시:</strong><br/>
+            비트코인 20일 평균: 1억원<br/>
+            - -6% 설정 시: 9,400만원 이하로 떨어지면 매수!<br/><br/>
+            <strong style="color: #4CAF50;">종목당 최대 보유:</strong><br/>
+            맘에 드는 가방이 있는데 가격이 계속 떨어져요.<br/>
+            - 1회 설정: 한 번만 사고 끝<br/>
+            - 2회 설정: 더 떨어지면 한 번 더 삼 (2번까지)<br/>
+            - 3회 설정: 최대 3번까지 나눠서 삼<br/><br/>
+            <strong style="color: #4CAF50;">장점:</strong> 물타기로 평균 단가 낮출 수 있음<br/>
+            <strong style="color: #F44336;">단점:</strong> 계속 떨어지면 손실 커짐
+          </div>
         </div>
-        <table style="width: 100%; margin-top: 12px; border-collapse: collapse; font-size: 14px;">
-          <tr style="border-bottom: 1px solid #ddd;">
-            <th style="text-align: left; padding: 8px;">설정값</th>
-            <th style="text-align: left; padding: 8px;">의미</th>
-            <th style="text-align: left; padding: 8px;">리스크</th>
-          </tr>
-          <tr><td style="padding: 8px;">1</td><td>한 번만 삼</td><td>낮음 (분산)</td></tr>
-          <tr style="background: #E8F5E9;"><td style="padding: 8px;"><strong>2</strong></td><td>두 번까지</td><td>보통 ✅</td></tr>
-          <tr><td style="padding: 8px;">3+</td><td>여러 번</td><td>높음 (집중)</td></tr>
-        </table>
+        
+        <div class="mb-2">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">📋 설정값 안내</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #E0E0E0; border-radius: 8px; overflow: hidden; font-size: 13px;">
+              <thead>
+                <tr style="background-color: #ECEFF1;">
+                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">항목</th>
+                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">추천값</th>
+                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">설명</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="background-color: #E3F2FD;">
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE; color: #1565C0;"><strong>하락률</strong></td>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE; color: #1565C0;">-6%</td>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE; color: #1565C0;">초보자 추천 ✅</td>
+                </tr>
+                <tr style="background-color: #E3F2FD;">
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE; color: #1565C0;"><strong>최대 보유</strong></td>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE; color: #1565C0;">2건</td>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE; color: #1565C0;">적당한 분산 ✅</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 12px;">일일 한도</td>
+                  <td style="padding: 8px 12px;">100만원</td>
+                  <td style="padding: 8px 12px;">리스크 계산 기준</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     `
   },
+
+  // 매도 조건 설정 (트레일링 스톱 분리)
   sellCondition: {
     title: '💰 매도 조건 설정',
     content: `
-      <div class="help-section">
-        <h4 style="color: #1565C0; margin-bottom: 12px;">1. 목표 수익률 % (현재: 4%)</h4>
-        <div class="help-box">
-          <p><strong>📖 쉬운 설명:</strong> "얼마 오르면 팔 것인가?"</p>
-          <p><strong>🛒 중고거래 예시:</strong></p>
-          <p>10,000원에 산 물건을</p>
-          <p>• 3% 설정: 10,300원에 판매</p>
-          <p>• 4% 설정: 10,400원에 판매</p>
-          <p>• 10% 설정: 11,000원에 판매</p>
-          <p style="margin-top: 8px;"><strong>낮게 설정하면:</strong></p>
-          <p>✅ 자주 수익 실현</p>
-          <p>❌ 큰 상승 놓칠 수 있음</p>
-          <p style="margin-top: 8px;"><strong>높게 설정하면:</strong></p>
-          <p>✅ 큰 수익 가능</p>
-          <p>❌ 목표 도달 못하고 하락할 수 있음</p>
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"언제 팔 것인가? - 수익 실현 vs 손실 제한"</p>
+          </div>
         </div>
-        <table style="width: 100%; margin-top: 12px; border-collapse: collapse; font-size: 14px;">
-          <tr style="border-bottom: 1px solid #ddd;">
-            <th style="text-align: left; padding: 8px;">설정값</th>
-            <th style="text-align: left; padding: 8px;">특징</th>
-            <th style="text-align: left; padding: 8px;">적합한 상황</th>
-          </tr>
-          <tr><td style="padding: 8px;">2~3%</td><td>빠른 수익 실현</td><td>횡보장, 하락장</td></tr>
-          <tr style="background: #E8F5E9;"><td style="padding: 8px;"><strong>4~5%</strong></td><td>균형잡힌 목표</td><td>초보자 추천 ✅</td></tr>
-          <tr><td style="padding: 8px;">10%+</td><td>큰 수익 노림</td><td>상승장</td></tr>
-        </table>
-      </div>
-      <div class="help-section" style="margin-top: 16px;">
-        <h4 style="color: #1565C0; margin-bottom: 12px;">2. 손절매 기준 % (현재: -8%)</h4>
-        <div class="help-box">
-          <p><strong>📖 쉬운 설명:</strong> "얼마나 손해보면 포기하고 팔 것인가?"</p>
-          <p><strong>🎰 도박 예시:</strong></p>
-          <p>카지노에서 10만원 들고 갔는데</p>
-          <p>• -5% 설정: 9.5만원 되면 "그만!"</p>
-          <p>• -8% 설정: 9.2만원 되면 "그만!"</p>
-          <p>• -15% 설정: 8.5만원 되면 "그만!"</p>
-          <p style="margin-top: 8px;"><strong>⚠️ 왜 필요한가?</strong></p>
-          <p>손절매 없이 버티면...</p>
-          <p>10만원 → 5만원 → 2만원 → 0원 😱</p>
-          <p style="margin-top: 8px;"><strong>손절매 있으면...</strong></p>
-          <p>10만원 → 9.2만원 → "여기서 멈춤!"</p>
-          <p>→ 남은 돈으로 다시 도전 가능</p>
+        
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">🤝 중고거래 예시 (목표 수익률)</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            10,000원에 산 물건을<br/>
+            - 3% 설정: 10,300원에 판매<br/>
+            - 4% 설정: 10,400원에 판매<br/>
+            - 10% 설정: 11,000원에 판매<br/><br/>
+            <strong style="color: #4CAF50;">낮게 설정하면:</strong> ✅ 자주 수익 실현 / ❌ 큰 상승 놓칠 수 있음<br/>
+            <strong style="color: #4CAF50;">높게 설정하면:</strong> ✅ 큰 수익 가능 / ❌ 목표 도달 못하고 하락할 수 있음
+          </div>
         </div>
-        <table style="width: 100%; margin-top: 12px; border-collapse: collapse; font-size: 14px;">
-          <tr style="border-bottom: 1px solid #ddd;">
-            <th style="text-align: left; padding: 8px;">설정값</th>
-            <th style="text-align: left; padding: 8px;">특징</th>
-            <th style="text-align: left; padding: 8px;">멘탈 요구도</th>
-          </tr>
-          <tr><td style="padding: 8px;">-5%</td><td>빠른 손절</td><td>약함 (안전)</td></tr>
-          <tr style="background: #E8F5E9;"><td style="padding: 8px;"><strong>-8%</strong></td><td>적당한 손절</td><td>보통 ✅</td></tr>
-          <tr><td style="padding: 8px;">-15%</td><td>느린 손절</td><td>강함 (위험)</td></tr>
-        </table>
-      </div>
-    `
-  },
-  riskManagement: {
-    title: '🛡️ 리스크 관리',
-    content: `
-      <div class="help-section">
-        <h4 style="color: #1565C0; margin-bottom: 12px;">1. 일일 최대 거래금액 (현재: 20%)</h4>
-        <div class="help-box">
-          <p><strong>📖 쉬운 설명:</strong> "하루에 최대 얼마까지만 살 것인가?"</p>
-          <p><strong>💰 용돈 비유:</strong></p>
-          <p>월급 100만원 받았는데</p>
-          <p>• 100% 설정: 하루에 100만원 다 써도 됨 (위험!)</p>
-          <p>• 20% 설정: 하루에 20만원까지만 씀</p>
-          <p style="margin-top: 8px;"><strong>🎯 현재 설정:</strong></p>
-          <p>초기 자본 1,000,000원의 20% = 200,000원</p>
-          <p>→ 하루에 최대 20만원어치만 매수 가능</p>
-          <p style="margin-top: 8px;"><strong>💡 왜 필요한가?</strong></p>
-          <p>"오늘 기회다!" 하고 한 번에 다 샀는데</p>
-          <p>다음날 더 떨어지면? 😱 살 돈이 없음!</p>
+        
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">🎰 도박 예시 (손절매)</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            카지노에서 10만원 들고 갔는데<br/>
+            - -5% 설정: 9.5만원 되면 "그만!"<br/>
+            - -8% 설정: 9.2만원 되면 "그만!"<br/>
+            - -15% 설정: 8.5만원 되면 "그만!"<br/><br/>
+            <strong style="color: #F44336;">⚠️ 왜 필요한가?</strong><br/>
+            손절매 없이 버티면...<br/>
+            10만원 → 5만원 → 2만원 → 0원 😭<br/><br/>
+            손절매 있으면...<br/>
+            10만원 → 9.2만원 → "여기서 멈춤!"<br/>
+            → 남은 돈으로 다시 도전 가능
+          </div>
         </div>
-      </div>
-      <div class="help-section" style="margin-top: 16px;">
-        <h4 style="color: #1565C0; margin-bottom: 12px;">2. 단일 종목 최대 비중 (현재: 25%)</h4>
-        <div class="help-box">
-          <p><strong>📖 쉬운 설명:</strong> "한 코인에 최대 얼마까지 투자할 것인가?"</p>
-          <p><strong>🥚 계란 비유:</strong></p>
-          <p>"계란을 한 바구니에 담지 마라"</p>
-          <p style="margin-top: 8px;"><strong>100만원이 있을 때:</strong></p>
-          <p>• 100% 설정: 비트코인에 100만원 몰빵 가능</p>
-          <p>• 25% 설정: 비트코인에 최대 25만원까지만! 나머지는 다른 코인에 분산</p>
-          <p style="margin-top: 8px;"><strong>💡 왜 필요한가?</strong></p>
-          <p>비트코인에 100만원 몰빵 → 비트코인 -30% → 30만원 손실</p>
-          <p>4개 코인에 25만원씩 → 비트코인 -30% → 7.5만원 손실</p>
-        </div>
-      </div>
-      <div class="help-section" style="margin-top: 16px;">
-        <h4 style="color: #1565C0; margin-bottom: 12px;">3. 긴급 정지 - 일일 손실률 (현재: -5%)</h4>
-        <div class="help-box">
-          <p><strong>📖 쉬운 설명:</strong> "오늘 손실이 이 정도면 오늘은 거래 중단!"</p>
-          <p><strong>🚨 비상 브레이크 비유:</strong></p>
-          <p>자동차가 너무 빨리 가면 비상 브레이크!</p>
-          <p>투자도 손실이 너무 커지면 "오늘은 그만!"</p>
-          <p style="margin-top: 8px;"><strong>🎯 현재 설정:</strong></p>
-          <p>1,000,000원 × -5% = -50,000원</p>
-          <p>→ 오늘 손실이 5만원 넘으면 자동으로 거래 중단</p>
-          <p style="margin-top: 8px;"><strong>💡 왜 필요한가?</strong></p>
-          <p>"오늘 손해 봤으니 더 사서 만회해야지!"</p>
-          <p>→ 복수 매매 → 더 큰 손실 😱</p>
-          <p style="margin-top: 8px;"><strong>긴급 정지 있으면:</strong></p>
-          <p>"5만원 잃었으니 오늘은 쉬자"</p>
-          <p>→ 냉정해진 후 내일 다시 시작</p>
+        
+        <div class="mb-2">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">📋 설정값 안내</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #E0E0E0; border-radius: 8px; overflow: hidden; font-size: 13px;">
+              <thead>
+                <tr style="background-color: #ECEFF1;">
+                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">항목</th>
+                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">추천값</th>
+                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">적합한 상황</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="background-color: #E3F2FD;">
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE; color: #1565C0;"><strong>목표 수익률</strong></td>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE; color: #1565C0;">4~5%</td>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE; color: #1565C0;">초보자 추천 ✅</td>
+                </tr>
+                <tr style="background-color: #E3F2FD;">
+                  <td style="padding: 8px 12px; color: #1565C0;"><strong>손절매</strong></td>
+                  <td style="padding: 8px 12px; color: #1565C0;">-8%</td>
+                  <td style="padding: 8px 12px; color: #1565C0;">적당한 손절 ✅</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     `
   },
-  crashProtection: {
-    title: '🚨 급락장 보호 기능',
+
+  // ★★★ [신규] 트레일링 스톱 - 분리된 도움말 ★★★
+  trailingStop: {
+    title: '🎯 트레일링 스톱',
     content: `
-      <p class="help-intro">급격한 시장 하락 시 손실을 줄이기 위한 안전장치입니다.</p>
-      <p class="help-item"><span class="help-bullet">•</span> <strong>시장 추세 필터</strong><br/>
-        <span class="help-desc">BTC가 20일선 아래일 때 전체 매수를 중단합니다. (기본: OFF)</span></p>
-      <p class="help-item"><span class="help-bullet">•</span> <strong>누적 손실 긴급정지</strong><br/>
-        <span class="help-desc">초기 자본 대비 누적 손실이 설정값에 도달하면 거래를 중단합니다. (기본: -10%)</span></p>
-      <p class="help-item"><span class="help-bullet">•</span> <strong>연속 손절 제한</strong><br/>
-        <span class="help-desc">동일 코인에서 연속 손절 시 해당 코인 매수를 24시간 금지합니다. (기본: 3회)</span></p>
-      <p class="help-note">💡 백테스팅 결과, 기본 설정으로 급락장 손실을 55% 줄일 수 있습니다.</p>
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"최고점에서 얼마 떨어지면 팔 것인가?"</p>
+          </div>
+        </div>
+        
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">🎯 롤러코스터 예시</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            목표 수익률 4%인데, 코인이 10%까지 올랐어요!<br/>
+            - 트레일링 OFF: 4%에서 이미 팔았음 (6% 놓침 😢)<br/>
+            - 트레일링 ON (4%): 최고점(10%)에서 -4% 떨어진<br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;6% 수익에서 팔림!<br/><br/>
+            📊 <strong style="color: #4CAF50;">실제 예시:</strong><br/>
+            9,400만원에 매수 → 목표 4% = 9,776만원<br/><br/>
+            <strong style="color: #4CAF50;">[트레일링 OFF]</strong><br/>
+            가격: 9,400 → 9,776 → 매도! (4% 수익)<br/>
+            이후: 9,900 → 1억 (놓침 😢)<br/><br/>
+            <strong style="color: #4CAF50;">[트레일링 ON, 4%]</strong><br/>
+            가격: 9,400 → 9,776 → 9,900 → 1억 (최고점)<br/>
+            → 9,600만원 (최고점 대비 -4%) → 매도!<br/>
+            최종: 약 2% 수익 (200만원)
+          </div>
+        </div>
+        
+        <div class="mb-2">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">📋 설정값 안내</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #E0E0E0; border-radius: 8px; overflow: hidden; font-size: 13px;">
+              <thead>
+                <tr style="background-color: #ECEFF1;">
+                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">설정</th>
+                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">장점</th>
+                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">단점</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE;">OFF</td>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE;">확실한 수익 확보</td>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE;">추가 상승 놓침</td>
+                </tr>
+                <tr style="background-color: #E3F2FD;">
+                  <td style="padding: 8px 12px; color: #1565C0;"><strong>ON, 4%</strong></td>
+                  <td style="padding: 8px 12px; color: #1565C0;">상승장에서 더 벌 수 있음</td>
+                  <td style="padding: 8px 12px; color: #1565C0;">하락장에선 효과 적음</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `
+  },
+
+  // ★★★ [신규] RSI - 분리된 도움말 ★★★
+  rsiIndicator: {
+    title: '🌡️ RSI (상대강도지수)',
+    content: `
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"지금 너무 많이 올랐나? 많이 떨어졌나? 판단 지표"</p>
+          </div>
+        </div>
+        
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">🌡️ 온도계 비유</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            RSI = 시장의 "과열/냉각" 온도계<br/><br/>
+            <div style="font-family: monospace; background: #37474F; padding: 12px; border-radius: 8px; color: #ECEFF1;">
+100 ── 🔥 극도로 과열 (팔아야 할 때)<br/>
+ 70 ── ⚠️ 과열 (매도 신호) ← 매도 ≥ 68<br/>
+ 50 ── 😐 보통<br/>
+ 30 ── ❄️ 냉각 (매수 신호) ← 매수 ≤ 32<br/>
+  0 ── 🥶 극도로 냉각 (사야 할 때)
+            </div><br/>
+            📊 <strong style="color: #4CAF50;">현재 설정:</strong><br/>
+            - RSI ≤ 32: "충분히 떨어졌다, 매수!"<br/>
+            - RSI ≥ 68: "충분히 올랐다, 매도!"
+          </div>
+        </div>
+        
+        <div class="mb-2">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">📋 설정값 안내</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #E0E0E0; border-radius: 8px; overflow: hidden; font-size: 13px;">
+              <thead>
+                <tr style="background-color: #ECEFF1;">
+                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">설정</th>
+                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">기간 14일</th>
+                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">매수 ≤32</th>
+                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">매도 ≥68</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE;">의미</td>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE;">표준 설정</td>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE;">과매도 진입</td>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE;">과매수 전 탈출</td>
+                </tr>
+                <tr style="background-color: #E3F2FD;">
+                  <td style="padding: 8px 12px; color: #1565C0;">추천</td>
+                  <td style="padding: 8px 12px; color: #1565C0;">✅</td>
+                  <td style="padding: 8px 12px; color: #1565C0;">✅</td>
+                  <td style="padding: 8px 12px; color: #1565C0;">✅</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `
+  },
+
+  // ★★★ [신규] 볼린저 밴드 - 분리된 도움말 ★★★
+  bbIndicator: {
+    title: '🚗 볼린저 밴드 (BB)',
+    content: `
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"가격이 정상 범위 안에 있나 밖에 있나? 판단 도구"</p>
+          </div>
+        </div>
+        
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">🚗 도로 비유</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            볼린저 밴드는 도로의 차선과 같습니다.<br/><br/>
+            - 가격이 하단 밴드 터치 → "싸졌네? 매수 신호!"<br/>
+            - 가격이 상단 밴드 터치 → "비싸졌네? 매도 신호!"<br/><br/>
+            📊 <strong style="color: #4CAF50;">현재 설정:</strong><br/>
+            - 기간 20일: 20일 평균 기준<br/>
+            - 표준편차 2배: 밴드 폭 결정 (2배가 표준)
+          </div>
+        </div>
+        
+        <div class="mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">📊 시각적 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <svg width="100%" height="140" viewBox="0 0 500 140" style="background: #FAFAFA; border-radius: 8px; border: 1px solid #E0E0E0;">
+              <line x1="30" y1="25" x2="450" y2="25" stroke="#e53935" stroke-width="2" stroke-dasharray="5,3"/>
+              <text x="460" y="29" font-size="12" fill="#e53935">상단 밴드 (비싸다!)</text>
+              <line x1="30" y1="70" x2="450" y2="70" stroke="#1976D2" stroke-width="2"/>
+              <text x="460" y="74" font-size="12" fill="#1976D2">중심선 (평균 가격)</text>
+              <line x1="30" y1="115" x2="450" y2="115" stroke="#43a047" stroke-width="2" stroke-dasharray="5,3"/>
+              <text x="460" y="119" font-size="12" fill="#43a047">하단 밴드 (싸다!)</text>
+              <polyline points="40,70 100,55 160,90 220,108 280,80 340,45 400,65 440,85" fill="none" stroke="#FF9800" stroke-width="2.5"/>
+              <circle cx="220" cy="108" r="8" fill="#43a047"/>
+              <text x="195" y="135" font-size="11" fill="#43a047" font-weight="bold">매수 신호!</text>
+              <circle cx="340" cy="45" r="8" fill="#e53935"/>
+              <text x="315" y="35" font-size="11" fill="#e53935" font-weight="bold">매도 신호!</text>
+              <circle cx="160" cy="90" r="4" fill="#FF9800"/>
+              <text x="135" y="75" font-size="10" fill="#FF9800">🚗</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    `
+  },
+
+  // ★★★ [신규] 거래량 분석 - 분리된 도움말 ★★★
+  volumeIndicator: {
+    title: '🏪 거래량 급증 기준',
+    content: `
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"평소보다 거래가 얼마나 활발해야 진짜 신호로 볼 것인가?"</p>
+          </div>
+        </div>
+        
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">🏪 가게 비유</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            평소 하루 100명 오는 가게에<br/>
+            - 오늘 140명 왔다 → "뭔가 있네! 관심 가져볼까?"<br/>
+            - 오늘 200명 왔다 → "대박 터졌다!"<br/>
+            - 오늘 80명 왔다 → "오늘은 조용하네..."<br/><br/>
+            📊 <strong style="color: #4CAF50;">코인 예시:</strong><br/>
+            비트코인 평균 거래량: 1조원/일<br/>
+            - 140% 설정 시: 1.4조원 이상 거래되는 날에만 매수 신호 인정<br/>
+            - 거래량 적으면 "가짜 신호"일 수 있으니 무시<br/><br/>
+            <strong style="color: #4CAF50;">왜 중요한가?</strong><br/>
+            거래량 없이 가격만 움직이면 → 세력의 조작일 수 있음<br/>
+            거래량 터지면서 움직이면 → 진짜 시장 반응!
+          </div>
+        </div>
+      </div>
+    `
+  },
+
+  // ★★★ [신규] 일일 최대 거래금액 - 분리된 도움말 ★★★
+  dailyTradeLimit: {
+    title: '💰 일일 최대 거래금액',
+    content: `
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"하루에 최대 얼마까지만 살 것인가?"</p>
+          </div>
+        </div>
+        
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">💰 용돈 비유</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            월급 100만원 받았는데<br/>
+            - 100% 설정: 하루에 100만원 다 써도 됨 (위험!)<br/>
+            - 20% 설정: 하루에 20만원까지만 씀<br/><br/>
+            📊 <strong style="color: #4CAF50;">현재 설정:</strong><br/>
+            초기 자본 1,000,000원의 20% = 200,000원<br/>
+            → 하루에 최대 20만원어치만 매수 가능<br/><br/>
+            <strong style="color: #4CAF50;">왜 필요한가?</strong><br/>
+            "오늘 기회다!" 하고 한 번에 다 샀는데<br/>
+            다음날 더 떨어지면? 😭 살 돈이 없음!
+          </div>
+        </div>
+      </div>
+    `
+  },
+
+  // ★★★ [신규] 단일 종목 최대 비중 - 분리된 도움말 ★★★
+  maxPosition: {
+    title: '🥚 단일 종목 최대 비중',
+    content: `
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"한 코인에 최대 얼마까지 투자할 것인가?"</p>
+          </div>
+        </div>
+        
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">🥚 계란 비유</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            "계란을 한 바구니에 담지 마라"<br/><br/>
+            100만원이 있을 때:<br/>
+            - 100% 설정: 비트코인에 100만원 몰빵 가능<br/>
+            - 25% 설정: 비트코인에 최대 25만원까지만!<br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;나머지는 다른 코인에 분산<br/><br/>
+            📊 <strong style="color: #4CAF50;">현재 설정:</strong><br/>
+            1,000,000원 × 25% = 250,000원<br/>
+            → 비트코인에 최대 25만원까지만 투자 가능<br/><br/>
+            <strong style="color: #4CAF50;">왜 필요한가?</strong><br/>
+            비트코인에 100만원 몰빵 → -30% → 30만원 손실<br/>
+            4개 코인에 25만원씩 → -30% → 7.5만원 손실
+          </div>
+        </div>
+      </div>
+    `
+  },
+
+  // ★★★ [신규] 긴급 정지 (일일 손실률) - 분리된 도움말 ★★★
+  dailyStopLoss: {
+    title: '🚨 긴급 정지 (일일 손실률)',
+    content: `
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"오늘 손실이 이 정도면 오늘은 거래 중단!"</p>
+          </div>
+        </div>
+        
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">🚨 비상 브레이크 비유</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            자동차가 너무 빨리 가면 비상 브레이크!<br/>
+            투자도 손실이 너무 커지면 "오늘은 그만!"<br/><br/>
+            📊 <strong style="color: #4CAF50;">현재 설정:</strong><br/>
+            1,000,000원 × -5% = -50,000원<br/>
+            → 오늘 손실이 5만원 넘으면 자동으로 거래 중단<br/><br/>
+            <strong style="color: #4CAF50;">왜 필요한가?</strong><br/>
+            "오늘 손해 봤으니 더 사서 만회해야지!"<br/>
+            → 복수 매매 → 더 큰 손실 😭<br/><br/>
+            긴급 정지 있으면:<br/>
+            "5만원 잃었으니 오늘은 쉬자"<br/>
+            → 냉정해진 후 내일 다시 시작
+          </div>
+        </div>
+      </div>
+    `
+  },
+
+  // ★★★ [신규] 누적 손실 한도 - 분리된 도움말 ★★★
+  cumulativeLossLimit: {
+    title: '🛑 누적 손실 한도',
+    content: `
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"전체 손실이 이 정도면 완전히 멈춘다"</p>
+          </div>
+        </div>
+        
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">🛑 완전 정지 비유</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            일일 긴급정지가 "오늘 그만"이라면<br/>
+            누적 긴급정지는 "전체 그만!"<br/><br/>
+            📊 <strong style="color: #4CAF50;">현재 설정 (-10%):</strong><br/>
+            초기 자본 100만원 × -10% = -10만원<br/>
+            → 누적 손실이 10만원 넘으면 모든 거래 완전 중단<br/><br/>
+            <strong style="color: #4CAF50;">예시:</strong><br/>
+            - 1일차: -3만원<br/>
+            - 2일차: -2만원<br/>
+            - 3일차: -4만원<br/>
+            - 누적: -9만원 → 아직 거래 가능<br/>
+            - 4일차: -2만원<br/>
+            - 누적: -11만원 → 🛑 완전 중단!<br/><br/>
+            <strong style="color: #4CAF50;">왜 필요한가?</strong><br/>
+            최악의 경우에도 원금의 90%는 지킴!
+          </div>
+        </div>
+      </div>
+    `
+  },
+
+  // ★★★ [신규] 연속 손절 제한 - 분리된 도움말 ★★★
+  consecutiveStopLossLimit: {
+    title: '⏳ 연속 손절 제한',
+    content: `
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"같은 코인에서 계속 손해보면 잠시 쉬어간다"</p>
+          </div>
+        </div>
+        
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">⏳ 휴식 비유</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            같은 실수를 3번 연속 하면 잠시 쉬어!<br/><br/>
+            📊 <strong style="color: #4CAF50;">예시 (3회 설정):</strong><br/>
+            비트코인 1차 매수 → 손절 😢<br/>
+            비트코인 2차 매수 → 손절 😢<br/>
+            비트코인 3차 매수 → 손절 😢<br/>
+            → "비트코인 3연속 손절! 잠시 매수 금지!"<br/><br/>
+            <strong style="color: #4CAF50;">왜 필요한가?</strong><br/>
+            특정 코인이 계속 떨어지는 중인데<br/>
+            계속 사면 계속 손해봄<br/>
+            → 잠시 쉬면서 추세 바뀔 때까지 기다림
+          </div>
+        </div>
+      </div>
+    `
+  },
+
+  marketTrendFilter: {
+    title: '🌧️ 시장 추세 필터',
+    content: `
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"비트코인이 떨어지고 있으면 아무것도 안 산다"</p>
+          </div>
+        </div>
+        
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">🌧️ 날씨 비유</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            비가 오면 소풍 안 가는 것처럼!<br/><br/>
+            비트코인 = 코인 시장의 날씨<br/>
+            - BTC가 20일 평균 위 = ☀️ 맑음 → 매수 OK<br/>
+            - BTC가 20일 평균 아래 = 🌧️ 비 옴 → 매수 중단!<br/><br/>
+            📊 <strong style="color: #4CAF50;">예시:</strong><br/>
+            BTC 20일 평균: 1억원<br/>
+            현재 BTC 가격: 9,500만원 (평균 아래)<br/>
+            → 시장 추세 필터 ON이면 모든 매수 중단!<br/><br/>
+            <strong style="color: #4CAF50;">왜 필요한가?</strong><br/>
+            비트코인이 떨어지면 대부분의 알트코인도 떨어짐<br/>
+            하락장에서 매수하면 손실 확률 높음
+          </div>
+        </div>
+      </div>
+    `
+  },
+
+  aiAnalysis: {
+    title: '🤖 AI 분석 점수 안내',
+    content: `
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">AI가 뉴스를 분석하여 시장에 미치는 영향을 <span style="color: #F44336;">-1.0</span> ~ <span style="color: #4CAF50;">+1.0</span> 범위의 점수로 나타냅니다.</p>
+          </div>
+        </div>
+        
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">📊 점수 해석</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            <strong style="color: #4CAF50;">• +0.2 이상 (호재)</strong><br/>
+            &nbsp;&nbsp;시장에 긍정적인 영향을 미칠 것으로 예상되는 뉴스입니다.<br/>
+            &nbsp;&nbsp;예: +0.8, +0.5 등 → 매수 조건이 완화됩니다.<br/><br/>
+            
+            <strong style="color: #FF9800;">• -0.2 ~ +0.2 (중립)</strong><br/>
+            &nbsp;&nbsp;시장에 큰 영향이 없을 것으로 예상됩니다.<br/>
+            &nbsp;&nbsp;예: +0.1, -0.1 등 → 매수 조건에 변화가 없습니다.<br/><br/>
+            
+            <strong style="color: #F44336;">• -0.2 이하 (악재)</strong><br/>
+            &nbsp;&nbsp;시장에 부정적인 영향을 미칠 것으로 예상되는 뉴스입니다.<br/>
+            &nbsp;&nbsp;예: -0.5, -0.9 등 → 매수 조건이 강화됩니다.<br/><br/>
+            
+            <strong style="color: #2196F3;">• 가중치 계산</strong><br/>
+            &nbsp;&nbsp;평균 점수 × 0.5 = 가중치(%)<br/>
+            &nbsp;&nbsp;예: 평균 +0.8 → 가중치 +0.4% → 매수 기준가 완화
+          </div>
+        </div>
+        
+        <div style="margin-top: 16px; padding: 10px 12px; background-color: #FFF8E1; border-left: 3px solid #FFA000; border-radius: 4px;">
+          <p style="margin: 0; color: #5D4037; font-size: 13px;">
+            💡 <strong>Tip:</strong> AI 분석은 참고용이며, 실제 시장 상황과 다를 수 있습니다.<br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;뉴스 원문을 직접 확인하는 것을 권장합니다.
+          </p>
+        </div>
+      </div>
     `
   }
 }

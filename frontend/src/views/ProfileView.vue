@@ -33,7 +33,7 @@
                 />
               </v-card-title>
 
-              <v-card-text class="pt-12 pb-5">
+              <v-card-text class="pt-10 pb-5">
                 <v-alert
                   v-if="profileMessage"
                   :type="profileMessageType"

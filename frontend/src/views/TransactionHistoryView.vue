@@ -178,24 +178,27 @@
                   </template>
 
              <template v-slot:item.actions="{ item }">
-                    <div class="d-flex align-center justify-center ga-1">
-                      <v-btn
-                        v-if="item.status === 'HOLDING'"
-                        color="orange"
-                        size="small"
-                        @click="openSellDialog(item)"
-                      >
-                        매도
-                      </v-btn>
-                      <v-btn
-                        color="grey"
-                        size="small"
-                        @click="viewDetail(item)"
-                      >
-                        상세
-                      </v-btn>
-                    </div>
-                  </template>
+               <div class="d-flex align-center justify-center ga-1" style="min-width: 130px;">
+                 <v-btn
+                   v-if="item.status === 'HOLDING'"
+                   color="orange"
+                   size="small"
+                   min-width="60"
+                   @click="openSellDialog(item)"
+                 >
+                   매도
+                 </v-btn>
+                 <div v-else style="width: 60px;"></div>
+                 <v-btn
+                   color="grey"
+                   size="small"
+                   min-width="60"
+                   @click="viewDetail(item)"
+                 >
+                   상세
+                 </v-btn>
+               </div>
+             </template>
                 </v-data-table>
 
                 <v-pagination
@@ -246,66 +249,69 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="detailDialog" max-width="600">
+    <v-dialog v-model="detailDialog" max-width="500">
       <v-card>
-        <v-card-title>거래 상세 정보</v-card-title>
-        <v-card-text>
-          <div v-if="selectedTransaction">
-            <v-list>
-              <v-list-item>
-                <v-list-item-title>거래 ID</v-list-item-title>
-                <v-list-item-subtitle>{{ selectedTransaction.transactionId }}</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>코인</v-list-item-title>
-                <v-list-item-subtitle>{{ selectedTransaction.coinSymbol }}</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>거래 유형</v-list-item-title>
-                <v-list-item-subtitle>
+        <v-card-title class="bg-primary text-white">
+          <v-icon class="mr-2">mdi-file-document-outline</v-icon>
+          거래 상세 정보
+        </v-card-title>
+        <v-card-text class="pa-0">
+          <v-table v-if="selectedTransaction" density="comfortable">
+            <tbody>
+              <tr>
+                <td class="font-weight-bold bg-grey-lighten-4" width="35%">거래 ID</td>
+                <td>{{ selectedTransaction.transactionId }}</td>
+              </tr>
+              <tr>
+                <td class="font-weight-bold bg-grey-lighten-4">코인</td>
+                <td>{{ selectedTransaction.coinSymbol }}</td>
+              </tr>
+              <tr>
+                <td class="font-weight-bold bg-grey-lighten-4">거래 유형</td>
+                <td>
                   <v-chip :color="selectedTransaction.type === 'BUY' ? 'blue' : 'orange'" size="small">
                     {{ selectedTransaction.type === 'BUY' ? '매수' : '매도' }}
                   </v-chip>
-                </v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>수량</v-list-item-title>
-                <v-list-item-subtitle>{{ formatNumber(selectedTransaction.quantity, 8) }}</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>가격</v-list-item-title>
-                <v-list-item-subtitle>{{ formatCurrency(selectedTransaction.price) }}</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>총 금액</v-list-item-title>
-                <v-list-item-subtitle>{{ formatCurrency(selectedTransaction.totalAmount) }}</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>수수료</v-list-item-title>
-                <v-list-item-subtitle>{{ formatCurrency(selectedTransaction.fee) }}</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>상태</v-list-item-title>
-                <v-list-item-subtitle>
+                </td>
+              </tr>
+              <tr>
+                <td class="font-weight-bold bg-grey-lighten-4">수량</td>
+                <td>{{ formatNumber(selectedTransaction.quantity, 8) }}</td>
+              </tr>
+              <tr>
+                <td class="font-weight-bold bg-grey-lighten-4">가격</td>
+                <td>{{ formatCurrency(selectedTransaction.price) }}</td>
+              </tr>
+              <tr>
+                <td class="font-weight-bold bg-grey-lighten-4">총 금액</td>
+                <td>{{ formatCurrency(selectedTransaction.totalAmount) }}</td>
+              </tr>
+              <tr>
+                <td class="font-weight-bold bg-grey-lighten-4">수수료</td>
+                <td>{{ formatCurrency(selectedTransaction.fee) }}</td>
+              </tr>
+              <tr>
+                <td class="font-weight-bold bg-grey-lighten-4">상태</td>
+                <td>
                   <v-chip :color="getStatusColor(selectedTransaction.status)" size="small">
                     {{ getStatusText(selectedTransaction.status) }}
                   </v-chip>
-                </v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>거래 시각</v-list-item-title>
-                <v-list-item-subtitle>{{ formatDateTime(selectedTransaction.createdAt) }}</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item v-if="selectedTransaction.note">
-                <v-list-item-title>메모</v-list-item-title>
-                <v-list-item-subtitle>{{ selectedTransaction.note }}</v-list-item-subtitle>
-              </v-list-item>
-            </v-list>
-          </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="font-weight-bold bg-grey-lighten-4">거래 시각</td>
+                <td>{{ formatDateTime(selectedTransaction.createdAt) }}</td>
+              </tr>
+              <tr v-if="selectedTransaction.note">
+                <td class="font-weight-bold bg-grey-lighten-4">메모</td>
+                <td>{{ selectedTransaction.note }}</td>
+              </tr>
+            </tbody>
+          </v-table>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="detailDialog = false">닫기</v-btn>
+          <v-btn variant="flat" color="primary" @click="detailDialog = false">닫기</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

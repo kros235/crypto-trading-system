@@ -601,7 +601,6 @@
                     v-model="settings.useAiAnalysis"
                     label="AI 뉴스 분석 사용"
                     color="primary"
-                    hint="ChatGPT/Claude API를 통한 뉴스 분석으로 매수/매도 판단에 활용"
                     hide-details
                   />
                   <HelpButton 
@@ -612,7 +611,7 @@
                   />
                 </div>
                 <div class="text-caption text-grey ml-8 mt-1">
-                  ChatGPT/Claude API를 통한 뉴스 분석으로 매수/매도 판단에 활용
+                  Groq API (Llama 3.3 70B)를 통한 뉴스 분석으로 매수 조건 가중치 조정에 활용
                 </div>
               </div>
               <v-divider class="my-6" />

@@ -225,8 +225,21 @@
 
                 <v-alert type="info" variant="tonal" density="compact" class="mb-3">
                   <div class="text-body-2">
-                    <strong>Discord User ID 확인:</strong>
-                    설정 → 고급 → 개발자 모드 ON → 프로필 우클릭 → ID 복사
+                    <strong>Discord User ID 확인 방법</strong>
+                    <a 
+                      href="https://support.discord.com/hc/ko/articles/206346498" 
+                      target="_blank" 
+                      class="ml-2 text-primary"
+                      style="font-size: 12px;"
+                    >
+                      (공식 가이드 보기 ↗)
+                    </a>
+                    <ol style="margin: 8px 0 0 0; padding-left: 20px; line-height: 1.8;">
+                      <li>Discord 설정(⚙️) 클릭</li>
+                      <li>고급 → <strong>개발자 모드</strong> ON</li>
+                      <li>자신의 프로필 우클릭</li>
+                      <li><strong>ID 복사</strong> 클릭</li>
+                    </ol>
                   </div>
                 </v-alert>
 

@@ -128,7 +128,7 @@
                           class="mt-2"
                         >
                           <template v-slot:append>
-                            <span class="text-body-2" style="min-width: 50px">{{ request.basePeriod }}일</span>
+                            <span class="text-body-2">{{ request.basePeriod }}일</span>
                           </template>
                         </v-slider>
 
@@ -152,7 +152,7 @@
                           hide-details
                         >
                           <template v-slot:append>
-                            <span class="text-body-2" style="min-width: 50px">{{ request.buyThresholdPct }}%</span>
+                            <span class="text-body-2">{{ request.buyThresholdPct }}%</span>
                           </template>
                         </v-slider>
 
@@ -175,7 +175,7 @@
                           hide-details
                         >
                           <template v-slot:append>
-                            <span class="text-body-2" style="min-width: 50px">{{ request.sellTargetPct }}%</span>
+                            <span class="text-body-2">{{ request.sellTargetPct }}%</span>
                           </template>
                         </v-slider>
 
@@ -198,7 +198,7 @@
                           hide-details
                         >
                           <template v-slot:append>
-                            <span class="text-body-2" style="min-width: 50px">{{ request.stopLossPct }}%</span>
+                            <span class="text-body-2">{{ request.stopLossPct }}%</span>
                           </template>
                         </v-slider>
 
@@ -221,7 +221,7 @@
                           hide-details
                         >
                           <template v-slot:append>
-                            <span class="text-body-2" style="min-width: 50px">{{ request.maxHoldingsPerCoin }}건</span>
+                            <span class="text-body-2">{{ request.maxHoldingsPerCoin }}건</span>
                           </template>
                         </v-slider>
 
@@ -254,7 +254,7 @@
                           hide-details
                         >
                           <template v-slot:append>
-                            <span class="text-body-2" style="min-width: 50px">{{ request.trailingStopPct }}%</span>
+                            <span class="text-body-2">{{ request.trailingStopPct }}%</span>
                           </template>
                         </v-slider>
 
@@ -392,7 +392,7 @@
                           hide-details
                         >
                           <template v-slot:append>
-                            <span class="text-body-2" style="min-width: 80px">
+                            <span class="text-body-2">
                               {{ request.dailyTradeLimitPct === 100 ? '제한없음' : `${request.dailyTradeLimitPct}%` }}
                             </span>
                           </template>
@@ -421,7 +421,7 @@
                           hide-details
                         >
                           <template v-slot:append>
-                            <span class="text-body-2" style="min-width: 80px">
+                            <span class="text-body-2">
                               {{ request.maxPositionPct === 100 ? '제한없음' : `${request.maxPositionPct}%` }}
                             </span>
                           </template>
@@ -451,7 +451,7 @@
                           color="error"
                         >
                           <template v-slot:append>
-                            <span class="text-body-2" style="min-width: 80px">
+                            <span class="text-body-2">
                               {{ request.dailyStopLossPct <= -50 ? '사용안함' : `${request.dailyStopLossPct}%` }}
                             </span>
                           </template>
@@ -518,7 +518,7 @@
                           class="mb-3"
                         >
                           <template v-slot:append>
-                            <span class="text-body-2" style="min-width: 50px">{{ request.cumulativeLossLimitPct }}%</span>
+                            <span class="text-body-2">{{ request.cumulativeLossLimitPct }}%</span>
                           </template>
                         </v-slider>
                         
@@ -543,7 +543,7 @@
                           color="info"
                         >
                           <template v-slot:append>
-                            <span class="text-body-2" style="min-width: 50px">{{ request.consecutiveStopLossLimit }}회</span>
+                            <span class="text-body-2">{{ request.consecutiveStopLossLimit }}회</span>
                           </template>
                         </v-slider>
 
@@ -2309,6 +2309,14 @@ function handleChartHover(event: MouseEvent) {
 /* 스크롤 모드에서 차트 래퍼 */
 .scroll-mode .chart-wrapper {
   min-width: 100%;
+}
+
+.v-expansion-panel-text .v-slider {
+  max-width: calc(100% - 60px);
+}
+
+.v-expansion-panel-text .v-slider .v-slider-track {
+  width: 100%;
 }
 
 </style>

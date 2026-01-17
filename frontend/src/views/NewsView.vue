@@ -5,14 +5,22 @@
 
     <v-main class="bg-grey-lighten-3">
       <v-container fluid>
-         <v-row>
-          <v-col cols="12">
-            <h1 class="text-h4">📰 코인 뉴스</h1>
-            <p class="text-subtitle-1 text-grey mb-4">AI가 분석한 코인별 최신 뉴스를 확인하세요</p>
-          </v-col>
-        </v-row>
+          <v-row>
+            <v-col cols="12">
+              <div class="d-flex align-center">
+                <h1 class="text-h4">📰 코인 뉴스</h1>
+                <HelpButton
+                  :use-dialog="true"
+                  :dialog-title="helpContents.newsOverview.title"
+                  :dialog-content="helpContents.newsOverview.content"
+                  color="grey-darken-1"
+                  class="ml-2"
+                />
+              </div>
+              <p class="text-subtitle-1 text-grey mb-4">AI가 분석한 코인별 최신 뉴스를 확인하세요</p>
+            </v-col>
+          </v-row>
 
-        <!-- 필터 및 검색 -->
         <v-row class="mb-4" align="center">
           <v-col cols="12" md="2">
             <v-select
@@ -22,6 +30,8 @@
               clearable
               density="comfortable"
               hide-details
+              variant="outlined"
+              bg-color="white"
               @update:model-value="loadNews"
             />
           </v-col>
@@ -33,6 +43,8 @@
               clearable
               density="comfortable"
               hide-details
+              variant="outlined"
+              bg-color="white"
               @keyup.enter="loadNews"
               @click:clear="clearSearch"
             />
@@ -44,6 +56,8 @@
               label="페이지당 건수"
               density="comfortable"
               hide-details
+              variant="outlined"
+              bg-color="white"
               @update:model-value="loadNews"
             />
           </v-col>
@@ -52,15 +66,16 @@
               color="primary" 
               @click="loadNews" 
               class="mr-2"
+              height="48"
             >
               <v-icon start>mdi-refresh</v-icon>
               새로고침
             </v-btn>
             <v-btn 
-              color="secondary" 
-              variant="outlined" 
+              color="teal-darken-1" 
               @click="collectNews" 
               :loading="collecting"
+              height="48"
             >
               <v-icon start>mdi-download</v-icon>
               뉴스 수집
@@ -74,6 +89,18 @@
         <v-row>
           <v-col cols="12">
             <v-card>
+              <v-card-title class="d-flex align-center">
+                <v-icon class="mr-2">mdi-format-list-bulleted</v-icon>
+                뉴스 목록
+                <v-chip size="small" color="primary" class="ml-2">{{ totalElements }}건</v-chip>
+                <v-spacer />
+                <HelpButton
+                  :use-dialog="true"
+                  :dialog-title="helpContents.aiAnalysis.title"
+                  :dialog-content="helpContents.aiAnalysis.content"
+                  color="grey-darken-1"
+                />
+              </v-card-title>
               <v-data-table
                 :headers="headers"
                 :items="newsList"
@@ -211,9 +238,43 @@ import { ref, onMounted } from 'vue'
 import api from '@/api'
 import TheHeader from '@/components/TheHeader.vue'
 import TheSidebar from '@/components/TheSidebar.vue'
+import HelpButton from '@/components/HelpButton.vue'
 
 // 사이드바 ref
 const sidebarRef = ref()
+
+const helpContents = {
+  newsOverview: {
+    title: '📰 코인 뉴스 안내',
+    content: `
+      <p class="help-intro">AI가 분석한 코인별 최신 뉴스를 확인할 수 있습니다.</p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>뉴스 소스</strong>
+        <span class="help-desc">CoinTelegraph, Bitcoin Magazine, Decrypt 등 글로벌 공신력 있는 매체에서 수집됩니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>수집 주기</strong>
+        <span class="help-desc">3시간마다 자동 수집됩니다. (0시, 3시, 6시, 9시, 12시, 15시, 18시, 21시)</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>AI 분석</strong>
+        <span class="help-desc">Groq AI가 뉴스를 분석하여 호재/악재/중립을 판단하고 점수를 부여합니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>가중치 적용</strong>
+        <span class="help-desc">AI 분석 결과는 거래 설정의 매수 기준가에 ±0.5% 범위로 자동 반영됩니다.</span></p>
+      <p class="help-note">💡 <strong>Tip:</strong> 뉴스 행을 클릭하면 상세 내용을 확인할 수 있습니다.</p>
+    `
+  },
+  aiAnalysis: {
+  title: '🤖 AI 분석 점수 안내',
+  content: `
+    <p class="help-intro">AI가 뉴스를 분석하여 시장에 미치는 영향을 <strong>-1.0 ~ +1.0</strong> 범위의 점수로 나타냅니다.</p>
+    <p class="help-item"><span class="help-bullet">•</span> <strong>+0.2 이상 (호재)</strong>
+      <span class="help-desc">시장에 긍정적인 영향을 미칠 것으로 예상되는 뉴스입니다.<br/>예: +0.8, +0.5 등 → 매수 조건이 완화됩니다.</span></p>
+    <p class="help-item"><span class="help-bullet">•</span> <strong>-0.2 ~ +0.2 (중립)</strong>
+      <span class="help-desc">시장에 큰 영향이 없을 것으로 예상됩니다.<br/>예: +0.1, -0.1 등 → 매수 조건에 변화가 없습니다.</span></p>
+    <p class="help-item"><span class="help-bullet">•</span> <strong>-0.2 이하 (악재)</strong>
+      <span class="help-desc">시장에 부정적인 영향을 미칠 것으로 예상되는 뉴스입니다.<br/>예: -0.5, -0.9 등 → 매수 조건이 강화됩니다.</span></p>
+    <p class="help-item"><span class="help-bullet">•</span> <strong>가중치 계산</strong>
+      <span class="help-desc">평균 점수 × 0.5 = 가중치(%)<br/>예: 평균 +0.8 → 가중치 +0.4% → 매수 기준가 완화</span></p>
+    <p class="help-note">💡 <strong>Tip:</strong> AI 분석은 참고용이며, 실제 시장 상황과 다를 수 있습니다.<br/><span style="margin-left: 47px;">뉴스 원문을 직접 확인하는 것을 권장합니다.</span></p>
+  `
+  }
+}
 
 // 상태
 const loading = ref(false)
@@ -391,5 +452,42 @@ onMounted(() => {
 }
 .v-data-table :deep(tr:hover) {
   background-color: rgba(var(--v-theme-primary), 0.05);
+}
+
+:deep(.help-content .help-intro) {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  color: #424242;
+  font-size: 14px;
+}
+
+:deep(.help-content .help-item) {
+  margin-bottom: 16px;
+  padding-left: 8px;
+}
+
+:deep(.help-content .help-bullet) {
+  color: #1565C0;
+  font-weight: bold;
+  margin-right: 6px;
+}
+
+:deep(.help-content .help-desc) {
+  display: block;
+  padding-left: 20px;
+  margin-top: 4px;
+  color: #616161;
+  font-size: 13px;
+}
+
+:deep(.help-content .help-note) {
+  margin-top: 16px;
+  padding: 10px 12px;
+  background-color: #FFF8E1;
+  border-left: 3px solid #FFA000;
+  border-radius: 4px;
+  color: #5D4037;
+  font-size: 13px;
 }
 </style>

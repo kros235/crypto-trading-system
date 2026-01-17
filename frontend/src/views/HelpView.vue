@@ -7,10 +7,19 @@
       <v-container fluid>
         <v-row class="mb-4">
           <v-col>
-            <h1 class="text-h4">
-              <v-icon class="mr-2">mdi-help-circle</v-icon>
-              도움말
-            </h1>
+            <div class="d-flex align-center">
+              <h1 class="text-h4">
+                <v-icon class="mr-2">mdi-help-circle</v-icon>
+                도움말
+              </h1>
+              <HelpButton
+                :use-dialog="true"
+                :dialog-title="helpContents.helpOverview.title"
+                :dialog-content="helpContents.helpOverview.content"
+                color="grey-darken-1"
+                class="ml-2"
+              />
+            </div>
             <p class="text-subtitle-1 text-grey">시스템 사용법, 용어 사전, FAQ를 확인하세요</p>
           </v-col>
         </v-row>
@@ -511,8 +520,28 @@
 import { ref, computed, watch } from 'vue'
 import TheHeader from '@/components/TheHeader.vue'
 import TheSidebar from '@/components/TheSidebar.vue'
+import HelpButton from '@/components/HelpButton.vue'
 
 const sidebarRef = ref()
+
+const helpContents = {
+  helpOverview: {
+    title: '❓ 도움말 페이지 안내',
+    content: `
+      <p class="help-intro">시스템 사용에 필요한 모든 정보를 제공하는 페이지입니다.</p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>시작 가이드</strong>
+        <span class="help-desc">회원가입부터 첫 거래까지의 단계별 안내입니다.<br/>처음 사용하시는 분은 이 탭부터 확인하세요.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>용어 사전</strong>
+        <span class="help-desc">기술적 지표, 거래 용어, 리스크 관리, 성과 지표의 상세 설명입니다.<br/>검색 기능으로 원하는 용어를 빠르게 찾을 수 있습니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>FAQ</strong>
+        <span class="help-desc">자주 묻는 질문과 답변을 카테고리별로 정리했습니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>문제 해결</strong>
+        <span class="help-desc">일반적인 오류, API 연동 문제, 긴급 상황 대응 방법입니다.</span></p>
+      <p class="help-note">💡 <strong>Tip:</strong> 각 페이지의 ? 아이콘을 클릭하면 해당 기능의 간단한 도움말을 볼 수 있습니다.</p>
+    `
+  }
+}
+
 const activeTab = ref('guide')
 const glossarySearch = ref('')
 const faqSearch = ref('')
@@ -1310,5 +1339,41 @@ const getCategoryColor = (category: string) => {
 
 .api-stepper :deep(.v-stepper-actions .v-btn:hover) {
   background-color: #3F51B5 !important;
+}
+:deep(.help-content .help-intro) {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  color: #424242;
+  font-size: 14px;
+}
+
+:deep(.help-content .help-item) {
+  margin-bottom: 16px;
+  padding-left: 8px;
+}
+
+:deep(.help-content .help-bullet) {
+  color: #1565C0;
+  font-weight: bold;
+  margin-right: 6px;
+}
+
+:deep(.help-content .help-desc) {
+  display: block;
+  padding-left: 20px;
+  margin-top: 4px;
+  color: #616161;
+  font-size: 13px;
+}
+
+:deep(.help-content .help-note) {
+  margin-top: 16px;
+  padding: 10px 12px;
+  background-color: #FFF8E1;
+  border-left: 3px solid #FFA000;
+  border-radius: 4px;
+  color: #5D4037;
+  font-size: 13px;
 }
 </style>

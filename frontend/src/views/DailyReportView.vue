@@ -97,9 +97,16 @@
           <v-row class="mb-4">
             <v-col cols="12" md="6">
               <v-card class="pa-4 detail-card">
-                <v-card-title>
+                <v-card-title class="d-flex align-center">
                   <v-icon class="mr-2">mdi-chart-pie</v-icon>
                   손익 상세
+                  <v-spacer />
+                  <HelpButton
+                    :use-dialog="true"
+                    :dialog-title="helpContents.profitDetail.title"
+                    :dialog-content="helpContents.profitDetail.content"
+                    color="grey-darken-1"
+                  />
                 </v-card-title>
                 <v-card-text>
                   <v-list>
@@ -151,9 +158,16 @@
             
             <v-col cols="12" md="6">
               <v-card class="pa-4 detail-card">
-                <v-card-title>
+                <v-card-title class="d-flex align-center">
                   <v-icon class="mr-2">mdi-bell</v-icon>
                   알림
+                  <v-spacer />
+                  <HelpButton
+                    :use-dialog="true"
+                    :dialog-title="helpContents.notification.title"
+                    :dialog-content="helpContents.notification.content"
+                    color="grey-darken-1"
+                  />
                 </v-card-title>
                 <v-card-text>
                   <v-btn
@@ -192,9 +206,16 @@
           <v-row v-if="report.coinSummaries && report.coinSummaries.length > 0">
             <v-col cols="12">
               <v-card>
-                <v-card-title>
+                <v-card-title class="d-flex align-center">
                   <v-icon class="mr-2">mdi-format-list-bulleted</v-icon>
                   코인별 현황 ({{ report.holdingCount }}종목)
+                  <v-spacer />
+                  <HelpButton
+                    :use-dialog="true"
+                    :dialog-title="helpContents.coinStatus.title"
+                    :dialog-content="helpContents.coinStatus.content"
+                    color="grey-darken-1"
+                  />
                 </v-card-title>
                 <v-card-text>
                   <v-data-table
@@ -283,10 +304,57 @@
 import { ref, onMounted } from 'vue'
 import TheHeader from '@/components/TheHeader.vue'
 import TheSidebar from '@/components/TheSidebar.vue'
+import HelpButton from '@/components/HelpButton.vue'
 import type { DailyReport } from '@/types/bot'
 
 // 사이드바 Ref
 const sidebarRef = ref()
+
+const helpContents = {
+  profitDetail: {
+    title: '📊 손익 상세 안내',
+    content: `
+      <p class="help-intro">일일 거래 손익의 상세 내역을 확인할 수 있습니다.</p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>실현 손익</strong>
+        <span class="help-desc">오늘 실제로 매도하여 확정된 손익입니다. 매도가 - 매수가로 계산됩니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>평가 손익</strong>
+        <span class="help-desc">현재 보유 중인 코인의 미실현 손익입니다. 현재가 - 매수가로 계산되며, 매도 전까지 변동됩니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>총 손익</strong>
+        <span class="help-desc">실현 손익 + 평가 손익의 합계입니다.</span></p>
+      <p class="help-note">💡 <strong>Tip:</strong> 평가 손익은 시장 상황에 따라 실시간으로 변동되며, 매도 시점에 실현 손익으로 확정됩니다.</p>
+    `
+  },
+  notification: {
+    title: '🔔 알림 발송 안내',
+    content: `
+      <p class="help-intro">일일 리포트를 Discord 또는 이메일로 발송할 수 있습니다.</p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>Discord로 리포트 발송</strong>
+        <span class="help-desc">프로필 설정에서 Discord User ID를 등록하면 DM으로 리포트를 받을 수 있습니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>이메일로 리포트 발송</strong>
+        <span class="help-desc">프로필 설정에서 등록한 이메일로 리포트를 발송합니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>자동 발송</strong>
+        <span class="help-desc">매일 23:50에 시스템이 자동으로 일일 리포트를 발송합니다.</span></p>
+      <p class="help-note">💡 <strong>Tip:</strong> 알림을 받으려면 프로필 설정에서 이메일 또는 Discord ID를 먼저 등록해주세요.</p>
+    `
+  },
+  coinStatus: {
+    title: '📋 코인별 현황 안내',
+    content: `
+      <p class="help-intro">보유 중인 코인별 상세 현황을 확인할 수 있습니다.</p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>보유 건수</strong>
+        <span class="help-desc">해당 코인을 몇 번에 걸쳐 매수했는지 나타냅니다. (분할 매수 시 여러 건)</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>총 수량</strong>
+        <span class="help-desc">보유 중인 해당 코인의 총 수량입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>평균 단가</strong>
+        <span class="help-desc">매수한 평균 가격입니다. 분할 매수 시 가중 평균으로 계산됩니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>평가 손익</strong>
+        <span class="help-desc">(현재가 - 평균 단가) × 총 수량으로 계산된 미실현 손익입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>수익률</strong>
+        <span class="help-desc">평균 단가 대비 현재가의 변동률입니다.</span></p>
+      <p class="help-note">💡 <strong>Tip:</strong> 테이블 헤더를 클릭하면 해당 컬럼 기준으로 정렬할 수 있습니다.</p>
+    `
+  }
+}
 
 // API 호출 함수
 const api = {
@@ -423,5 +491,41 @@ onMounted(() => {
 
 :deep(.v-chip) {
   font-size: 0.9rem !important;
+}
+:deep(.help-content .help-intro) {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  color: #424242;
+  font-size: 14px;
+}
+
+:deep(.help-content .help-item) {
+  margin-bottom: 16px;
+  padding-left: 8px;
+}
+
+:deep(.help-content .help-bullet) {
+  color: #1565C0;
+  font-weight: bold;
+  margin-right: 6px;
+}
+
+:deep(.help-content .help-desc) {
+  display: block;
+  padding-left: 20px;
+  margin-top: 4px;
+  color: #616161;
+  font-size: 13px;
+}
+
+:deep(.help-content .help-note) {
+  margin-top: 16px;
+  padding: 10px 12px;
+  background-color: #FFF8E1;
+  border-left: 3px solid #FFA000;
+  border-radius: 4px;
+  color: #5D4037;
+  font-size: 13px;
 }
 </style>

@@ -35,18 +35,22 @@
 
         <v-card elevation="2">
           <v-card-title class="d-flex align-center bg-indigo-darken-2 text-white py-3">
-            <v-icon class="mr-2">mdi-format-list-bulleted</v-icon>
-            활성 코인 목록
-            <v-chip class="ml-2" color="white" variant="outlined" size="small">{{ filteredCoins.length }}개</v-chip>
-            <v-spacer />
-            <!-- ★★★ 수정: 시세 조회 진행 상황 표시 ★★★ -->
-            <span v-if="priceLoading" class="text-caption">
-              <v-progress-circular size="16" width="2" indeterminate class="mr-1" />
-              시세 조회중... ({{ priceLoadedCount }}/{{ priceTargetCount }})
-            </span>
-          </v-card-title>
+          <v-icon class="mr-2">mdi-format-list-bulleted</v-icon>
+          활성 코인 목록
+          <v-chip class="ml-2" color="white" variant="outlined" size="small">{{ filteredCoins.length }}개</v-chip>
+          <v-spacer />
+          <span v-if="priceLoading" class="text-caption mr-2">
+            <v-progress-circular size="16" width="2" indeterminate class="mr-1" />
+            시세 조회중... ({{ priceLoadedCount }}/{{ priceTargetCount }})
+          </span>
+          <HelpButton
+            :use-dialog="true"
+            :dialog-title="helpContents.coinList.title"
+            :dialog-content="helpContents.coinList.content"
+            color="white"
+          />
+        </v-card-title>
 
-          <!-- ★★★ 수정: 페이지 변경 이벤트 추가 ★★★ -->
           <v-data-table 
             :headers="headers" 
             :items="filteredCoins" 
@@ -107,6 +111,12 @@
             <v-card-title class="d-flex align-center bg-indigo-darken-2 text-white py-3">
               <v-icon class="mr-2">mdi-information-outline</v-icon>
               {{ selectedCoin?.nameKr || selectedCoin?.symbol }} 상세 정보
+              <HelpButton
+                :use-dialog="true"
+                :dialog-title="helpContents.coinDetail.title"
+                :dialog-content="helpContents.coinDetail.content"
+                color="white"
+              />
               <v-spacer />
               <v-btn icon variant="text" @click="coinDetailDialog = false" size="small"><v-icon color="white">mdi-close</v-icon></v-btn>
             </v-card-title>
@@ -174,10 +184,44 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import TheHeader from '@/components/TheHeader.vue'
 import TheSidebar from '@/components/TheSidebar.vue'
+import HelpButton from '@/components/HelpButton.vue'
 import { coinApi } from '@/api'
 
 const router = useRouter()
 const sidebarRef = ref()
+
+const helpContents = {
+  coinList: {
+    title: '📋 코인 목록 안내',
+    content: `
+      <p class="help-intro">업비트 거래소에서 거래 가능한 코인 목록을 확인하고 관리하는 페이지입니다.</p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>코인 검색</strong>
+        <span class="help-desc">심볼(BTC, ETH 등)이나 한글 이름으로 원하는 코인을 빠르게 찾을 수 있습니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>상태 필터</strong>
+        <span class="help-desc">활성/비활성 상태로 필터링하여 거래 가능한 코인만 확인할 수 있습니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>정렬 옵션</strong>
+        <span class="help-desc">시가총액 순위, 가격순, 변동률순 등 원하는 기준으로 정렬할 수 있습니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>실시간 시세</strong>
+        <span class="help-desc">페이지에 표시되는 코인의 현재가와 24시간 변동률을 자동으로 조회합니다.</span></p>
+      <p class="help-note">💡 <strong>Tip:</strong> 코인 행을 클릭하면 상세 정보를 확인하고, "거래 설정에 추가" 버튼으로 바로 거래 코인으로 등록할 수 있습니다.</p>
+    `
+  },
+  coinDetail: {
+    title: '🔍 코인 상세 정보',
+    content: `
+      <p class="help-intro">선택한 코인의 상세 정보를 확인할 수 있습니다.</p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>기본 정보</strong>
+        <span class="help-desc">심볼, 한글명, 영문명, 시가총액 순위 등 코인의 기본적인 정보입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>현재가</strong>
+        <span class="help-desc">업비트 실시간 API에서 가져온 최신 거래 가격입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>24시간 변동률</strong>
+        <span class="help-desc">지난 24시간 동안의 가격 변동률입니다. 양수(+)는 상승, 음수(-)는 하락을 의미합니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>24시간 거래대금</strong>
+        <span class="help-desc">지난 24시간 동안 해당 코인의 총 거래금액입니다. 거래량이 많을수록 유동성이 좋습니다.</span></p>
+      <p class="help-note">💡 <strong>Tip:</strong> "거래 설정에 추가" 버튼을 클릭하면 거래 설정 페이지로 이동하여 해당 코인을 거래 대상에 추가할 수 있습니다.</p>
+    `
+  }
+}
 
 const loading = ref(false)
 const priceLoading = ref(false)
@@ -407,4 +451,41 @@ onMounted(() => { fetchCoins() })
 <style scoped>
 .v-data-table { font-size: 0.9rem; }
 .fill-height { height: 100%; }
+
+:deep(.help-content .help-intro) {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  color: #424242;
+  font-size: 14px;
+}
+
+:deep(.help-content .help-item) {
+  margin-bottom: 16px;
+  padding-left: 8px;
+}
+
+:deep(.help-content .help-bullet) {
+  color: #1565C0;
+  font-weight: bold;
+  margin-right: 6px;
+}
+
+:deep(.help-content .help-desc) {
+  display: block;
+  padding-left: 20px;
+  margin-top: 4px;
+  color: #616161;
+  font-size: 13px;
+}
+
+:deep(.help-content .help-note) {
+  margin-top: 16px;
+  padding: 10px 12px;
+  background-color: #FFF8E1;
+  border-left: 3px solid #FFA000;
+  border-radius: 4px;
+  color: #5D4037;
+  font-size: 13px;
+}
 </style>

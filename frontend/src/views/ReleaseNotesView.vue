@@ -6,11 +6,20 @@
     <v-main class="bg-grey-lighten-3">
       <v-container fluid>
          <v-row>
-          <v-col cols="12">
-            <h1 class="text-h4">📢 릴리즈 노트</h1>
-            <p class="text-subtitle-1 text-grey mb-4">시스템 업데이트 및 변경 사항을 확인하세요</p>
-          </v-col>
-        </v-row>
+           <v-col cols="12">
+             <div class="d-flex align-center">
+               <h1 class="text-h4">📢 릴리즈 노트</h1>
+               <HelpButton
+                 :use-dialog="true"
+                 :dialog-title="helpContents.releaseNotes.title"
+                 :dialog-content="helpContents.releaseNotes.content"
+                 color="grey-darken-1"
+                 class="ml-2"
+               />
+             </div>
+             <p class="text-subtitle-1 text-grey mb-4">시스템 업데이트 및 변경 사항을 확인하세요</p>
+           </v-col>
+         </v-row>
 
         <!-- 검색 + 페이지당 건수 + 글 작성 버튼 -->
         <v-row class="mb-4" align="center">
@@ -178,10 +187,29 @@ import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import TheHeader from '@/components/TheHeader.vue'
 import TheSidebar from '@/components/TheSidebar.vue'
+import HelpButton from '@/components/HelpButton.vue'
 import api from '@/api'
 
 const authStore = useAuthStore()
 const sidebarRef = ref()
+
+const helpContents = {
+  releaseNotes: {
+    title: '📢 릴리즈 노트 안내',
+    content: `
+      <p class="help-intro">시스템의 업데이트 내역과 변경 사항을 확인할 수 있습니다.</p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>업데이트 내역</strong>
+        <span class="help-desc">새로운 기능 추가, 버그 수정, 개선 사항 등의 변경 내역이 게시됩니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>검색 기능</strong>
+        <span class="help-desc">제목, 작성자, 내용을 기준으로 검색할 수 있습니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>상세 보기</strong>
+        <span class="help-desc">게시글 행을 클릭하면 전체 내용을 확인할 수 있습니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>관리자 기능</strong>
+        <span class="help-desc">관리자는 새 글 작성, 수정, 삭제가 가능합니다.</span></p>
+      <p class="help-note">💡 <strong>Tip:</strong> 중요한 업데이트는 대시보드 시스템 알림에도 표시됩니다.</p>
+    `
+  }
+}
 
 // 상태
 const loading = ref(false)
@@ -342,5 +370,42 @@ onMounted(() => {
 }
 :deep(.v-data-table tbody tr:hover) {
   background-color: rgba(0, 0, 0, 0.04);
+}
+
+:deep(.help-content .help-intro) {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  color: #424242;
+  font-size: 14px;
+}
+
+:deep(.help-content .help-item) {
+  margin-bottom: 16px;
+  padding-left: 8px;
+}
+
+:deep(.help-content .help-bullet) {
+  color: #1565C0;
+  font-weight: bold;
+  margin-right: 6px;
+}
+
+:deep(.help-content .help-desc) {
+  display: block;
+  padding-left: 20px;
+  margin-top: 4px;
+  color: #616161;
+  font-size: 13px;
+}
+
+:deep(.help-content .help-note) {
+  margin-top: 16px;
+  padding: 10px 12px;
+  background-color: #FFF8E1;
+  border-left: 3px solid #FFA000;
+  border-radius: 4px;
+  color: #5D4037;
+  font-size: 13px;
 }
 </style>

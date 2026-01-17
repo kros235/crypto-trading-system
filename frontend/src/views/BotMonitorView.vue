@@ -29,13 +29,17 @@
             </v-card>
           </v-col>
           
+          
           <v-col cols="12" md="3">
-            <v-card class="pa-4 bot-stats-card" color="primary" dark>
+            <v-card class="pa-4 bot-stats-card bot-schedule-card" color="primary" dark>
               <div class="d-flex align-center">
                 <v-icon size="48" class="mr-4">mdi-clock-outline</v-icon>
-                <div>
-                  <div class="text-h6">다음 실행</div>
-                  <div class="text-h5">{{ nextExecution }}</div>
+                <div class="flex-grow-1">
+                  <div class="schedule-label-row">마지막 봇 수행 시간</div>
+                  <div class="schedule-value-row">{{ lastExecutionTime }}</div>
+                  <div class="schedule-label-row mt-2">다음 봇 수행 시간</div>
+                  <div class="schedule-value-row">{{ nextExecutionTime }}</div>
+	    <div class="countdown-row">({{ countdownText }})</div>
                 </div>
               </div>
             </v-card>
@@ -71,10 +75,17 @@
           <!-- 수동 제어 -->
           <v-col cols="12" md="4">
             <v-card class="pa-4 control-card">
-              <v-card-title class="d-flex align-center pb-0">
-                <v-icon class="mr-2" color="primary">mdi-account-cog</v-icon>
-                수동 제어
-              </v-card-title>
+            <v-card-title class="d-flex align-center pb-0">
+              <v-icon class="mr-2" color="primary">mdi-account-cog</v-icon>
+              수동 제어
+              <v-spacer />
+              <HelpButton
+                :use-dialog="true"
+                :dialog-title="helpContents.manualControl.title"
+                :dialog-content="helpContents.manualControl.content"
+                color="grey-darken-1"
+              />
+            </v-card-title>
               <v-card-text class="pt-6">
                 <div class="d-flex flex-column gap-3">
                   <v-btn 
@@ -125,26 +136,35 @@
               <v-card-title class="d-flex align-center pb-0">
                 <v-icon class="mr-2" color="success">mdi-email</v-icon>
                 이메일 테스트 발송
+                <v-spacer />
+                <HelpButton
+                  :use-dialog="true"
+                  :dialog-title="helpContents.emailTest.title"
+                  :dialog-content="helpContents.emailTest.content"
+                  color="grey-darken-1"
+                />
               </v-card-title>
               <v-card-text class="pt-6">
-                <v-alert 
-                  v-if="!userProfile.email" 
-                  type="warning" 
-                  variant="tonal" 
-                  density="compact"
-                  class="mb-4"
-                >
-                  이메일 미등록
+              <v-alert 
+                v-if="!userProfile.email" 
+                type="warning" 
+                variant="tonal" 
+                density="compact"
+                class="mb-4"
+              >
+                <div class="d-flex align-center" style="flex-wrap: nowrap;">
+                  <span class="text-black" style="white-space: nowrap;">이메일 미등록</span>
+                  <v-spacer />
                   <v-btn 
                     variant="flat" 
                     color="primary" 
                     size="small" 
                     to="/profile"
-                    class="ml-2"
                   >
                     등록하기
                   </v-btn>
-                </v-alert>
+                </div>
+              </v-alert>
                 
                 <v-row dense>
                   <v-col cols="6">
@@ -221,6 +241,13 @@
                 >
                   {{ discordBotEnabled ? 'Bot 활성화' : 'Bot 비활성화' }}
                 </v-chip>
+                <v-spacer />
+                <HelpButton
+                  :use-dialog="true"
+                  :dialog-title="helpContents.discordTest.title"
+                  :dialog-content="helpContents.discordTest.content"
+                  color="grey-darken-1"
+                />
               </v-card-title>
               <v-card-text class="pt-6">
                 <v-alert 
@@ -230,16 +257,18 @@
                   density="compact"
                   class="mb-4"
                 >
-                  Discord ID 미등록
-                  <v-btn 
-                    variant="flat" 
-                    color="deep-purple" 
-                    size="small" 
-                    to="/profile"
-                    class="ml-2"
-                  >
-                    등록하기
-                  </v-btn>
+                  <div class="d-flex align-center" style="flex-wrap: nowrap;">
+                    <span class="text-black" style="white-space: nowrap;">Discord ID 미등록</span>
+                    <v-spacer />
+                    <v-btn 
+                      variant="flat" 
+                      color="deep-purple" 
+                      size="small" 
+                      to="/profile"
+                    >
+                      등록하기
+                    </v-btn>
+                  </div>
                 </v-alert>
                 
                 <v-row dense>
@@ -329,6 +358,12 @@
                 <span>
                   <v-icon class="mr-2">mdi-chart-line</v-icon>
                   기술적 지표
+                  <HelpButton
+                    :use-dialog="true"
+                    :dialog-title="helpContents.indicators.title"
+                    :dialog-content="helpContents.indicators.content"
+                    color="grey-darken-1"
+                  />
                 </span>
                 <span class="text-caption text-grey">
                   마지막 업데이트: {{ lastUpdated }}
@@ -397,13 +432,71 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import TheHeader from '@/components/TheHeader.vue'
 import TheSidebar from '@/components/TheSidebar.vue'
+import HelpButton from '@/components/HelpButton.vue' 
 import api from '@/api'
 import type { IndicatorResult } from '@/types/bot'
 
 const sidebarRef = ref()
+
+const helpContents = {
+  manualControl: {
+    title: '🎮 수동 제어 안내',
+    content: `
+      <p class="help-intro">자동매매 봇을 수동으로 제어할 수 있습니다.</p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>수동 매매 실행</strong>
+        <span class="help-desc">현재 설정된 거래 조건에 따라 즉시 매매 신호를 확인하고 거래를 실행합니다. 정기 스케줄(5분 간격) 외에 즉시 실행하고 싶을 때 사용합니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>지표 새로고침</strong>
+        <span class="help-desc">모든 코인의 기술적 지표(RSI, 볼린저밴드, 이동평균선 등)를 즉시 갱신합니다.</span></p>
+      <p class="help-note">💡 <strong>주의:</strong> 수동 실행은 실제 매매가 발생할 수 있으므로 신중하게 사용하세요. 테스트 목적이라면 소액으로 설정 후 실행하세요.</p>
+    `
+  },
+  indicators: {
+    title: '📊 기술적 지표 안내',
+    content: `
+      <p class="help-intro">각 코인의 기술적 지표와 매매 신호를 실시간으로 확인할 수 있습니다.</p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>RSI (상대강도지수)</strong>
+        <span class="help-desc">30 이하: 과매도 구간 (매수 신호)<br/>70 이상: 과매수 구간 (매도 신호)<br/>30~70: 중립 구간</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>볼린저밴드 위치</strong>
+        <span class="help-desc">하단 접근: 가격이 밴드 하단에 근접 (매수 신호)<br/>상단 접근: 가격이 밴드 상단에 근접 (매도 신호)<br/>중간: 밴드 중앙 부근</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>거래량 비율</strong>
+        <span class="help-desc">1.5x 이상: 평균 대비 거래량 급증 (신호 신뢰도 상승)<br/>1.0x 미만: 평균 이하 거래량</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>MA 위치</strong>
+        <span class="help-desc">20일 이동평균선 대비 현재가 위치. 음수(-)는 MA 아래(매수 검토), 양수(+)는 MA 위</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>신호</strong>
+        <span class="help-desc">강력 매수: 3개 이상 조건 충족<br/>매수 검토: 2개 조건 충족<br/>관망: 1개 조건 충족<br/>대기: 조건 미충족</span></p>
+      <p class="help-note">💡 <strong>Tip:</strong> 신호는 참고용이며, 실제 매매는 거래 설정의 조건에 따라 실행됩니다.</p>
+    `
+  },
+  emailTest: {
+    title: '📧 이메일 테스트 발송',
+    content: `
+      <p class="help-intro">각 유형별 알림 이메일이 정상적으로 발송되는지 테스트합니다.</p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>매수</strong>
+        <span class="help-desc">코인 매수 시 발송되는 알림 이메일 샘플</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>매도</strong>
+        <span class="help-desc">코인 매도 시 발송되는 알림 이메일 샘플</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>리포트</strong>
+        <span class="help-desc">일일 거래 리포트 이메일 샘플</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>가중치</strong>
+        <span class="help-desc">AI 뉴스 분석 가중치 변경 알림 샘플</span></p>
+      <p class="help-note">💡 <strong>Tip:</strong> 프로필 설정에서 이메일을 먼저 등록해야 테스트가 가능합니다.</p>
+    `
+  },
+  discordTest: {
+    title: '💬 디스코드 DM 테스트',
+    content: `
+      <p class="help-intro">디스코드 봇을 통한 DM 알림이 정상적으로 발송되는지 테스트합니다.</p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>Bot 활성화 상태</strong>
+        <span class="help-desc">서버의 디스코드 봇이 활성화되어 있어야 DM 발송이 가능합니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>Discord User ID</strong>
+        <span class="help-desc">프로필 설정에서 Discord User ID를 먼저 등록해야 합니다.</span></p>
+      <p class="help-note">💡 <strong>Tip:</strong> Discord User ID는 개발자 모드를 켜고 본인 프로필에서 "ID 복사"로 확인할 수 있습니다.</p>
+    `
+  }
+}
 
 // 상태 변수
 const loading = ref(false)
@@ -425,6 +518,11 @@ const todayStats = ref({
 })
 
 const botRunning = ref(true)
+const lastExecutionTime = ref('-')
+const nextExecutionTime = ref('-')
+const countdownSeconds = ref(0)
+const countdownText = ref('계산 중...')
+let countdownInterval: ReturnType<typeof setInterval> | null = null
 
 // 사용자 프로필 정보
 const userProfile = ref({
@@ -508,6 +606,59 @@ const fetchDiscordBotStatus = async () => {
   } catch (error) {
     console.error('Discord Bot 상태 조회 실패:', error)
     discordBotEnabled.value = false
+  }
+}
+
+const fetchBotStatus = async () => {
+  try {
+    const response = await api.get('/bot/status')
+    const data = response.data || response
+    
+    botRunning.value = data.isRunning ?? true
+    lastExecutionTime.value = data.lastExecutedAt || '-'
+    nextExecutionTime.value = data.nextExecutionAt || '-'
+    countdownSeconds.value = data.secondsUntilNextExecution || 0
+    
+    // 카운트다운 시작
+    startCountdown()
+  } catch (error) {
+    console.error('봇 상태 조회 실패:', error)
+  }
+}
+
+const startCountdown = () => {
+  // 기존 인터벌 정리
+  if (countdownInterval) {
+    clearInterval(countdownInterval)
+  }
+  
+  updateCountdownText()
+  
+  countdownInterval = setInterval(() => {
+    if (countdownSeconds.value > 0) {
+      countdownSeconds.value--
+      updateCountdownText()
+    } else {
+      // 카운트다운 종료 시 상태 재조회
+      fetchBotStatus()
+    }
+  }, 1000)
+}
+
+const updateCountdownText = () => {
+  const seconds = countdownSeconds.value
+  if (seconds <= 0) {
+    countdownText.value = '곧 실행'
+    return
+  }
+  
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  
+  if (mins > 0) {
+    countdownText.value = `${mins}분 ${secs}초 후`
+  } else {
+    countdownText.value = `${secs}초 후`
   }
 }
 
@@ -707,9 +858,17 @@ onMounted(() => {
   fetchIndicators()
   fetchUserProfile()  
   fetchDiscordBotStatus() 
+  fetchBotStatus()  
   
   // 30초마다 자동 새로고침
   setInterval(fetchIndicators, 30000)
+  setInterval(fetchBotStatus, 300000)
+})
+
+onUnmounted(() => {
+  if (countdownInterval) {
+    clearInterval(countdownInterval)
+  }
 })
 </script>
 
@@ -750,5 +909,62 @@ onMounted(() => {
 
 .gap-3 {
   gap: 12px;
+}
+
+:deep(.help-content .help-intro) {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  color: #424242;
+  font-size: 14px;
+}
+
+:deep(.help-content .help-item) {
+  margin-bottom: 16px;
+  padding-left: 8px;
+}
+
+:deep(.help-content .help-bullet) {
+  color: #1565C0;
+  font-weight: bold;
+  margin-right: 6px;
+}
+
+:deep(.help-content .help-desc) {
+  display: block;
+  padding-left: 20px;
+  margin-top: 4px;
+  color: #616161;
+  font-size: 13px;
+}
+
+:deep(.help-content .help-note) {
+  margin-top: 16px;
+  padding: 10px 12px;
+  background-color: #FFF8E1;
+  border-left: 3px solid #FFA000;
+  border-radius: 4px;
+  color: #5D4037;
+  font-size: 13px;
+}
+
+.bot-schedule-card .schedule-label-row {
+  font-size: 13px;
+  opacity: 0.9;
+  text-align: left;
+}
+
+.bot-schedule-card .schedule-value-row {
+  font-size: 16px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.bot-schedule-card .countdown-row {
+  font-size: 15px;
+  font-weight: 700;
+  text-align: right;
+  color: #FFD54F;
+  margin-top: 2px;
 }
 </style>

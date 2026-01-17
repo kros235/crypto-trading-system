@@ -7,7 +7,16 @@
     <!-- Page Title -->
     <v-row class="mb-4">
       <v-col>
-        <h1 class="text-h4">🔧 관리자 대시보드</h1>
+        <div class="d-flex align-center">
+          <h1 class="text-h4">🔧 관리자 대시보드</h1>
+          <HelpButton
+            :use-dialog="true"
+            :dialog-title="helpContents.systemStats.title"
+            :dialog-content="helpContents.systemStats.content"
+            color="grey-darken-1"
+            class="ml-2"
+          />
+        </div>
         <p class="text-subtitle-1 text-grey">시스템 현황 및 사용자 관리</p>
       </v-col>
       <v-col cols="auto">
@@ -100,22 +109,33 @@
           <v-card-title class="d-flex align-center">
             <v-icon class="mr-2">mdi-monitor-dashboard</v-icon>
             시스템 모니터링
+            <HelpButton
+              :use-dialog="true"
+              :dialog-title="helpContents.monitoring.title"
+              :dialog-content="helpContents.monitoring.content"
+              color="grey-darken-1"
+            />
             <v-spacer />
             <v-btn
-              variant="text"
+              color="primary"
+              variant="outlined"
               size="small"
+              class="mr-2"
               @click="fetchMonitoring"
               :loading="monitoringLoading"
             >
-              <v-icon>mdi-refresh</v-icon>
+              <v-icon start>mdi-refresh</v-icon>
+              새로고침
             </v-btn>
             <v-btn
-              variant="text"
+              color="indigo"
+              variant="outlined"
               size="small"
               @click="showMonitoringDialog = true"
               v-if="monitoring"
             >
-              <v-icon>mdi-fullscreen</v-icon>
+              <v-icon start>mdi-fullscreen</v-icon>
+              전체화면
             </v-btn>
           </v-card-title>
           
@@ -123,7 +143,7 @@
             <v-row>
               <!-- JVM 메모리 -->
               <v-col cols="12" md="3">
-                <v-card variant="outlined" class="pa-3">
+                <v-card variant="outlined" class="pa-3 monitoring-card">
                   <div class="text-caption text-grey mb-1">JVM Heap 사용량</div>
                   <v-progress-linear
                     :model-value="monitoring.heapUsagePercent"
@@ -143,7 +163,7 @@
               
               <!-- DB 커넥션 풀 -->
               <v-col cols="12" md="3">
-                <v-card variant="outlined" class="pa-3">
+                <v-card variant="outlined" class="pa-3 monitoring-card">
                   <div class="text-caption text-grey mb-1">DB 커넥션 풀</div>
                   <v-progress-linear
                     :model-value="(monitoring.dbActiveConnections / monitoring.dbMaxConnections) * 100"
@@ -160,10 +180,10 @@
                   </div>
                 </v-card>
               </v-col>
-              
+    
               <!-- Redis 상태 -->
               <v-col cols="12" md="3">
-                <v-card variant="outlined" class="pa-3">
+                <v-card variant="outlined" class="pa-3 monitoring-card">
                   <div class="text-caption text-grey mb-1">Redis 상태</div>
                   <div class="d-flex align-center">
                     <v-chip
@@ -183,9 +203,9 @@
                 </v-card>
               </v-col>
               
-              <!-- 업타임 & 스레드 -->
+              <!-- 시스템 정보 + 최근 에러 -->
               <v-col cols="12" md="3">
-                <v-card variant="outlined" class="pa-3">
+                <v-card variant="outlined" class="pa-3 monitoring-card">
                   <div class="text-caption text-grey mb-1">시스템 정보</div>
                   <div class="text-body-2">
                     <v-icon size="small" class="mr-1">mdi-clock-outline</v-icon>
@@ -194,10 +214,16 @@
                   <div class="text-caption mt-1">
                     스레드: {{ monitoring.threadCount }} (Peak: {{ monitoring.peakThreadCount }})
                   </div>
+                  <div class="text-caption mt-1">
+                    <v-icon size="small" class="mr-1" :color="monitoring.recentErrorCount > 0 ? 'error' : 'success'">
+                      {{ monitoring.recentErrorCount > 0 ? 'mdi-alert-circle' : 'mdi-check-circle' }}
+                    </v-icon>
+                    최근 에러: <strong :class="monitoring.recentErrorCount > 0 ? 'text-error' : 'text-success'">{{ monitoring.recentErrorCount }}건</strong>
+                  </div>
                 </v-card>
               </v-col>
             </v-row>
-            
+                      
             <!-- 슬로우 쿼리 -->
             <v-row class="mt-2" v-if="monitoring.recentSlowQueries && monitoring.recentSlowQueries.length > 0">
               <v-col cols="12">
@@ -239,7 +265,15 @@
       <v-col cols="12">
         <v-card>
           <v-card-title class="d-flex align-center justify-space-between">
-            <span>📢 알림 설정 상태</span>
+            <div class="d-flex align-center">
+              <span>📢 알림 설정 상태</span>
+              <HelpButton
+                :use-dialog="true"
+                :dialog-title="helpContents.notificationStatus.title"
+                :dialog-content="helpContents.notificationStatus.content"
+                color="grey-darken-1"
+              />
+            </div>
             <div>
               <v-btn
                 color="deep-purple"
@@ -285,7 +319,15 @@
       <v-col cols="12">
         <v-card>
           <v-card-title class="d-flex justify-space-between align-center">
-            <span>👥 사용자 관리</span>
+            <div class="d-flex align-center">
+              <span>👥 사용자 관리</span>
+              <HelpButton
+                :use-dialog="true"
+                :dialog-title="helpContents.userManagement.title"
+                :dialog-content="helpContents.userManagement.content"
+                color="grey-darken-1"
+              />
+            </div>
             <v-text-field
               v-model="search"
               append-icon="mdi-magnify"
@@ -374,7 +416,7 @@
           <v-row>
             <!-- JVM 메모리 상세 -->
             <v-col cols="12" md="6">
-              <v-card variant="outlined" class="pa-4">
+              <v-card variant="outlined" class="pa-4 monitoring-detail-card">
                 <h4 class="mb-3">💾 JVM 메모리</h4>
                 <v-progress-linear
                   :model-value="monitoring.heapUsagePercent"
@@ -401,7 +443,7 @@
             
             <!-- DB 커넥션 상세 -->
             <v-col cols="12" md="6">
-              <v-card variant="outlined" class="pa-4">
+              <v-card variant="outlined" class="pa-4 monitoring-detail-card">
                 <h4 class="mb-3">🗄️ DB 커넥션 풀</h4>
                 <v-progress-linear
                   :model-value="(monitoring.dbActiveConnections / monitoring.dbMaxConnections) * 100"
@@ -428,7 +470,7 @@
             
             <!-- Redis 상세 -->
             <v-col cols="12" md="6">
-              <v-card variant="outlined" class="pa-4">
+              <v-card variant="outlined" class="pa-4 monitoring-detail-card">
                 <h4 class="mb-3">🔴 Redis</h4>
                 <v-chip
                   :color="monitoring.redisConnected ? 'success' : 'error'"
@@ -447,7 +489,7 @@
             
             <!-- 시스템 정보 상세 -->
             <v-col cols="12" md="6">
-              <v-card variant="outlined" class="pa-4">
+              <v-card variant="outlined" class="pa-4 monitoring-detail-card">
                 <h4 class="mb-3">⚙️ 시스템 정보</h4>
                 <div class="text-body-2 mb-1">
                   <strong>업타임:</strong> {{ monitoring.uptimeFormatted }}
@@ -499,6 +541,7 @@ import api, { adminApi } from '@/api'
 
 import TheHeader from '@/components/TheHeader.vue'
 import TheSidebar from '@/components/TheSidebar.vue'
+import HelpButton from '@/components/HelpButton.vue' 
 
 interface SystemStats {
   totalUsers: number
@@ -564,6 +607,67 @@ interface SlowQueryInfo {
   executionTimeMs: number
   executedAt: string
   source: string
+}
+
+const helpContents = {
+  systemStats: {
+    title: '📊 시스템 통계 안내',
+    content: `
+      <p class="help-intro">시스템 전체의 현황을 한눈에 파악할 수 있습니다.</p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>전체 사용자</strong>
+        <span class="help-desc">등록된 총 사용자 수와 현재 활성 상태인 사용자 수를 표시합니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>오늘 거래</strong>
+        <span class="help-desc">금일 00:00 KST 이후 발생한 매수/매도 거래 건수입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>오늘 거래액</strong>
+        <span class="help-desc">금일 발생한 모든 거래의 총 금액입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>봇 상태</strong>
+        <span class="help-desc">자동매매 봇의 실행 상태와 서버 메모리 사용량을 표시합니다.</span></p>
+      <p class="help-note">💡 <strong>Tip:</strong> 새로고침 버튼을 클릭하면 최신 데이터를 조회합니다.</p>
+    `
+  },
+  monitoring: {
+    title: '🖥️ 시스템 모니터링 안내',
+    content: `
+      <p class="help-intro">서버의 상세 리소스 사용 현황을 모니터링합니다.</p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>JVM Heap 사용량</strong>
+        <span class="help-desc">Java 애플리케이션의 메모리 사용량입니다.<br/>80% 이상 시 주의, 90% 이상 시 경고입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>DB 커넥션 풀</strong>
+        <span class="help-desc">데이터베이스 연결 풀 사용 현황입니다.<br/>Active가 Max에 가까우면 병목이 발생할 수 있습니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>Redis</strong>
+        <span class="help-desc">캐시 서버 연결 상태와 메모리 사용량입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>최근 에러</strong>
+        <span class="help-desc">최근 1시간 내 발생한 에러 건수입니다. 0건이 정상입니다.</span></p>
+      <p class="help-note">💡 <strong>Tip:</strong> 전체화면 버튼(⛶)을 클릭하면 상세 정보를 확인할 수 있습니다.</p>
+    `
+  },
+  userManagement: {
+    title: '👥 사용자 관리 안내',
+    content: `
+      <p class="help-intro">등록된 사용자 목록을 조회하고 관리할 수 있습니다.</p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>역할 (Role)</strong>
+        <span class="help-desc">ADMIN: 관리자 권한, USER: 일반 사용자 권한</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>상태</strong>
+        <span class="help-desc">활성: 정상 이용 가능, 비활성: 로그인 차단됨</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>API 키</strong>
+        <span class="help-desc">업비트 API 키 등록 여부를 표시합니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>사용자 비활성화</strong>
+        <span class="help-desc">사용자 행의 버튼을 클릭하여 활성/비활성 상태를 전환할 수 있습니다.<br/>관리자 계정은 비활성화할 수 없습니다.</span></p>
+      <p class="help-note">💡 <strong>Tip:</strong> 검색창에서 사용자 ID, 이메일로 검색할 수 있습니다.</p>
+    `
+  },
+  notificationStatus: {
+    title: '📢 알림 설정 상태 안내',
+    content: `
+      <p class="help-intro">시스템 알림 채널의 활성화 상태를 확인합니다.</p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>Discord</strong>
+        <span class="help-desc">Discord Webhook이 설정되어 있으면 활성 상태입니다.<br/>시스템 알림이 Discord 채널로 발송됩니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>이메일</strong>
+        <span class="help-desc">SMTP 설정이 완료되어 있으면 활성 상태입니다.<br/>관리자에게 시스템 알림 이메일이 발송됩니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>테스트 발송</strong>
+        <span class="help-desc">각 채널의 테스트 버튼으로 알림이 정상 작동하는지 확인할 수 있습니다.</span></p>
+      <p class="help-note">💡 <strong>Tip:</strong> 비활성 상태인 채널은 환경변수 설정을 확인하세요.</p>
+    `
+  }
 }
 
 const sidebarRef = ref()
@@ -773,7 +877,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* ✅ 추가: 통계 카드 높이 통일 */
 .stats-card {
   height: 100%;
   min-height: 100px;
@@ -781,5 +884,55 @@ onUnmounted(() => {
 
 .stats-card .d-flex {
   height: 100%;
+}
+
+:deep(.help-content .help-intro) {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  color: #424242;
+  font-size: 14px;
+}
+
+:deep(.help-content .help-item) {
+  margin-bottom: 16px;
+  padding-left: 8px;
+}
+
+:deep(.help-content .help-bullet) {
+  color: #1565C0;
+  font-weight: bold;
+  margin-right: 6px;
+}
+
+:deep(.help-content .help-desc) {
+  display: block;
+  padding-left: 20px;
+  margin-top: 4px;
+  color: #616161;
+  font-size: 13px;
+}
+
+:deep(.help-content .help-note) {
+  margin-top: 16px;
+  padding: 10px 12px;
+  background-color: #FFF8E1;
+  border-left: 3px solid #FFA000;
+  border-radius: 4px;
+  color: #5D4037;
+  font-size: 13px;
+}
+
+.monitoring-card {
+  min-height: 120px !important;
+  height: 120px !important;
+}
+
+.monitoring-card .text-caption {
+  line-height: 1.4;
+}
+
+.monitoring-detail-card {
+  min-height: 200px;
 }
 </style>

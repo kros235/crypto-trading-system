@@ -18,9 +18,16 @@
         <v-row>
           <v-col cols="12">
             <v-card>
-              <v-card-title>
+              <v-card-title class="d-flex align-center">
                 <v-icon class="mr-2">mdi-filter</v-icon>
                 검색 필터
+                <v-spacer />
+                <HelpButton
+                  :use-dialog="true"
+                  :dialog-title="helpContents.filter.title"
+                  :dialog-content="helpContents.filter.content"
+                  color="grey-darken-1"
+                />
               </v-card-title>
               <v-card-text>
                 <v-row align="center">
@@ -92,11 +99,19 @@
                   color="primary"
                   @click="loadTransactions"
                   :loading="loading"
-                  size="small"
+                  variant="flat"
+                  class="mr-2"
+                  min-width="135"
                 >
                   <v-icon start>mdi-refresh</v-icon>
                   새로고침
                 </v-btn>
+                <HelpButton
+                  :use-dialog="true"
+                  :dialog-title="helpContents.transactionList.title"
+                  :dialog-content="helpContents.transactionList.content"
+                  color="grey-darken-1"
+                />
               </v-card-title>
 
               <v-card-text>
@@ -308,9 +323,41 @@ import { useCoinStore } from '@/stores/coin'
 import type { Transaction } from '@/types'
 import TheHeader from '@/components/TheHeader.vue'
 import TheSidebar from '@/components/TheSidebar.vue'
+import HelpButton from '@/components/HelpButton.vue'
 
 const coinStore = useCoinStore()
 const sidebarRef = ref()
+
+const helpContents = {
+  filter: {
+    title: '🔍 검색 필터 안내',
+    content: `
+      <p class="help-intro">거래 내역을 다양한 조건으로 필터링하여 원하는 기록을 찾을 수 있습니다.</p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>코인 선택</strong>
+        <span class="help-desc">특정 코인의 거래 내역만 보고 싶을 때 선택합니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>상태</strong>
+        <span class="help-desc">보유 중: 아직 매도하지 않은 거래<br/>매도 완료: 이미 매도된 거래<br/>취소됨: 취소된 거래</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>기간 검색</strong>
+        <span class="help-desc">시작일과 종료일을 지정하여 특정 기간의 거래만 조회합니다.</span></p>
+      <p class="help-note">💡 <strong>Tip:</strong> 필터를 조합하여 사용하면 더 정확한 검색이 가능합니다. 예: "BTC + 보유 중 + 이번 달"</p>
+    `
+  },
+  transactionList: {
+    title: '📋 거래 목록 안내',
+    content: `
+      <p class="help-intro">모든 매수/매도 거래 기록을 확인할 수 있습니다.</p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>거래 유형</strong>
+        <span class="help-desc">매수(파란색): 코인을 구매한 거래<br/>매도(주황색): 코인을 판매한 거래</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>손익</strong>
+        <span class="help-desc">빨간색(+): 수익 발생<br/>파란색(-): 손실 발생<br/>보유 중인 경우 현재가 기준 평가손익 표시</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>상태</strong>
+        <span class="help-desc">보유 중(초록): 현재 보유 중인 코인<br/>매도 완료(파랑): 이미 매도된 거래<br/>취소됨(회색): 취소된 거래</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>액션 버튼</strong>
+        <span class="help-desc">매도: 보유 중인 코인을 현재가 또는 지정가로 매도<br/>상세: 거래의 세부 정보 확인</span></p>
+      <p class="help-note">💡 <strong>Tip:</strong> 테이블 헤더를 클릭하면 해당 컬럼 기준으로 정렬할 수 있습니다.</p>
+    `
+  }
+}
 
 const transactions = ref<Transaction[]>([])
 const loading = ref(false)
@@ -492,5 +539,42 @@ onMounted(() => {
 
 .text-grey {
   color: #9e9e9e;
+}
+
+:deep(.help-content .help-intro) {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  color: #424242;
+  font-size: 14px;
+}
+
+:deep(.help-content .help-item) {
+  margin-bottom: 16px;
+  padding-left: 8px;
+}
+
+:deep(.help-content .help-bullet) {
+  color: #1565C0;
+  font-weight: bold;
+  margin-right: 6px;
+}
+
+:deep(.help-content .help-desc) {
+  display: block;
+  padding-left: 20px;
+  margin-top: 4px;
+  color: #616161;
+  font-size: 13px;
+}
+
+:deep(.help-content .help-note) {
+  margin-top: 16px;
+  padding: 10px 12px;
+  background-color: #FFF8E1;
+  border-left: 3px solid #FFA000;
+  border-radius: 4px;
+  color: #5D4037;
+  font-size: 13px;
 }
 </style>

@@ -33,12 +33,12 @@
                 />
               </v-card-title>
 
-              <v-card-text class="pt-4">
+              <v-card-text class="pt-12 pb-5">
                 <v-alert
                   v-if="profileMessage"
                   :type="profileMessageType"
                   dismissible
-                  class="mb-4"
+                  class="mb-5"
                   @click:close="profileMessage = ''"
                 >
                   {{ profileMessage }}
@@ -51,7 +51,7 @@
                     prepend-icon="mdi-account"
                     readonly
                     variant="outlined"
-                    class="mb-2"
+                    class="mb-4"
                   />
 
                   <v-text-field
@@ -60,7 +60,7 @@
                     prepend-icon="mdi-email"
                     :rules="[rules.required, rules.email]"
                     variant="outlined"
-                    class="mb-2"
+                    class="mb-4"
                   />
 
                   <v-text-field
@@ -70,7 +70,7 @@
                     :rules="[rules.phone]"
                     placeholder="010-XXXX-XXXX"
                     variant="outlined"
-                    class="mb-2"
+                    class="mb-4"
                   />
 
                   <v-text-field
@@ -79,7 +79,7 @@
                     prepend-icon="mdi-shield-account"
                     readonly
                     variant="outlined"
-                    class="mb-2"
+                    class="mb-4"
                   />
 
                   <v-text-field
@@ -88,7 +88,7 @@
                     prepend-icon="mdi-calendar"
                     readonly
                     variant="outlined"
-                    class="mb-2"
+                    class="mb-4"
                   />
 
                   <v-text-field
@@ -97,7 +97,7 @@
                     prepend-icon="mdi-clock-outline"
                     readonly
                     variant="outlined"
-                    class="mb-4"
+                    class="mb-6"
                   />
 
                   <v-btn

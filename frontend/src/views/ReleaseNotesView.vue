@@ -104,7 +104,7 @@
         </v-row>
 
         <!-- 상세 보기 다이얼로그 -->
-        <v-dialog v-model="detailDialog" max-width="800">
+        <v-dialog v-model="detailDialog" max-width="1000">
           <v-card v-if="selectedNote">
             <v-card-title class="text-h5">
               {{ selectedNote.title }}

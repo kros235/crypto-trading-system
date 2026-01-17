@@ -375,8 +375,8 @@
                       thumb-label
                       class="mt-2"
                     >
-                      <template v-slot:append>
-                        <v-chip size="small" color="primary">
+                       <template v-slot:append>
+                        <v-chip size="small" color="primary" style="color: #000000 !important;">
                           {{ settings.volumeThreshold }}%
                         </v-chip>
                       </template>
@@ -417,8 +417,8 @@
                   thumb-label
                   class="mt-2"
                 >
-                  <template v-slot:append>
-                    <v-chip size="small" color="primary">
+                   <template v-slot:append>
+                    <v-chip size="small" color="primary" style="color: #000000 !important;">
                       {{ settings.dailyTradeLimitPct === 100 ? '제한없음' : `${settings.dailyTradeLimitPct}%` }}
                     </v-chip>
                   </template>
@@ -450,7 +450,7 @@
                   class="mt-2"
                 >
                   <template v-slot:append>
-                    <v-chip size="small" color="primary">
+                    <v-chip size="small" color="primary" style="color: #000000 !important;">
                       {{ settings.maxPositionPct === 100 ? '제한없음' : `${settings.maxPositionPct}%` }}
                     </v-chip>
                   </template>
@@ -483,7 +483,7 @@
                   class="mt-2"
                 >
                   <template v-slot:append>
-                    <v-chip size="small" color="error">
+                    <v-chip size="small" color="error" style="color: #000000 !important;">
                       {{ settings.dailyStopLossPct === 0 ? '사용안함' : `${settings.dailyStopLossPct}%` }}
                     </v-chip>
                   </template>
@@ -545,7 +545,7 @@
                   class="mt-2"
                 >
                   <template v-slot:append>
-                    <v-chip size="small" color="error">
+                    <v-chip size="small" color="error" style="color: #000000 !important;">
                       {{ settings.cumulativeLossLimitPct }}%
                     </v-chip>
                   </template>
@@ -578,7 +578,7 @@
                   class="mt-2"
                 >
                   <template v-slot:append>
-                    <v-chip size="small" color="warning">
+                    <v-chip size="small" color="warning" style="color: #000000 !important;">
                       {{ settings.consecutiveStopLossLimit }}회
                     </v-chip>
                   </template>

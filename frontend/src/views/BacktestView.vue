@@ -124,8 +124,13 @@
                           :max="30"
                           :step="1"
                           thumb-label
-                          class="mt-4"
-                        />
+                          hide-details
+                          class="mt-2"
+                        >
+                          <template v-slot:append>
+                            <span class="text-body-2" style="min-width: 50px">{{ request.basePeriod }}일</span>
+                          </template>
+                        </v-slider>
 
                         <!-- 매수 기준 도움말 -->
                         <div class="d-flex align-center mb-1">
@@ -144,7 +149,12 @@
                           :max="0"
                           :step="0.5"
                           thumb-label
-                        />
+                          hide-details
+                        >
+                          <template v-slot:append>
+                            <span class="text-body-2" style="min-width: 50px">{{ request.buyThresholdPct }}%</span>
+                          </template>
+                        </v-slider>
 
                         <div class="d-flex align-center mb-1">
                           <span class="text-caption text-grey">목표 수익률 (%)</span>
@@ -162,7 +172,12 @@
                           :max="20"
                           :step="0.5"
                           thumb-label
-                        />
+                          hide-details
+                        >
+                          <template v-slot:append>
+                            <span class="text-body-2" style="min-width: 50px">{{ request.sellTargetPct }}%</span>
+                          </template>
+                        </v-slider>
 
                         <div class="d-flex align-center mb-1">
                           <span class="text-caption text-grey">손절매 기준 (%)</span>
@@ -180,7 +195,12 @@
                           :max="0"
                           :step="0.5"
                           thumb-label
-                        />
+                          hide-details
+                        >
+                          <template v-slot:append>
+                            <span class="text-body-2" style="min-width: 50px">{{ request.stopLossPct }}%</span>
+                          </template>
+                        </v-slider>
 
                         <div class="d-flex align-center mb-1">
                           <span class="text-caption text-grey">종목당 최대 보유</span>
@@ -198,7 +218,12 @@
                           :max="10"
                           :step="1"
                           thumb-label
-                        />
+                          hide-details
+                        >
+                          <template v-slot:append>
+                            <span class="text-body-2" style="min-width: 50px">{{ request.maxHoldingsPerCoin }}건</span>
+                          </template>
+                        </v-slider>
 
                         <div class="d-flex align-center">
                           <v-switch
@@ -216,15 +241,22 @@
                           />
                         </div>
 
+                        <div v-if="request.useTrailingStop" class="d-flex align-center mb-1 mt-2">
+                          <span class="text-caption text-grey">트레일링 스톱 (%)</span>
+                        </div>
                         <v-slider
                           v-if="request.useTrailingStop"
                           v-model="request.trailingStopPct"
-                          label="트레일링 스톱 (%)"
                           :min="1"
                           :max="10"
                           :step="0.5"
                           thumb-label
-                        />
+                          hide-details
+                        >
+                          <template v-slot:append>
+                            <span class="text-body-2" style="min-width: 50px">{{ request.trailingStopPct }}%</span>
+                          </template>
+                        </v-slider>
 
                         <v-divider class="my-4" />
 
@@ -480,11 +512,15 @@
                           :min="-50"
                           :max="0"
                           :step="5"
-                          thumb-label="always"
-                          density="compact"
+                          thumb-label
+                          hide-details
                           color="warning"
                           class="mb-3"
-                        ></v-slider>
+                        >
+                          <template v-slot:append>
+                            <span class="text-body-2" style="min-width: 50px">{{ request.cumulativeLossLimitPct }}%</span>
+                          </template>
+                        </v-slider>
                         
                         <!-- ★★★ 수정: 연속 손절 제한 - 개별 도움말 버튼 추가 ★★★ -->
                         <div class="d-flex align-center mb-1">
@@ -502,10 +538,14 @@
                           :min="1"
                           :max="10"
                           :step="1"
-                          thumb-label="always"
-                          density="compact"
+                          thumb-label
+                          hide-details
                           color="info"
-                        ></v-slider>
+                        >
+                          <template v-slot:append>
+                            <span class="text-body-2" style="min-width: 50px">{{ request.consecutiveStopLossLimit }}회</span>
+                          </template>
+                        </v-slider>
 
                       </v-expansion-panel-text>
                     </v-expansion-panel>

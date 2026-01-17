@@ -284,7 +284,7 @@
                 :disabled="!stats.discordEnabled"
                 @click="sendSystemDiscordTest"
               >
-                <v-icon left>mdi-discord</v-icon>
+                <v-icon left>mdi-robot</v-icon>
                 디스코드 Hook 채널 테스트
               </v-btn>
               <v-btn

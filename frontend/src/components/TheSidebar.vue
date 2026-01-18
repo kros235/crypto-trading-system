@@ -2,8 +2,9 @@
   <v-navigation-drawer
     v-model="drawer"
     temporary
+    width="280"
   >
-    <v-list :opened="['coin']">
+    <v-list v-model:opened="openedGroups">
       <v-list-group value="coin">
         <template v-slot:activator="{ props }">
           <v-list-item
@@ -20,7 +21,7 @@
         />
         <v-list-item
           prepend-icon="mdi-briefcase-outline"
-          title="보유 자산"
+          title="보유 코인 자산"
           @click="$router.push('/holdings')"
         />
         <v-list-item
@@ -30,12 +31,12 @@
         />
         <v-list-item
           prepend-icon="mdi-history"
-          title="거래 내역"
+          title="코인 거래 내역"
           @click="$router.push('/transactions')"
         />
         <v-list-item
           prepend-icon="mdi-cog"
-          title="거래 설정"
+          title="코인 거래 설정"
           @click="$router.push('/trading-settings')"
         />
         <v-list-item
@@ -50,7 +51,7 @@
         />
         <v-list-item
           prepend-icon="mdi-chart-timeline-variant"
-          title="백테스팅"
+          title="코인 거래 백테스팅"
           @click="$router.push('/backtest')"
         />
         <v-list-item
@@ -64,14 +65,11 @@
 
       <v-list-group value="stock">
         <template v-slot:activator="{ props }">
-          <v-list-item
-            v-bind="props"
-            prepend-icon="mdi-chart-line"
-          >
-            <v-list-item-title class="text-wrap">
-              주식 거래<br><span class="text-caption text-grey">(공사중)</span>
-            </v-list-item-title>
-          </v-list-item>
+           <v-list-item
+             v-bind="props"
+             prepend-icon="mdi-chart-line"
+             title="주식 거래 (공사중)"
+           />
         </template>
 
         <v-list-item
@@ -81,22 +79,22 @@
         />
         <v-list-item
           prepend-icon="mdi-briefcase-outline"
-          title="보유 자산"
+          title="보유 주식 자산"
           disabled
         />
         <v-list-item
           prepend-icon="mdi-format-list-bulleted"
-          title="종목 목록"
+          title="주식 종목 목록"
           disabled
         />
         <v-list-item
           prepend-icon="mdi-history"
-          title="거래 내역"
+          title="주식 거래 내역"
           disabled
         />
         <v-list-item
           prepend-icon="mdi-cog-outline"
-          title="거래 설정"
+          title="주식 거래 설정"
           disabled
         />
       </v-list-group>
@@ -142,6 +140,7 @@ import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
 const drawer = ref(false)
+const openedGroups = ref(['coin'])  
 
 defineExpose({ drawer })
 </script>

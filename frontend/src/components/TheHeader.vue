@@ -4,7 +4,7 @@
 
     <v-toolbar-title>
       <v-icon class="mr-2">mdi-chart-line</v-icon>
-      코인 자동매매 시스템
+      코인 & 주식 자동매매 시스템
     </v-toolbar-title>
 
     <v-spacer />

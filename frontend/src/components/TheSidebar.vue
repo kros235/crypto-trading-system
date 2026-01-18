@@ -3,62 +3,104 @@
     v-model="drawer"
     temporary
   >
-    <v-list>
-      <v-list-item
-        prepend-icon="mdi-view-dashboard"
-        title="대시보드"
-        @click="$router.push('/dashboard')"
-      />
+    <v-list :opened="['coin']">
+      <v-list-group value="coin">
+        <template v-slot:activator="{ props }">
+          <v-list-item
+            v-bind="props"
+            prepend-icon="mdi-bitcoin"
+            title="코인 거래"
+          />
+        </template>
 
-      <v-list-item
-        prepend-icon="mdi-wallet"
-        title="보유 자산"
-        @click="$router.push('/holdings')"
-      />
-
-      <v-list-item
-        prepend-icon="mdi-currency-btc"
-        title="코인 목록"
-        @click="$router.push('/coins')"
-      />
-
-      <v-list-item
-        prepend-icon="mdi-history"
-        title="거래 내역"
-        @click="$router.push('/transactions')"
-      />
-
-      <v-list-item
-        prepend-icon="mdi-cog"
-        title="거래 설정"
-        @click="$router.push('/trading-settings')"
-      />
+        <v-list-item
+          prepend-icon="mdi-view-dashboard"
+          title="대시보드"
+          @click="$router.push('/dashboard')"
+        />
+        <v-list-item
+          prepend-icon="mdi-wallet"
+          title="보유 자산"
+          @click="$router.push('/holdings')"
+        />
+        <v-list-item
+          prepend-icon="mdi-currency-btc"
+          title="코인 목록"
+          @click="$router.push('/coins')"
+        />
+        <v-list-item
+          prepend-icon="mdi-history"
+          title="거래 내역"
+          @click="$router.push('/transactions')"
+        />
+        <v-list-item
+          prepend-icon="mdi-cog"
+          title="거래 설정"
+          @click="$router.push('/trading-settings')"
+        />
+        <v-list-item
+          prepend-icon="mdi-robot"
+          title="봇 모니터링"
+          @click="$router.push('/bot-monitor')"
+        />
+        <v-list-item
+          prepend-icon="mdi-file-chart"
+          title="일일 리포트"
+          @click="$router.push('/daily-report')"
+        />
+        <v-list-item
+          prepend-icon="mdi-chart-timeline-variant"
+          title="백테스팅"
+          @click="$router.push('/backtest')"
+        />
+        <v-list-item
+          prepend-icon="mdi-newspaper"
+          title="코인 뉴스"
+          @click="$router.push('/news')"
+        />
+      </v-list-group>
 
       <v-divider class="my-2" />
 
-      <v-list-item
-        prepend-icon="mdi-robot"
-        title="봇 모니터링"
-        @click="$router.push('/bot-monitor')"
-      />
+      <v-list-group value="stock">
+        <template v-slot:activator="{ props }">
+          <v-list-item
+            v-bind="props"
+            prepend-icon="mdi-chart-line"
+          >
+            <v-list-item-title class="text-wrap">
+              주식 거래<br><span class="text-caption text-grey">(공사중)</span>
+            </v-list-item-title>
+          </v-list-item>
+        </template>
 
-      <v-list-item
-        prepend-icon="mdi-file-chart"
-        title="일일 리포트"
-        @click="$router.push('/daily-report')"
-      />
+        <v-list-item
+          prepend-icon="mdi-view-dashboard-outline"
+          title="대시보드"
+          disabled
+        />
+        <v-list-item
+          prepend-icon="mdi-briefcase-outline"
+          title="보유 자산"
+          disabled
+        />
+        <v-list-item
+          prepend-icon="mdi-format-list-bulleted"
+          title="종목 목록"
+          disabled
+        />
+        <v-list-item
+          prepend-icon="mdi-history"
+          title="거래 내역"
+          disabled
+        />
+        <v-list-item
+          prepend-icon="mdi-cog-outline"
+          title="거래 설정"
+          disabled
+        />
+      </v-list-group>
 
-      <v-list-item
-        prepend-icon="mdi-chart-timeline-variant"
-        title="백테스팅"
-        @click="$router.push('/backtest')"
-      />
-      
-     <v-list-item
-        prepend-icon="mdi-newspaper"
-        title="코인 뉴스"
-        @click="$router.push('/news')"
-      />
       <v-divider class="my-2" />
 
       <v-list-item

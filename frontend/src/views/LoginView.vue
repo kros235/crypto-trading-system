@@ -4,7 +4,7 @@
       <v-col cols="12" sm="8" md="4">
         <v-card class="elevation-12">
           <v-toolbar color="primary" dark flat>
-            <v-toolbar-title>코인 자동매매 시스템</v-toolbar-title>
+            <v-toolbar-title>코인 & 주식 자동매매 시스템</v-toolbar-title>
           </v-toolbar>
 
           <v-card-text>

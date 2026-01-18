@@ -19,7 +19,7 @@
           @click="$router.push('/dashboard')"
         />
         <v-list-item
-          prepend-icon="mdi-wallet"
+          prepend-icon="mdi-briefcase-outline"
           title="보유 자산"
           @click="$router.push('/holdings')"
         />

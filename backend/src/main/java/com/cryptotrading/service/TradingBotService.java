@@ -170,12 +170,54 @@ public class TradingBotService {
         try {
             UpbitOrderDTO order = upbitApiService.orderBuy(apiKeys[0], apiKeys[1], market, buyAmount);
             
+            // 체결 수량 확인을 위해 주문 조회 (최대 3회 재시도)
+            BigDecimal executedVolume = BigDecimal.ZERO;
+            int retryCount = 0;
+            final int MAX_RETRY = 3;
+            
+            while (retryCount < MAX_RETRY) {
+                try {
+                    Thread.sleep(500);  // 0.5초 대기
+                    UpbitOrderDTO orderStatus = upbitApiService.getOrder(apiKeys[0], apiKeys[1], order.getUuid());
+                    
+                    if (orderStatus.getExecutedVolume() != null && 
+                        orderStatus.getExecutedVolume().compareTo(BigDecimal.ZERO) > 0) {
+                        executedVolume = orderStatus.getExecutedVolume();
+                        log.info("체결 수량 확인: {} - {}개", market, executedVolume);
+                        break;
+                    }
+                    
+                    // 주문 상태가 'done'이면 종료
+                    if ("done".equals(orderStatus.getState())) {
+                        executedVolume = orderStatus.getExecutedVolume() != null 
+                                ? orderStatus.getExecutedVolume() 
+                                : BigDecimal.ZERO;
+                        break;
+                    }
+                    
+                    retryCount++;
+                    log.debug("체결 대기 중... (시도 {}/{})", retryCount, MAX_RETRY);
+                    
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+            
+            // 체결 수량을 여전히 못 가져온 경우 금액/현재가로 추정
+            if (executedVolume.compareTo(BigDecimal.ZERO) == 0) {
+                BigDecimal fee = buyAmount.multiply(FEE_RATE);
+                BigDecimal actualBuyAmount = buyAmount.subtract(fee);
+                executedVolume = actualBuyAmount.divide(signal.getCurrentPrice(), SCALE, RoundingMode.DOWN);
+                log.warn("체결 수량 조회 실패, 추정 수량 사용: {} - {}개", market, executedVolume);
+            }
+            
             // 거래 내역 저장
             Transaction transaction = Transaction.builder()
                     .userId(userId)
                     .coinSymbol(market)
                     .type(TransactionType.BUY)
-                    .quantity(order.getExecutedVolume() != null ? order.getExecutedVolume() : BigDecimal.ZERO)
+                    .quantity(executedVolume)  // ⭐ 변경: order.getExecutedVolume() → executedVolume
                     .price(signal.getCurrentPrice())
                     .fee(buyAmount.multiply(FEE_RATE))
                     .totalAmount(buyAmount)

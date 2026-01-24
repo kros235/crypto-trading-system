@@ -72,7 +72,7 @@
                   <!-- 4개 통계 카드 -->
                   <v-col cols="6" sm="2">
                     <v-card color="teal-darken-1" dark class="pa-2 text-center" elevation="0">
-                      <div class="text-caption">총 손익</div>
+                      <div class="text-caption">총 평가손익</div>
                       <div class="text-subtitle-1 font-weight-bold">{{ formatCurrency(dashboardStats.totalProfitLoss) }}</div>
                       <div class="text-caption">{{ dashboardStats.totalProfitLossPct >= 0 ? '+' : '' }}{{ dashboardStats.totalProfitLossPct?.toFixed(1) || '0.0' }}%</div>
                     </v-card>

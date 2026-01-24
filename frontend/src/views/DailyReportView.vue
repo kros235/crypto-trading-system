@@ -35,7 +35,7 @@
                     {{ report.totalProfit >= 0 ? 'mdi-trending-up' : 'mdi-trending-down' }}
                   </v-icon>
                   <div>
-                    <div class="text-h6">총 손익</div>
+                    <div class="text-h6">총 평가손익</div>
                     <div class="text-h4">
                       {{ formatCurrency(report.totalProfit) }}
                     </div>
@@ -142,7 +142,7 @@
                           {{ report.totalProfit >= 0 ? 'mdi-trending-up' : 'mdi-trending-down' }}
                         </v-icon>
                       </template>
-                      <v-list-item-title class="text-body-1 font-weight-bold">총 손익</v-list-item-title>
+                      <v-list-item-title class="text-body-1 font-weight-bold">총 평가손익</v-list-item-title>
                       <template v-slot:append>
                         <span 
                           :class="[report.totalProfit >= 0 ? 'text-success' : 'text-error', 'font-weight-bold', 'text-h5']"

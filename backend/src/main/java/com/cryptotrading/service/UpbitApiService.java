@@ -235,6 +235,33 @@ public class UpbitApiService {
                 .block();
     }
 
+     /**
+     * ⭐⭐⭐ 신규: 주문 조회 (인증 필요) - 체결 수량 확인용 ⭐⭐⭐
+     */
+    public UpbitOrderDTO getOrder(String accessKey, String secretKey, String uuid) {
+        log.info("주문 조회: uuid={}", uuid);
+        
+        Map<String, String> params = new HashMap<>();
+        params.put("uuid", uuid);
+        
+        String token = generateToken(accessKey, secretKey, params);
+        
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/order")
+                        .queryParam("uuid", uuid)
+                        .build())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .retrieve()
+                .bodyToMono(UpbitOrderDTO.class)
+                .retryWhen(getRetrySpec())
+                .doOnSuccess(order -> log.info("주문 조회 완료: uuid={}, state={}, executedVolume={}", 
+                        order.getUuid(), order.getState(), order.getExecutedVolume()))
+                .doOnError(error -> log.error("주문 조회 실패: {}", error.getMessage()))
+                .block();
+    }
+
+
     /**
      * 6. 주문 취소 (인증 필요) - 사용자 API 키 사용
      */

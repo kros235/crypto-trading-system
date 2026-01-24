@@ -219,8 +219,9 @@ public class TransactionService {
         
         BigDecimal todayBuyAmount = transactionRepository.sumDailyTransactionAmount(
                 userId, TransactionType.BUY, todayStart, todayEnd);
-        BigDecimal todaySellAmount = transactionRepository.sumDailyTransactionAmount(
-                userId, TransactionType.SELL, todayStart, todayEnd);
+        // ⭐⭐⭐ [수정] 오늘 매도 금액: soldAt 기준으로 조회 ⭐⭐⭐
+        BigDecimal todaySellAmount = transactionRepository.sumTodaySoldAmount(
+                userId, todayStart, todayEnd);
         
         // 거래 설정에서 일일 한도 조회
         TradingSetting setting = tradingSettingRepository.findByUserId(userId).orElse(null);
@@ -231,8 +232,9 @@ public class TransactionService {
         
         int todayBuyCount = transactionRepository.countByUserIdAndTypeAndCreatedAtBetween(
                 userId, TransactionType.BUY, todayStart, todayEnd);
-        int todaySellCount = transactionRepository.countByUserIdAndTypeAndCreatedAtBetween(
-                userId, TransactionType.SELL, todayStart, todayEnd);
+        // ⭐⭐⭐ [수정] 오늘 매도 건수: soldAt 기준으로 조회 ⭐⭐⭐
+        int todaySellCount = transactionRepository.countTodaySoldTransactions(
+                userId, todayStart, todayEnd);
 
         return DashboardStatsDTO.builder()
                 .totalHoldingAmount(totalHoldingAmount)

@@ -163,4 +163,22 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("type") TransactionType type,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
+
+    // ⭐⭐⭐ [추가] 오늘 매도 건수 조회 (soldAt 기준) ⭐⭐⭐
+    @Query("SELECT COUNT(t) FROM Transaction t " +
+           "WHERE t.userId = :userId AND t.status = 'SOLD' " +
+           "AND t.soldAt BETWEEN :start AND :end")
+    int countTodaySoldTransactions(
+            @Param("userId") String userId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
+
+    // ⭐⭐⭐ [추가] 오늘 매도 금액 조회 (soldAt 기준) ⭐⭐⭐
+    @Query("SELECT COALESCE(SUM(t.soldPrice * t.quantity), 0) FROM Transaction t " +
+           "WHERE t.userId = :userId AND t.status = 'SOLD' " +
+           "AND t.soldAt BETWEEN :start AND :end")
+    BigDecimal sumTodaySoldAmount(
+            @Param("userId") String userId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
 }

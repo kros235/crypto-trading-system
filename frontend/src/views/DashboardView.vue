@@ -1835,19 +1835,21 @@ const fetchDashboardStats = async () => {
     // ⭐⭐⭐ [수정] 백엔드 필드명을 프론트엔드 필드명으로 매핑 + 총 평가손익 계산 ⭐⭐⭐
     dashboardStats.value = {
       // 평가손익 + 실현손익 = 총 평가손익
-      totalProfitLoss: (data.totalProfitLoss || 0) + (data.realizedProfitLoss || 0),
-      totalProfitLossPct: data.totalProfitLossPct || 0,
-      // 필드명 매핑
-      totalEvaluation: data.totalCurrentValue || 0,
-      totalInvestment: data.totalHoldingAmount || 0,
-      // 오늘 매수/매도 (Repository에서 조회)
+      totalProfitLoss: (parseFloat(data.totalProfitLoss) || 0) + (parseFloat(data.realizedProfitLoss) || 0),
+      totalProfitLossPct: parseFloat(data.totalProfitLossPct) || 0,
+      // 필드명 매핑: 백엔드 totalCurrentValue → 프론트엔드 totalEvaluation
+      totalEvaluation: parseFloat(data.totalCurrentValue) || 0,
+      // 필드명 매핑: 백엔드 totalHoldingAmount → 프론트엔드 totalInvestment
+      totalInvestment: parseFloat(data.totalHoldingAmount) || 0,
+      // 오늘 매수/매도
       todayBuyCount: data.todayBuyCount || 0,
-      todayBuyAmount: data.todayBuyAmount || 0,
+      todayBuyAmount: parseFloat(data.todayBuyAmount) || 0,
       todaySellCount: data.todaySellCount || 0,
-      todaySellAmount: data.todaySellAmount || 0
+      todaySellAmount: parseFloat(data.todaySellAmount) || 0
     }
   } catch (e) { console.error(e) } 
 }
+
 const fetchUpbitAccount = async () => {
   if (!authStore.user?.hasApiKey) return
   loadingAccount.value = true

@@ -17,15 +17,15 @@ import com.cryptotrading.dto.notification.DailyReportDTO;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import jakarta.annotation.PostConstruct;
 
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -38,35 +38,59 @@ public class TradingScheduler {
     private final EmailService emailService;
     private final UserRepository userRepository;
     private final DiscordBotService discordBotService;
-
     private final NewsCollectorService newsCollectorService;
     private final NewsAnalysisService newsAnalysisService;
     private final CoinNewsRepository coinNewsRepository;
     private final TradingSettingRepository tradingSettingRepository;
     
+    // ⭐⭐⭐ [추가] Redis Template (한 번만 선언) ⭐⭐⭐
+    private final StringRedisTemplate redisTemplate;
+    
     // 업비트 점검 시간 (매일 09:00 ~ 09:10 KST)
     private static final LocalTime MAINTENANCE_START = LocalTime.of(9, 0);
     private static final LocalTime MAINTENANCE_END = LocalTime.of(9, 10);
 
-
-     /**
-     * ⭐ 봇 활성화 상태 (true: 실행, false: 중지)
-     */
-    private static volatile boolean botEnabled = true;
+    // ⭐⭐⭐ [추가] Redis 키 상수 ⭐⭐⭐
+    private static final String BOT_ENABLED_KEY = "trading:bot:enabled";
     
+    // ⭐⭐⭐ [추가] static 참조용 ⭐⭐⭐
+    private static StringRedisTemplate staticRedisTemplate;
+    
+    // ⭐⭐⭐ [추가] 초기화 메서드 ⭐⭐⭐
+    @PostConstruct
+    public void init() {
+        staticRedisTemplate = this.redisTemplate;
+        log.info("⭐ TradingScheduler 초기화 완료 - 봇 상태: {}", isBotEnabled() ? "활성화" : "비활성화");
+    }
+
     /**
-     * ⭐ 봇 활성화 상태 조회
+     * ⭐ 봇 활성화 상태 조회 (Redis에서)
      */
     public static boolean isBotEnabled() {
-        return botEnabled;
+        if (staticRedisTemplate == null) {
+            return true; // Redis 연결 전 기본값
+        }
+        try {
+            String value = staticRedisTemplate.opsForValue().get(BOT_ENABLED_KEY);
+            return value == null || "true".equals(value); // 값이 없으면 기본값 true
+        } catch (Exception e) {
+            return true; // Redis 오류 시 기본값
+        }
     }
     
     /**
-     * ⭐ 봇 활성화 상태 설정
+     * ⭐ 봇 활성화 상태 설정 (Redis에 저장)
      */
     public static void setBotEnabled(boolean enabled) {
-        botEnabled = enabled;
-        log.info("⭐ 자동매매 봇 상태 변경: {}", enabled ? "활성화" : "비활성화");
+        if (staticRedisTemplate != null) {
+            try {
+                staticRedisTemplate.opsForValue().set(BOT_ENABLED_KEY, String.valueOf(enabled));
+            } catch (Exception e) {
+                // Redis 오류 시 무시
+            }
+        }
+        // ⭐⭐⭐ [수정] static 메서드에서는 log 사용 불가 - System.out 사용 ⭐⭐⭐
+        System.out.println("⭐ 자동매매 봇 상태 변경: " + (enabled ? "활성화" : "비활성화"));
     }
 
     /**
@@ -77,8 +101,8 @@ public class TradingScheduler {
     public void executeAutoTrading() {
         LocalTime now = LocalTime.now();
 
-        // 봇 비활성화 상태면 스킵
-        if (!botEnabled) {
+        // ⭐⭐⭐ [수정] 봇 비활성화 상태면 스킵 - 메서드 호출로 변경 ⭐⭐⭐
+        if (!isBotEnabled()) {
             log.info("⏸️ 자동매매 봇 비활성화 상태 - 스킵");
             return;
         }
@@ -148,57 +172,57 @@ public class TradingScheduler {
         return !time.isBefore(MAINTENANCE_START) && time.isBefore(MAINTENANCE_END);
     }
 
-     /**
+    /**
      * 매일 23:50에 일일 리포트 발송
      */
-     @Scheduled(cron = "0 50 23 * * *", zone = "Asia/Seoul")  // 매일 23:50 KST
-     public void sendDailyReport() {
-         log.info("========== 일일 리포트 발송 시작 ==========");
-    
-         try {
-             List<User> users = userRepository.findAll();
-        
-             for (User user : users) {
-                 try {
-                     DailyReportDTO report = dailyReportService.generateDailyReport(user.getUserId());
-                
-                     // Discord 알림 (기존 로직)
-                     notificationService.sendDailyReport(report);
-                
-                     // 이메일 알림 (신규 추가) ★★★ 추가 부분 ★★★
-                     if (user.getEmail() != null && !user.getEmail().isEmpty()) {
-                         emailService.sendDailyReport(user.getEmail(), report);
-                     }
+    @Scheduled(cron = "0 50 23 * * *", zone = "Asia/Seoul")  // 매일 23:50 KST
+    public void sendDailyReport() {
+        log.info("========== 일일 리포트 발송 시작 ==========");
+   
+        try {
+            List<User> users = userRepository.findAll();
+       
+            for (User user : users) {
+                try {
+                    DailyReportDTO report = dailyReportService.generateDailyReport(user.getUserId());
+               
+                    // Discord 알림 (기존 로직)
+                    notificationService.sendDailyReport(report);
+               
+                    // 이메일 알림
+                    if (user.getEmail() != null && !user.getEmail().isEmpty()) {
+                        emailService.sendDailyReport(user.getEmail(), report);
+                    }
 
-	       // ★★★ 추가: Discord DM 발송 ★★★
-                     if (user.getDiscordUserId() != null && !user.getDiscordUserId().isEmpty()) {
-                         String profitSign = report.getTotalProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "";
-                         discordBotService.sendDailyReportDM(
-                             user.getDiscordUserId(),
-                             report.getReportDate().toString(),
-                             profitSign + String.format("%,.0f", report.getRealizedProfit()),
-                             (report.getUnrealizedProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "") 
-                                 + String.format("%,.0f", report.getUnrealizedProfit()),
-                             profitSign + String.format("%,.0f", report.getTotalProfit()),
-                             profitSign + report.getProfitRate().setScale(2, RoundingMode.HALF_UP).toPlainString(),
-                             report.getHoldingCount(),
-                             String.format("%,.0f", report.getTotalHoldingValue())
-                         );
-                     }
-                
-                     log.info("사용자 {} 일일 리포트 발송 완료", user.getUserId());
-                
-                 } catch (Exception e) {
-                     log.error("사용자 {} 일일 리포트 발송 실패: {}", user.getUserId(), e.getMessage());
-                 }
-             }
-        
-         } catch (Exception e) {
-             log.error("일일 리포트 발송 중 오류: {}", e.getMessage());
-         }
-    
-         log.info("========== 일일 리포트 발송 완료 ==========");
-     }
+                    // Discord DM 발송
+                    if (user.getDiscordUserId() != null && !user.getDiscordUserId().isEmpty()) {
+                        String profitSign = report.getTotalProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "";
+                        discordBotService.sendDailyReportDM(
+                            user.getDiscordUserId(),
+                            report.getReportDate().toString(),
+                            profitSign + String.format("%,.0f", report.getRealizedProfit()),
+                            (report.getUnrealizedProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "") 
+                                + String.format("%,.0f", report.getUnrealizedProfit()),
+                            profitSign + String.format("%,.0f", report.getTotalProfit()),
+                            profitSign + report.getProfitRate().setScale(2, RoundingMode.HALF_UP).toPlainString(),
+                            report.getHoldingCount(),
+                            String.format("%,.0f", report.getTotalHoldingValue())
+                        );
+                    }
+               
+                    log.info("사용자 {} 일일 리포트 발송 완료", user.getUserId());
+               
+                } catch (Exception e) {
+                    log.error("사용자 {} 일일 리포트 발송 실패: {}", user.getUserId(), e.getMessage());
+                }
+            }
+       
+        } catch (Exception e) {
+            log.error("일일 리포트 발송 중 오류: {}", e.getMessage());
+        }
+   
+        log.info("========== 일일 리포트 발송 완료 ==========");
+    }
 
     // ======================================================
     // AI 뉴스 분석 스케줄러

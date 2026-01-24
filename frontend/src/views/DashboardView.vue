@@ -1832,20 +1832,33 @@ const fetchDashboardStats = async () => {
   try { 
     const r = await transactionApi.getStats()
     const data = r.data
-    // ⭐⭐⭐ [수정] 백엔드 필드명을 프론트엔드 필드명으로 매핑 + 총 평가손익 계산 ⭐⭐⭐
+    
+    // 평가손익 (미실현) = 총 평가액 - 투자금
+    const unrealizedProfit = parseFloat(data.totalProfitLoss) || 0
+    const unrealizedProfitPct = parseFloat(data.totalProfitLossPct) || 0
+    // 실현손익 (확정)
+    const realizedProfit = parseFloat(data.realizedProfitLoss) || 0
+    // 총 손익 = 평가손익 + 실현손익
+    const totalProfit = unrealizedProfit + realizedProfit
+    
     dashboardStats.value = {
-      // 평가손익 + 실현손익 = 총 평가손익
-      totalProfitLoss: (parseFloat(data.totalProfitLoss) || 0) + (parseFloat(data.realizedProfitLoss) || 0),
-      totalProfitLossPct: parseFloat(data.totalProfitLossPct) || 0,
-      // 필드명 매핑: 백엔드 totalCurrentValue → 프론트엔드 totalEvaluation
+      totalProfitLoss: totalProfit,
+      totalProfitLossPct: unrealizedProfitPct,
       totalEvaluation: parseFloat(data.totalCurrentValue) || 0,
-      // 필드명 매핑: 백엔드 totalHoldingAmount → 프론트엔드 totalInvestment
       totalInvestment: parseFloat(data.totalHoldingAmount) || 0,
-      // 오늘 매수/매도
       todayBuyCount: data.todayBuyCount || 0,
       todayBuyAmount: parseFloat(data.todayBuyAmount) || 0,
       todaySellCount: data.todaySellCount || 0,
       todaySellAmount: parseFloat(data.todaySellAmount) || 0
+    }
+    
+    // 수익 현황 카드에도 값 반영
+    profitSummary.value = {
+      ...profitSummary.value,
+      unrealizedProfit: unrealizedProfit,
+      unrealizedProfitPct: unrealizedProfitPct,
+      realizedProfit: realizedProfit,
+      totalProfit: totalProfit
     }
   } catch (e) { console.error(e) } 
 }

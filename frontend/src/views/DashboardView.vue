@@ -122,8 +122,10 @@
           <!-- 봇 상태 카드 -->
           <v-col cols="12" md="3">
             <v-card class="fill-height" elevation="2">
-              <v-card-title class="py-2 px-3 bg-indigo-darken-2 text-white d-flex align-center">
-                <v-icon class="mr-2" size="20">mdi-robot</v-icon>
+              <!-- ⭐⭐⭐ [수정] 봇 비활성화 시 회색 배경으로 변경 ⭐⭐⭐ -->
+              <v-card-title class="py-2 px-3 text-white d-flex align-center" :class="botEnabled ? 'bg-indigo-darken-2' : 'bg-grey-darken-1'">
+                <!-- ⭐⭐⭐ [수정] 봇 비활성화 시 아이콘 변경 ⭐⭐⭐ -->
+                <v-icon class="mr-2" size="20">{{ botEnabled ? 'mdi-robot' : 'mdi-robot-off' }}</v-icon>
                 <span class="text-body-2">자동매매</span>
                 <v-btn icon size="x-small" variant="text" color="white" @click.stop="openHelp('botStatus')" class="ml-1">
                   <v-icon size="14">mdi-help-circle-outline</v-icon>
@@ -151,10 +153,14 @@
                 </div>
                 <div class="d-flex justify-space-between align-center text-body-2 text-grey-darken-3">
                   <span>다음 봇 수행 시간</span>
-                  <span class="font-weight-medium">{{ formatBotTimeDisplay(botStatus.nextExecution || botStatus.nextExecutionTime) }}</span>
+                  <!-- ⭐⭐⭐ [수정] 봇 비활성화 시 "-" 표시 ⭐⭐⭐ -->
+                  <span class="font-weight-medium">{{ botEnabled ? formatBotTimeDisplay(botStatus.nextExecution || botStatus.nextExecutionTime) : '-' }}</span>
                 </div>
-                <!-- ★★★ [수정] 실시간 카운트다운 ★★★ -->
-                <div v-if="countdownSeconds > 0" class="text-caption text-teal-darken-2 text-right mt-1 font-weight-medium">
+                <!-- ⭐⭐⭐ [수정] 봇 비활성화 시 "중단 상태입니다" 표시, 활성화 시 카운트다운 ⭐⭐⭐ -->
+                <div v-if="!botEnabled" class="text-caption text-orange-darken-2 text-right mt-1 font-weight-medium">
+                  (중단 상태입니다)
+                </div>
+                <div v-else-if="countdownSeconds > 0" class="text-caption text-teal-darken-2 text-right mt-1 font-weight-medium">
                   ({{ Math.floor(countdownSeconds / 60) }}분 {{ countdownSeconds % 60 }}초 후)
                 </div>
                 <v-chip v-if="botStatus.emergencyStop" color="red" size="x-small" variant="flat" class="mt-1">🚨 긴급정지</v-chip>

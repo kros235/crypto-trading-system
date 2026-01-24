@@ -227,6 +227,22 @@ public class SignalDetectorService {
                         .build();
             }
         }
+
+        // 조건 4: RSI 과매수 신호 (옵션) ⭐신규
+        // RSI가 매도 임계값 이상이고 수익 중일 때만 매도 신호
+        if (indicators.isRsiSellSignal() && profitRate.compareTo(BigDecimal.ZERO) > 0) {
+            return TradingSignalDTO.builder()
+                    .market(market)
+                    .signalType(SignalType.SELL)
+                    .strength(SignalStrength.MODERATE)
+                    .detectedAt(LocalDateTime.now())
+                    .currentPrice(currentPrice)
+                    .reason(String.format("RSI 과매수: %.2f (임계값: %d), 수익률: %.2f%%", 
+                            indicators.getRsi14(), setting.getRsiSellThreshold(), profitRate))
+                    .conditionsMet(1)
+                    .totalConditions(1)
+                    .build();
+        }
         
         return createHoldSignal(market, String.format("현재 수익률: %.2f%%", profitRate));
     }

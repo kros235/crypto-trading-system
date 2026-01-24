@@ -340,6 +340,16 @@ public class TradingBotService {
                 }
             }
 
+            // ⭐⭐⭐ [추가] 연속 손절/수익 실현 카운터 업데이트 ⭐⭐⭐
+            if (signal.getSignalType() == SignalType.STOP_LOSS || 
+                signal.getSignalType() == SignalType.TRAILING_STOP && profitLoss.compareTo(BigDecimal.ZERO) < 0) {
+                // 손절 발생 - 카운터 증가
+                riskManagementService.recordStopLoss(holding.getUserId(), holding.getCoinSymbol(), setting);
+            } else if (profitLoss.compareTo(BigDecimal.ZERO) > 0) {
+                // 수익 실현 - 카운터 리셋
+                riskManagementService.recordProfitSell(holding.getUserId(), holding.getCoinSymbol());
+            }
+
             result.addSell(holding.getCoinSymbol(), sellAmount, profitLoss);
             log.info("매도 완료: {} - {}원, 손익: {}원 (주문ID: {})", 
                     holding.getCoinSymbol(), sellAmount, profitLoss, order.getUuid());

@@ -138,7 +138,7 @@ public class TradingBotService {
      */
     private void processBuySignal(String userId, String market, TradingSetting setting, 
                                    String[] apiKeys, BotExecutionResult result) {
-        TradingSignalDTO signal = signalDetectorService.detectBuySignal(market, setting);
+        TradingSignalDTO signal = signalDetectorService.detectBuySignal(market, setting, userId);
         
         if (signal.getSignalType() != SignalType.BUY) {
             log.debug("매수 신호 없음: {} - {}", market, signal.getReason());

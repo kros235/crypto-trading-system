@@ -208,14 +208,20 @@ public class SignalDetectorService {
                     ? setting.getTrailingStopPct().negate()  // 양수를 음수로
                     : new BigDecimal("-5");
             
-            if (dropFromHigh.compareTo(trailingPct) <= 0 && profitRate.compareTo(BigDecimal.ZERO) > 0) {
+            // ⭐⭐⭐ [수정] 트레일링 스톱 활성화 최소 수익률: 목표 수익률의 50% 또는 최소 1% ⭐⭐⭐
+            BigDecimal minProfitForTrailing = setting.getSellTargetPct()
+                    .multiply(new BigDecimal("0.5"))
+                    .max(new BigDecimal("1")); // 최소 1% 수익 확보 후 트레일링 스톱 활성화
+            
+            // ⭐⭐⭐ [수정] profitRate > 0 → profitRate >= minProfitForTrailing ⭐⭐⭐
+            if (dropFromHigh.compareTo(trailingPct) <= 0 && profitRate.compareTo(minProfitForTrailing) >= 0) {
                 return TradingSignalDTO.builder()
                         .market(market)
                         .signalType(SignalType.TRAILING_STOP)
                         .strength(SignalStrength.MODERATE)
                         .detectedAt(LocalDateTime.now())
                         .currentPrice(currentPrice)
-                        .reason(String.format("트레일링 스톱: 최고가 대비 %.2f%% 하락", dropFromHigh))
+                        .reason(String.format("트레일링 스톱: 최고가 대비 %.2f%% 하락 (수익률: %.2f%%)", dropFromHigh, profitRate))
                         .conditionsMet(1)
                         .totalConditions(1)
                         .build();

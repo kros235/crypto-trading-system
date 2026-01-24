@@ -296,6 +296,7 @@ public class TradingBotService {
             holding.setSoldAt(LocalDateTime.now());
             holding.setSoldPrice(sellPrice);
             holding.setProfitLoss(profitLoss);
+            holding.setProfitLossPct(profitRate);
             
             transactionRepository.save(holding);
             

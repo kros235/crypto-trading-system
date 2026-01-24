@@ -229,6 +229,11 @@ public class TransactionService {
                 : new BigDecimal("1000000");
         BigDecimal remainingDailyLimit = dailyLimitAmount.subtract(todayBuyAmount);
         
+        int todayBuyCount = transactionRepository.countByUserIdAndTypeAndCreatedAtBetween(
+                userId, TransactionType.BUY, todayStart, todayEnd);
+        int todaySellCount = transactionRepository.countByUserIdAndTypeAndCreatedAtBetween(
+                userId, TransactionType.SELL, todayStart, todayEnd);
+
         return DashboardStatsDTO.builder()
                 .totalHoldingAmount(totalHoldingAmount)
                 .totalCurrentValue(totalCurrentValue)
@@ -240,6 +245,8 @@ public class TransactionService {
                 .currentHoldingCount(holdings.size())
                 .todayBuyAmount(todayBuyAmount)
                 .todaySellAmount(todaySellAmount)
+                .todayBuyCount(todayBuyCount)
+                .todaySellCount(todaySellCount)
                 .dailyLimitAmount(dailyLimitAmount)
                 .remainingDailyLimit(remainingDailyLimit)
                 .build();

@@ -152,4 +152,15 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
            "ORDER BY t.soldAt DESC")
     List<Transaction> findSoldTransactionsByCoin(@Param("userId") String userId,
                                                   @Param("coinSymbol") String coinSymbol);
+
+
+    // 오늘 매수/매도 건수 조회
+    @Query("SELECT COUNT(t) FROM Transaction t " +
+           "WHERE t.userId = :userId AND t.type = :type " +
+           "AND t.createdAt BETWEEN :start AND :end")
+    int countByUserIdAndTypeAndCreatedAtBetween(
+            @Param("userId") String userId,
+            @Param("type") TransactionType type,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
 }

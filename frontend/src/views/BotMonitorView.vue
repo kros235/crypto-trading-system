@@ -16,20 +16,29 @@
         <!-- 봇 상태 카드 -->
         <v-row class="mb-4">
           <v-col cols="12" md="3">
-            <v-card class="pa-4 bot-stats-card" :color="botRunning ? 'success' : 'grey'" dark>
+            <v-card class="pa-4 bot-stats-card" :color="botEnabled ? (botRunning ? 'success' : 'info') : 'grey-darken-1'" dark>
               <div class="d-flex align-center">
                 <v-icon size="48" class="mr-4">
-                  {{ botRunning ? 'mdi-robot' : 'mdi-robot-off' }}
+                  {{ botEnabled ? 'mdi-robot' : 'mdi-robot-off' }}
                 </v-icon>
-                <div>
-                  <div class="text-h6">봇 상태</div>
-                  <div class="text-h4">{{ botRunning ? '실행 중' : '대기 중' }}</div>
+                <div class="flex-grow-1">
+                  <div class="d-flex align-center justify-space-between">
+                    <div class="text-h6">봇 상태</div>
+                    <v-switch
+                      v-model="botEnabled"
+                      :loading="botToggleLoading"
+                      :disabled="botToggleLoading"
+                      color="white"
+                      hide-details
+                      density="compact"
+                      @change="toggleBot"
+                    />
+                  </div>
+                  <div class="text-h4">{{ botEnabled ? (botRunning ? '실행 중' : '대기 중') : '중지됨' }}</div>
                 </div>
               </div>
             </v-card>
-          </v-col>
-          
-          
+          </v-col>          
           <v-col cols="12" md="3">
             <v-card class="pa-4 bot-stats-card bot-schedule-card" color="primary" dark>
               <div class="d-flex align-center">
@@ -38,8 +47,8 @@
                   <div class="schedule-label-row">마지막 봇 수행 시간</div>
                   <div class="schedule-value-row">{{ lastExecutionTime }}</div>
                   <div class="schedule-label-row mt-2">다음 봇 수행 시간</div>
-                  <div class="schedule-value-row">{{ nextExecutionTime }}</div>
-	    <div class="countdown-row">({{ countdownText }})</div>
+                  <div class="schedule-value-row">{{ botEnabled ? nextExecutionTime : '-' }}</div>
+                  <div class="countdown-row">({{ countdownText }})</div>
                 </div>
               </div>
             </v-card>
@@ -520,6 +529,9 @@ const todayStats = ref({
 const botRunning = ref(true)
 const lastExecutionTime = ref('-')
 const nextExecutionTime = ref('-')
+const botEnabled = ref(true)  // 봇 활성화 상태
+const botToggleLoading = ref(false)  // 스위치 로딩 상태
+
 const countdownSeconds = ref(0)
 const countdownText = ref('계산 중...')
 let countdownInterval: ReturnType<typeof setInterval> | null = null
@@ -618,11 +630,39 @@ const fetchBotStatus = async () => {
     lastExecutionTime.value = data.lastExecutedAt || '-'
     nextExecutionTime.value = data.nextExecutionAt || '-'
     countdownSeconds.value = data.secondsUntilNextExecution || 0
+
+    botEnabled.value = data.botEnabled ?? true  // 봇 활성화 상태 반영
     
     // 카운트다운 시작
     startCountdown()
   } catch (error) {
     console.error('봇 상태 조회 실패:', error)
+  }
+}
+
+// 봇 활성/비활성 토글
+const toggleBot = async () => {
+  botToggleLoading.value = true
+  try {
+    // v-model이 이미 변경된 상태이므로, 새 값 기준으로 API 호출
+    if (botEnabled.value) {
+      // 새 값이 true = 사용자가 켬 → start 호출
+      await api.post('/bot/start')
+      showSnackbar('자동매매 봇이 시작되었습니다.', 'success')
+    } else {
+      // 새 값이 false = 사용자가 끔 → stop 호출
+      await api.post('/bot/stop')
+      showSnackbar('자동매매 봇이 중지되었습니다.', 'warning')
+    }
+    // 상태 재조회
+    await fetchBotStatus()
+  } catch (error) {
+    console.error('봇 상태 변경 실패:', error)
+    showSnackbar('봇 상태 변경에 실패했습니다.', 'error')
+    // 실패 시 원래 값으로 복원
+    botEnabled.value = !botEnabled.value
+  } finally {
+    botToggleLoading.value = false
   }
 }
 
@@ -647,6 +687,13 @@ const startCountdown = () => {
 
 const updateCountdownText = () => {
   const seconds = countdownSeconds.value
+
+  // 봇 비활성화 상태면 중단 메시지 표시
+  if (!botEnabled.value) {
+    countdownText.value = '중단 상태입니다'
+    return
+  }
+
   if (seconds <= 0) {
     countdownText.value = '곧 실행'
     return

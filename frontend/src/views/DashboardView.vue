@@ -129,9 +129,19 @@
                   <v-icon size="14">mdi-help-circle-outline</v-icon>
                 </v-btn>
                 <v-spacer />
-                <!-- ★★★ [수정] 로봇 아이콘 삭제, 칩만 표시 ★★★ -->
-                <v-chip :color="botStatus.isRunning ? 'teal' : 'blue-grey-darken-1'" size="x-small" variant="flat">
-                  {{ botStatus.isRunning ? '작동중' : '대기중' }}
+                <v-switch
+                  v-model="botEnabled"
+                  :loading="botToggleLoading"
+                  :disabled="botToggleLoading"
+                  color="white"
+                  hide-details
+                  density="compact"
+                  class="mr-2"
+                  style="flex: none;"
+                  @change="toggleBot"
+                />
+                <v-chip :color="botEnabled ? (botStatus.isRunning ? 'teal' : 'blue-grey-darken-1') : 'grey-darken-1'" size="x-small" variant="flat">
+                  {{ botEnabled ? (botStatus.isRunning ? '실행 중' : '대기 중') : '중지됨' }}
                 </v-chip>
               </v-card-title>
               <v-card-text class="pa-3">
@@ -1249,6 +1259,9 @@ const botStatus = ref({
   isMaintenanceTime: false,    
   secondsUntilNext: 0          
 })
+const botEnabled = ref(true)  // 봇 활성화 상태
+const botToggleLoading = ref(false)  // 스위치 로딩 상태
+
 const tradingSettings = ref<any>(null)
 const dailyLimit = ref({ totalLimit: 0, usedAmount: 0, remainingAmount: 0, usedPercent: 0 })
 const holdingsPerCoin = ref<Record<string, number>>({})
@@ -1851,6 +1864,8 @@ const fetchBotStatus = async () => {
       isMaintenanceTime: r.data?.isMaintenanceTime || false,
       secondsUntilNext: r.data?.secondsUntilNextExecution || 0
     }
+
+    botEnabled.value = r.data?.botEnabled ?? true 
     
     // 카운트다운 시작
     const seconds = r.data?.secondsUntilNextExecution || 0
@@ -1864,6 +1879,29 @@ const fetchBotStatus = async () => {
   } catch (e) {
     console.error(e)
     botStatus.value.apiConnected = false
+  }
+}
+
+// 봇 활성/비활성 토글
+const toggleBot = async () => {
+  botToggleLoading.value = true
+  try {
+    // v-model이 이미 변경된 상태이므로, 새 값 기준으로 API 호출 
+    if (botEnabled.value) {
+      // 새 값이 true = 사용자가 켬 → start 호출
+      await botApi.start()
+    } else {
+      // 새 값이 false = 사용자가 끔 → stop 호출
+      await botApi.stop()
+    }
+    // 상태 재조회
+    await fetchBotStatus()
+  } catch (error) {
+    console.error('봇 상태 변경 실패:', error)
+    // ⭐⭐⭐ [추가] 실패 시 원래 값으로 복원 ⭐⭐⭐
+    botEnabled.value = !botEnabled.value
+  } finally {
+    botToggleLoading.value = false
   }
 }
 

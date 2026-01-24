@@ -259,6 +259,10 @@ export const botApi = {
   // 기술적 지표 조회 (다중)
   getIndicators: (markets: string[]) => 
     api.get('/bot/indicators', { params: { markets: markets.join(',') } }),
+
+  // 봇 시작/중지
+  start: () => api.post('/bot/start'),
+  stop: () => api.post('/bot/stop'),
 }
 
 // 알림 API

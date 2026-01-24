@@ -5,6 +5,7 @@ import com.cryptotrading.service.RiskManagementService;
 import com.cryptotrading.service.TechnicalIndicatorService;
 import com.cryptotrading.service.TradingBotService;
 import com.cryptotrading.service.TradingBotService.BotExecutionResult;
+import com.cryptotrading.scheduler.TradingScheduler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -120,7 +121,10 @@ public class BotController {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
         DateTimeFormatter fullFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     
-        status.put("isRunning", isRunning);
+        boolean isBotActive = TradingScheduler.isBotEnabled() && !isMaintenanceTime;
+        status.put("isRunning", isBotActive);
+        status.put("botEnabled", TradingScheduler.isBotEnabled()); 
+
         status.put("lastExecutedAt", lastExecution.format(fullFormatter));
         status.put("nextExecutionAt", nextExecution.format(fullFormatter));
         status.put("nextExecutionTime", nextExecution.format(formatter));  // 시:분만
@@ -134,5 +138,37 @@ public class BotController {
         status.put("secondsUntilNextExecution", secondsUntilNext);
         
         return ResponseEntity.ok(status);
+    }
+
+    /**
+     * ⭐ 자동매매 봇 시작
+     */
+    @PostMapping("/start")
+    public ResponseEntity<Map<String, Object>> startBot() {
+        log.info("🟢 자동매매 봇 시작 요청");
+        TradingScheduler.setBotEnabled(true);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "자동매매 봇이 시작되었습니다.");
+        response.put("botEnabled", true);
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * ⭐ 자동매매 봇 중지
+     */
+    @PostMapping("/stop")
+    public ResponseEntity<Map<String, Object>> stopBot() {
+        log.info("🔴 자동매매 봇 중지 요청");
+        TradingScheduler.setBotEnabled(false);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "자동매매 봇이 중지되었습니다.");
+        response.put("botEnabled", false);
+        
+        return ResponseEntity.ok(response);
     }
 }

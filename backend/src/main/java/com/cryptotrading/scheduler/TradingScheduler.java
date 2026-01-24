@@ -48,6 +48,27 @@ public class TradingScheduler {
     private static final LocalTime MAINTENANCE_START = LocalTime.of(9, 0);
     private static final LocalTime MAINTENANCE_END = LocalTime.of(9, 10);
 
+
+     /**
+     * ⭐ 봇 활성화 상태 (true: 실행, false: 중지)
+     */
+    private static volatile boolean botEnabled = true;
+    
+    /**
+     * ⭐ 봇 활성화 상태 조회
+     */
+    public static boolean isBotEnabled() {
+        return botEnabled;
+    }
+    
+    /**
+     * ⭐ 봇 활성화 상태 설정
+     */
+    public static void setBotEnabled(boolean enabled) {
+        botEnabled = enabled;
+        log.info("⭐ 자동매매 봇 상태 변경: {}", enabled ? "활성화" : "비활성화");
+    }
+
     /**
      * 5분마다 자동매매 실행
      * cron: 초 분 시 일 월 요일
@@ -55,6 +76,12 @@ public class TradingScheduler {
     @Scheduled(cron = "0 */5 * * * *", zone = "Asia/Seoul")  // 5분마다 (KST 기준)
     public void executeAutoTrading() {
         LocalTime now = LocalTime.now();
+
+        // 봇 비활성화 상태면 스킵
+        if (!botEnabled) {
+            log.info("⏸️ 자동매매 봇 비활성화 상태 - 스킵");
+            return;
+        }
         
         // 업비트 점검 시간 체크
         if (isMaintenanceTime(now)) {

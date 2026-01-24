@@ -1071,6 +1071,34 @@ const helpContents = {
           </div>
         </div>
         
+        <div class="glossary-section mb-4" style="background-color: #FFF3E0; border-radius: 8px; padding: 12px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #E65100;">⚡ 활성화 조건</span>
+          </div>
+          <div style="padding-left: 24px; color: #424242;">
+            트레일링 스톱은 <strong>목표 수익률의 50% 또는 최소 1%</strong> 수익 확보 후 활성화됩니다.<br/><br/>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <tr style="background-color: #FFE0B2;">
+                <td style="padding: 6px 10px; border: 1px solid #FFCC80;"><strong>목표 수익률</strong></td>
+                <td style="padding: 6px 10px; border: 1px solid #FFCC80;"><strong>활성화 시점</strong></td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 10px; border: 1px solid #FFCC80;">4%</td>
+                <td style="padding: 6px 10px; border: 1px solid #FFCC80;">2% 수익부터 (4% × 50%)</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 10px; border: 1px solid #FFCC80;">1%</td>
+                <td style="padding: 6px 10px; border: 1px solid #FFCC80;">1% 수익부터 (최소 1%)</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 10px; border: 1px solid #FFCC80;">10%</td>
+                <td style="padding: 6px 10px; border: 1px solid #FFCC80;">5% 수익부터 (10% × 50%)</td>
+              </tr>
+            </table><br/>
+            💡 <strong>왜 필요한가?</strong><br/>미미한 수익(0.1% 등)에서 조기 매도되는 것을 방지합니다.
+          </div>
+        </div>
+        
         <div class="mb-2">
           <div class="d-flex align-center mb-2">
             <span class="text-subtitle-1 font-weight-bold">📋 설정값 안내</span>

@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS trading_settings (
     use_market_trend_filter BOOLEAN DEFAULT FALSE COMMENT '시장 추세 필터 사용 (BTC MA20 기준)',
     cumulative_loss_limit_pct INT DEFAULT -10 COMMENT '누적 손실 한도 (%) - 초기 자본 대비',
     consecutive_stop_loss_limit INT DEFAULT 3 COMMENT '연속 손절 제한 횟수',
+    buy_amount_pct INT DEFAULT 10 COMMENT '1회 매수 비율 (%) - 기준 금액 대비',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,

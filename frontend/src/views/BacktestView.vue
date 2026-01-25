@@ -225,6 +225,30 @@
                           </template>
                         </v-slider>
 
+                        <!-- 1회 매수 비율 (다른 항목과 동일한 스타일로) -->
+                        <div class="d-flex align-center mb-1 mt-4">
+                          <span class="text-caption text-grey">1회 매수 비율 (%)</span>
+                          <HelpButton 
+                            use-dialog
+                            :dialog-title="helpContents.buyAmountPct.title"
+                            :dialog-content="helpContents.buyAmountPct.content"
+                            size="x-small"
+                            color="grey"
+                          />
+                        </div>
+                        <v-slider
+                          v-model="request.buyAmountPct"
+                          :min="1"
+                          :max="50"
+                          :step="1"
+                          thumb-label
+                          hide-details
+                        >
+                          <template v-slot:append>
+                            <span class="text-body-2">{{ request.buyAmountPct }}%</span>
+                          </template>
+                        </v-slider>                 
+
                         <div class="d-flex align-center">
                           <v-switch
                             v-model="request.useTrailingStop"
@@ -1231,6 +1255,62 @@ const helpContents = {
     `
   },
 
+  buyAmountPct: {
+  title: '💵 1회 매수 비율',
+  content: `
+    <div class="glossary-detail pa-3">
+      <div class="glossary-section mb-4">
+        <div class="d-flex align-center mb-2">
+          <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+        </div>
+        <div style="padding-left: 24px;">
+          <p class="text-body-2 text-grey-darken-3 mb-0">
+            "매수 신호가 발생했을 때, 초기 자본의 몇 %를 투자할 것인가?"
+          </p>
+        </div>
+      </div>
+      
+      <div class="glossary-example-card mb-4" style="background-color: #263238; border-radius: 8px; padding: 16px;">
+        <div style="padding-left: 24px; line-height: 1.8; color: #CFD8DC;">
+          초기 자본이 <strong style="color: #4CAF50;">100만원</strong>일 때:<br/>
+          • 5% 설정 → 1회 매수 시 <strong style="color: #4CAF50;">5만원</strong> (소액 분산)<br/>
+          • 10% 설정 → 1회 매수 시 <strong style="color: #4CAF50;">10만원</strong> (기본)<br/>
+          • 20% 설정 → 1회 매수 시 <strong style="color: #4CAF50;">20만원</strong> (집중 투자)
+        </div>
+      </div>
+      
+      <div class="mb-2">
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid #E0E0E0; border-radius: 8px; font-size: 13px;">
+          <thead>
+            <tr style="background-color: #ECEFF1;">
+              <th style="padding: 10px 12px; text-align: left;">설정값</th>
+              <th style="padding: 10px 12px; text-align: left;">특징</th>
+              <th style="padding: 10px 12px; text-align: left;">적합한 상황</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding: 8px 12px; border-bottom: 1px solid #EEE;">5%</td>
+              <td style="padding: 8px 12px; border-bottom: 1px solid #EEE;">소액 분산</td>
+              <td style="padding: 8px 12px; border-bottom: 1px solid #EEE;">여러 기회에 분산</td>
+            </tr>
+            <tr style="background-color: #E3F2FD;">
+              <td style="padding: 8px 12px; color: #1565C0;"><strong>10%</strong></td>
+              <td style="padding: 8px 12px; color: #1565C0;">균형</td>
+              <td style="padding: 8px 12px; color: #1565C0;">기본값 ✅</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 12px;">20%</td>
+              <td style="padding: 8px 12px;">집중 투자</td>
+              <td style="padding: 8px 12px;">확신 있는 신호에 집중</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `
+  },
+
   // ★★★ 종목당 최대 보유 - 도움말 페이지에서 이식 ★★★
   maxHoldings: {
     title: '🛍️ 종목당 최대 보유',
@@ -2005,7 +2085,8 @@ const request = ref({
   dailyStopLossPct: -5,      // 기본값: 사용 안함
   useMarketTrendFilter: false,
   cumulativeLossLimitPct: -10,
-  consecutiveStopLossLimit: 3
+  consecutiveStopLossLimit: 3,
+  buyAmountPct: 10
 })
 
 // 스낵바

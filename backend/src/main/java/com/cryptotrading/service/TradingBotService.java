@@ -147,10 +147,12 @@ public class TradingBotService {
         
         log.info("매수 신호 감지: {} - {} (강도: {})", market, signal.getReason(), signal.getStrength());
         
-        // 매수 금액 계산 (일일 한도의 10% 또는 남은 한도)
+        // 매수 금액 계산 (일일 한도의 설정 비율% 또는 남은 한도)
         BigDecimal remainingLimit = riskManagementService.getRemainingDailyLimit(userId, setting);
+        int buyAmountPct = setting.getBuyAmountPct() != null ? setting.getBuyAmountPct() : 10;
         BigDecimal buyAmount = setting.getDailyLimitAmount()
-                .multiply(new BigDecimal("0.1"))
+                .multiply(new BigDecimal(buyAmountPct))
+                .divide(new BigDecimal("100"), SCALE, RoundingMode.HALF_UP)
                 .min(remainingLimit);
         
         if (buyAmount.compareTo(new BigDecimal("5000")) < 0) {  // 최소 5000원

@@ -60,6 +60,7 @@ public class TradingSettingService {
                 .useMarketTrendFilter(dto.getUseMarketTrendFilter() != null ? dto.getUseMarketTrendFilter() : false)
                 .cumulativeLossLimitPct(dto.getCumulativeLossLimitPct() != null ? dto.getCumulativeLossLimitPct() : -10)
                 .consecutiveStopLossLimit(dto.getConsecutiveStopLossLimit() != null ? dto.getConsecutiveStopLossLimit() : 3)
+                .buyAmountPct(dto.getBuyAmountPct() != null ? dto.getBuyAmountPct() : 10)
                 .build();
 
         TradingSetting saved = tradingSettingRepository.save(setting);
@@ -95,6 +96,7 @@ public class TradingSettingService {
         setting.setUseMarketTrendFilter(dto.getUseMarketTrendFilter() != null ? dto.getUseMarketTrendFilter() : false);
         setting.setCumulativeLossLimitPct(dto.getCumulativeLossLimitPct() != null ? dto.getCumulativeLossLimitPct() : -10);
         setting.setConsecutiveStopLossLimit(dto.getConsecutiveStopLossLimit() != null ? dto.getConsecutiveStopLossLimit() : 3);
+        setting.setBuyAmountPct(dto.getBuyAmountPct() != null ? dto.getBuyAmountPct() : 10);
 
         TradingSetting updated = tradingSettingRepository.save(setting);
         log.info("거래 설정 수정 완료: userId={}", userId);
@@ -136,6 +138,7 @@ public class TradingSettingService {
                 .useMarketTrendFilter(setting.getUseMarketTrendFilter())
                 .cumulativeLossLimitPct(setting.getCumulativeLossLimitPct())
                 .consecutiveStopLossLimit(setting.getConsecutiveStopLossLimit())
+                .buyAmountPct(setting.getBuyAmountPct())
                 .build();
     }
 }

@@ -156,6 +156,7 @@
                     />
                   </v-col>
 
+                  <!-- ⭐ 위치 변경: 종목당 최대 보유 건수 -->
                   <v-col cols="12" md="4">
                     <v-text-field
                       v-model.number="settings.maxHoldingsPerCoin"
@@ -168,6 +169,7 @@
                     />
                   </v-col>
 
+                  <!-- ⭐ 위치 변경: 일일 거래 한도 -->
                   <v-col cols="12" md="4">
                     <v-text-field
                       v-model.number="settings.dailyLimitAmount"
@@ -179,6 +181,36 @@
                       hint="리스크 관리에서 비율 계산의 기준이 됩니다"
                       persistent-hint
                     />
+                  </v-col>
+
+                  <!-- ⭐ 위치 변경: 1회 매수 비율 -->
+                  <v-col cols="12" md="4">
+                    <div class="d-flex align-center mb-1">
+                      <span class="text-body-2">1회 매수 비율</span>
+                      <HelpButton 
+                        use-dialog 
+                        :dialog-title="helpContents.buyAmountPct.title"
+                        :dialog-content="helpContents.buyAmountPct.content"
+                        color="grey-darken-1"
+                      />
+                    </div>
+                    <v-slider
+                      v-model="settings.buyAmountPct"
+                      :min="1"
+                      :max="50"
+                      :step="1"
+                      thumb-label
+                      color="primary"
+                    >
+                      <template v-slot:append>
+                        <v-chip size="small" color="primary">
+                          {{ settings.buyAmountPct }}%
+                        </v-chip>
+                      </template>
+                    </v-slider>
+                    <p class="text-caption text-grey mt-n2">
+                      1회 매수 금액: {{ formatCurrency(settings.dailyLimitAmount * settings.buyAmountPct / 100) }}
+                    </p>
                   </v-col>
                 </v-row>
               </div>
@@ -1323,6 +1355,80 @@ const helpContents = {
     `
   },
 
+  // 1회 매수 비율 도움말
+  buyAmountPct: {
+    title: '💵 1회 매수 비율',
+    content: `
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">
+              "매수 신호가 발생했을 때, 기준 금액의 몇 %를 투자할 것인가?"를 설정합니다.
+            </p>
+          </div>
+        </div>
+        
+        <div class="mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">📐 계산 예시</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3">
+              기준 금액이 <strong>100만원</strong>일 때:<br>
+              • 10% 설정 → 1회 매수 시 <strong>10만원</strong><br>
+              • 5% 설정 → 1회 매수 시 <strong>5만원</strong> (더 분산 투자)<br>
+              • 20% 설정 → 1회 매수 시 <strong>20만원</strong> (집중 투자)
+            </p>
+          </div>
+        </div>
+
+        <div class="mb-2">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">📋 설정값 안내</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #E0E0E0; border-radius: 8px; overflow: hidden; font-size: 13px;">
+              <thead>
+                <tr style="background-color: #ECEFF1;">
+                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">설정값</th>
+                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">특징</th>
+                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">적합한 상황</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE;">5%</td>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE;">소액 분산</td>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE;">여러 코인에 분산 투자</td>
+                </tr>
+                <tr style="background-color: #E3F2FD;">
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE; color: #1565C0;"><strong>10%</strong></td>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE; color: #1565C0;">균형</td>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE; color: #1565C0;">기본값 ✅</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 12px;">20%</td>
+                  <td style="padding: 8px 12px;">집중 투자</td>
+                  <td style="padding: 8px 12px;">확신 있는 신호에 집중</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mt-3 pa-2" style="background-color: #FFF3E0; border-radius: 8px;">
+          <span style="font-size: 16px;">💡</span>
+          <span class="text-caption text-orange-darken-3">
+            <strong>팁:</strong> 낮은 비율(5%)은 더 많은 매수 기회, 높은 비율(20%)은 적은 기회에 집중 투자합니다.
+          </span>
+        </div>
+      </div>
+    `
+  },
+
   // ★★★ [신규] 단일 종목 최대 비중 - 분리된 도움말 ★★★
   maxPosition: {
     title: '🥚 단일 종목 최대 비중',
@@ -1580,7 +1686,8 @@ const settings = ref({
   dailyStopLossPct: -5,
   useMarketTrendFilter: false,
   cumulativeLossLimitPct: -10,
-  consecutiveStopLossLimit: 3      
+  consecutiveStopLossLimit: 3,
+  buyAmountPct: 10
 })
 
 // 기본값 (초기화용)
@@ -1708,7 +1815,8 @@ const loadSettings = async () => {
         dailyStopLossPct: data.dailyStopLossPct || -5,
         useMarketTrendFilter: data.useMarketTrendFilter ?? false,
         cumulativeLossLimitPct: data.cumulativeLossLimitPct || -10,
-        consecutiveStopLossLimit: data.consecutiveStopLossLimit || 3
+        consecutiveStopLossLimit: data.consecutiveStopLossLimit || 3,
+        buyAmountPct: data.buyAmountPct || 10
       }
 
       hasExistingSettings.value = true
@@ -1751,7 +1859,8 @@ const createDefaultSettings = async () => {
       dailyStopLossPct: Number(settings.value.dailyStopLossPct),
       useMarketTrendFilter: Boolean(settings.value.useMarketTrendFilter),
       cumulativeLossLimitPct: Number(settings.value.cumulativeLossLimitPct),
-      consecutiveStopLossLimit: Number(settings.value.consecutiveStopLossLimit)
+      consecutiveStopLossLimit: Number(settings.value.consecutiveStopLossLimit),
+      buyAmountPct: Number(settings.value.buyAmountPct)
     }
     
     await tradingApi.createSettings(payload)

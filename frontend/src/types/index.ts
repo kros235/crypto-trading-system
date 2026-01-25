@@ -100,6 +100,7 @@ export interface TradingSetting {
   useMarketTrendFilter?: boolean
   cumulativeLossLimitPct?: number
   consecutiveStopLossLimit?: number
+  buyAmountPct?: number
 }
 
 // 거래 설정 요청 타입

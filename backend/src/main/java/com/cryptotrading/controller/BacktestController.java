@@ -187,6 +187,7 @@ public class BacktestController {
                 .dailyTradeLimitPct(20)
                 .maxPositionPct(25)
                 .dailyStopLossPct(-5)
+                .buyAmountPct(10)
                 .build();
         
         return ResponseEntity.ok(defaults);

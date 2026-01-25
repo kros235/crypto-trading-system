@@ -105,4 +105,9 @@ public class TradingSettingDTO {
     @Min(value = 1, message = "연속 손절 제한은 1회 이상이어야 합니다")
     @Max(value = 10, message = "연속 손절 제한은 10회 이하여야 합니다")
     private Integer consecutiveStopLossLimit;
+
+    // 1회 매수 비율 (%)
+    @Min(value = 1, message = "1회 매수 비율은 최소 1% 이상이어야 합니다")
+    @Max(value = 50, message = "1회 매수 비율은 최대 50% 이하여야 합니다")
+    private Integer buyAmountPct;
 }

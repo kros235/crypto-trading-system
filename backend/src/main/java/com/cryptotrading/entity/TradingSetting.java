@@ -103,6 +103,10 @@ public class TradingSetting extends BaseEntity {
     @Column(name = "consecutive_stop_loss_limit")
     private Integer consecutiveStopLossLimit = 3;
 
+    // 1회 매수 비율 (%)
+    @Column(name = "buy_amount_pct")
+    private Integer buyAmountPct = 10;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "user_id", 
                 insertable = false, updatable = false)

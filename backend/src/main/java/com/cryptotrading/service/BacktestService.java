@@ -366,9 +366,11 @@ public class BacktestService {
      */
     private void executeBuy(String symbol, BigDecimal price, LocalDate date, 
                              String signal, BacktestRequestDTO request, SimulationState state) {
-        // 매수 금액: 초기 자본의 10% 또는 남은 현금
+        // 매수 금액: 초기 자본의 설정 비율% 또는 남은 현금
+        int buyAmountPct = request.getBuyAmountPct() != null ? request.getBuyAmountPct() : 10;
         BigDecimal buyAmount = request.getInitialBalance()
-                .multiply(new BigDecimal("0.1"))
+                .multiply(new BigDecimal(buyAmountPct))
+                .divide(new BigDecimal("100"), SCALE, RoundingMode.DOWN)
                 .min(state.getCashBalance());
         
         if (buyAmount.compareTo(new BigDecimal("10000")) < 0) return;  // 최소 1만원
@@ -521,9 +523,11 @@ public class BacktestService {
             return false;
         }
 
-        // ★★★ 예상 매수 금액 계산 (executeBuy와 동일한 로직) ★★★
+         // 예상 매수 금액 계산 (executeBuy와 동일한 로직)
+        int buyAmountPct = request.getBuyAmountPct() != null ? request.getBuyAmountPct() : 10;
         BigDecimal buyAmount = request.getInitialBalance()
-                .multiply(new BigDecimal("0.1"))
+                .multiply(new BigDecimal(buyAmountPct))
+                .divide(new BigDecimal("100"), SCALE, RoundingMode.DOWN)
                 .min(state.getCashBalance());
 
         // 3. ★★★ 신규: 일일 거래 한도 체크 ★★★

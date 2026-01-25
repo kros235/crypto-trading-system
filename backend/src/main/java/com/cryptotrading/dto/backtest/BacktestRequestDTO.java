@@ -119,4 +119,10 @@ public class BacktestRequestDTO {
     private Boolean useMarketTrendFilter = false;      // 시장 추세 필터 (BTC MA20)
     private Integer cumulativeLossLimitPct = -10;     // 누적 손실 한도 (%)
     private Integer consecutiveStopLossLimit = 3;     // 연속 손절 제한 횟수
+
+    // 1회 매수 비율 (%)
+    @Min(value = 1, message = "1회 매수 비율은 1% 이상")
+    @Max(value = 50, message = "1회 매수 비율은 50% 이하")
+    @Builder.Default
+    private Integer buyAmountPct = 10;
 }

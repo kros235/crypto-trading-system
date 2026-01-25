@@ -25,6 +25,7 @@ export interface BacktestRequest {
   useMarketTrendFilter?: boolean
   cumulativeLossLimitPct?: number
   consecutiveStopLossLimit?: number
+  buyAmountPct?: number
 }
 
 // 백테스트 결과

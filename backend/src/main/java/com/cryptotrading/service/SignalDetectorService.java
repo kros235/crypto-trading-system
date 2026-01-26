@@ -29,6 +29,8 @@ public class SignalDetectorService {
     
     private static final int SCALE = 8;
 
+    private static final BigDecimal FEE_RATE = new BigDecimal("0.0005");
+
     /**
      * 매수 신호 감지 + AI 가중치 반영
      */
@@ -110,9 +112,17 @@ public class SignalDetectorService {
         if (conditionsMet >= 1 && dropRate.compareTo(threshold) <= 0) {
             SignalStrength strength = determineStrength(conditionsMet, totalConditions);
             
-            // 목표가 및 손절가 계산
+            // ⭐⭐⭐ [수정] 목표가 계산 - 수수료 반영 ⭐⭐⭐
+            // 목표 수익률을 달성하려면, 수수료(매수+매도 약 0.1%)를 보정해야 함
+            // 목표가 = 현재가 × (1 + 목표수익률 + 총수수료율) / (1 - 매도수수료율)
+            // 간소화: 목표가 ≈ 현재가 × (1 + 목표수익률 + 0.1%)
+            BigDecimal totalFeeRate = FEE_RATE.multiply(new BigDecimal("2")); // 매수+매도 수수료
+            BigDecimal adjustedTargetPct = setting.getSellTargetPct().add(
+                    totalFeeRate.multiply(new BigDecimal("100"))); // 수수료 보정
             BigDecimal targetPrice = indicators.getCurrentPrice()
-                    .multiply(BigDecimal.ONE.add(setting.getSellTargetPct().divide(new BigDecimal("100"), SCALE, RoundingMode.HALF_UP)));
+                    .multiply(BigDecimal.ONE.add(adjustedTargetPct.divide(new BigDecimal("100"), SCALE, RoundingMode.HALF_UP)));
+            
+            // 손절가는 기존 유지 (가격 기준)
             BigDecimal stopLossPrice = indicators.getCurrentPrice()
                     .multiply(BigDecimal.ONE.add(setting.getStopLossPct().divide(new BigDecimal("100"), SCALE, RoundingMode.HALF_UP)));
             
@@ -143,6 +153,7 @@ public class SignalDetectorService {
     /**
      * 매도 신호 감지 (보유 중인 거래에 대해)
      */
+    // ===== 수정 코드 =====
     public TradingSignalDTO detectSellSignal(Transaction transaction, TradingSetting setting) {
         String market = transaction.getCoinSymbol();
         log.debug("매도 신호 감지 시작: {} (거래ID: {})", market, transaction.getTransactionId());
@@ -163,27 +174,45 @@ public class SignalDetectorService {
         
         BigDecimal currentPrice = indicators.getCurrentPrice();
         BigDecimal buyPrice = transaction.getPrice();
-        BigDecimal profitRate = currentPrice.subtract(buyPrice)
+        
+        // ⭐⭐⭐ [기존] 단순 가격 변동률 (손절매, 트레일링 스톱용) ⭐⭐⭐
+        BigDecimal priceChangeRate = currentPrice.subtract(buyPrice)
                 .divide(buyPrice, SCALE, RoundingMode.HALF_UP)
                 .multiply(new BigDecimal("100"));
         
-        // 조건 1: 목표 수익률 도달
-        if (profitRate.compareTo(setting.getSellTargetPct()) >= 0) {
+        // ⭐⭐⭐ [추가] 수수료 포함 실제 수익률 (목표 수익률 판단용) ⭐⭐⭐
+        // 매도 예상 금액 = 보유 수량 × 현재가
+        BigDecimal sellAmount = transaction.getQuantity().multiply(currentPrice);
+        // 매도 수수료 = 매도 금액 × 0.05%
+        BigDecimal sellFee = sellAmount.multiply(FEE_RATE);
+        // 실제 수령 예상액 = 매도 금액 - 매도 수수료
+        BigDecimal netSellAmount = sellAmount.subtract(sellFee);
+        // 실제 수익률 = (실제 수령 예상액 - 매수 투입금) / 매수 투입금 × 100
+        // ※ 매수 투입금(totalAmount)에는 매수 수수료가 이미 포함됨
+        BigDecimal netProfitRate = transaction.getTotalAmount().compareTo(BigDecimal.ZERO) > 0
+                ? netSellAmount.subtract(transaction.getTotalAmount())
+                    .divide(transaction.getTotalAmount(), SCALE, RoundingMode.HALF_UP)
+                    .multiply(new BigDecimal("100"))
+                : BigDecimal.ZERO;
+        
+        // 조건 1: 목표 수익률 도달 (⭐ 수수료 포함 수익률 사용)
+        if (netProfitRate.compareTo(setting.getSellTargetPct()) >= 0) {
             return TradingSignalDTO.builder()
                     .market(market)
                     .signalType(SignalType.SELL)
                     .strength(SignalStrength.STRONG)
                     .detectedAt(LocalDateTime.now())
                     .currentPrice(currentPrice)
-                    .reason(String.format("목표 수익률 도달: %.2f%% (목표: %.2f%%)", 
-                            profitRate, setting.getSellTargetPct()))
+                    // ⭐⭐⭐ [수정] 수수료 포함 실제 수익률 표시 ⭐⭐⭐
+                    .reason(String.format("목표 수익률 도달: %.2f%% (목표: %.2f%%, 수수료 반영)", 
+                            netProfitRate, setting.getSellTargetPct()))
                     .conditionsMet(1)
                     .totalConditions(1)
                     .build();
         }
         
         // 조건 2: 손절매 (음수)
-        if (profitRate.compareTo(setting.getStopLossPct()) <= 0) {
+        if (priceChangeRate.compareTo(setting.getStopLossPct()) <= 0) {
             return TradingSignalDTO.builder()
                     .market(market)
                     .signalType(SignalType.STOP_LOSS)
@@ -191,7 +220,7 @@ public class SignalDetectorService {
                     .detectedAt(LocalDateTime.now())
                     .currentPrice(currentPrice)
                     .reason(String.format("손절매 도달: %.2f%% (기준: %.2f%%)", 
-                            profitRate, setting.getStopLossPct()))
+                            priceChangeRate, setting.getStopLossPct()))
                     .conditionsMet(1)
                     .totalConditions(1)
                     .build();
@@ -214,14 +243,14 @@ public class SignalDetectorService {
                     .max(new BigDecimal("1")); // 최소 1% 수익 확보 후 트레일링 스톱 활성화
             
             // ⭐⭐⭐ [수정] profitRate > 0 → profitRate >= minProfitForTrailing ⭐⭐⭐
-            if (dropFromHigh.compareTo(trailingPct) <= 0 && profitRate.compareTo(minProfitForTrailing) >= 0) {
+            if (dropFromHigh.compareTo(trailingPct) <= 0 && netProfitRate.compareTo(minProfitForTrailing) >= 0) {
                 return TradingSignalDTO.builder()
                         .market(market)
                         .signalType(SignalType.TRAILING_STOP)
                         .strength(SignalStrength.MODERATE)
                         .detectedAt(LocalDateTime.now())
                         .currentPrice(currentPrice)
-                        .reason(String.format("트레일링 스톱: 최고가 대비 %.2f%% 하락 (수익률: %.2f%%)", dropFromHigh, profitRate))
+                        .reason(String.format("트레일링 스톱: 최고가 대비 %.2f%% 하락 (수익률: %.2f%%, 수수료 반영)", dropFromHigh, netProfitRate))
                         .conditionsMet(1)
                         .totalConditions(1)
                         .build();
@@ -230,21 +259,22 @@ public class SignalDetectorService {
 
         // 조건 4: RSI 과매수 신호 (옵션) ⭐신규
         // RSI가 매도 임계값 이상이고 수익 중일 때만 매도 신호
-        if (indicators.isRsiSellSignal() && profitRate.compareTo(BigDecimal.ZERO) > 0) {
+        if (indicators.isRsiSellSignal() && netProfitRate.compareTo(BigDecimal.ZERO) > 0) {
             return TradingSignalDTO.builder()
                     .market(market)
                     .signalType(SignalType.SELL)
                     .strength(SignalStrength.MODERATE)
                     .detectedAt(LocalDateTime.now())
                     .currentPrice(currentPrice)
-                    .reason(String.format("RSI 과매수: %.2f (임계값: %d), 수익률: %.2f%%", 
-                            indicators.getRsi14(), setting.getRsiSellThreshold(), profitRate))
+                    .reason(String.format("RSI 과매수: %.2f (임계값: %d), 수익률: %.2f%% (수수료 반영)", 
+                            indicators.getRsi14(), setting.getRsiSellThreshold(), netProfitRate))
                     .conditionsMet(1)
                     .totalConditions(1)
                     .build();
         }
         
-        return createHoldSignal(market, String.format("현재 수익률: %.2f%%", profitRate));
+        // ⭐⭐⭐ [수정] 현재 수익률 표시도 수수료 포함 ⭐⭐⭐
+        return createHoldSignal(market, String.format("현재 수익률: %.2f%% (수수료 반영)", netProfitRate));
     }
 
     /**

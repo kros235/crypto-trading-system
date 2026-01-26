@@ -335,25 +335,44 @@ public class BacktestService {
      * 매도 신호 체크
      */
     private String checkSellSignal(Position position, BigDecimal currentPrice,
-                                    BigDecimal profitRate, BacktestRequestDTO request) {
-        // 1. 목표 수익률 도달
-        if (profitRate.compareTo(request.getSellTargetPct()) >= 0) {
-            return String.format("목표 수익률 도달: %.2f%%", profitRate);
+                                    BigDecimal priceChangeRate, BacktestRequestDTO request) {
+        // ⭐⭐⭐ [추가] 수수료 포함 실제 수익률 계산 ⭐⭐⭐
+        // 매도 예상 금액 = 보유 수량 × 현재가
+        BigDecimal sellAmount = position.getQuantity().multiply(currentPrice);
+        // 매도 수수료 = 매도 금액 × 0.05%
+        BigDecimal sellFee = sellAmount.multiply(FEE_RATE);
+        // 실제 수령 예상액 = 매도 금액 - 매도 수수료
+        BigDecimal netSellAmount = sellAmount.subtract(sellFee);
+        // 매수 투입금 (매수 수수료 포함) = 수량 × 매수가 × (1 + 수수료율)
+        BigDecimal buyAmount = position.getQuantity().multiply(position.getAvgPrice());
+        BigDecimal buyFee = buyAmount.multiply(FEE_RATE);
+        BigDecimal totalBuyAmount = buyAmount.add(buyFee);
+        // 실제 수익률 = (실제 수령 예상액 - 매수 투입금) / 매수 투입금 × 100
+        BigDecimal netProfitRate = totalBuyAmount.compareTo(BigDecimal.ZERO) > 0
+                ? netSellAmount.subtract(totalBuyAmount)
+                    .divide(totalBuyAmount, 4, RoundingMode.HALF_UP)
+                    .multiply(new BigDecimal("100"))
+                : BigDecimal.ZERO;
+        
+        // 1. 목표 수익률 도달 (⭐ 수수료 포함 수익률 사용)
+        if (netProfitRate.compareTo(request.getSellTargetPct()) >= 0) {
+            return String.format("목표 수익률 도달: %.2f%% (수수료 반영)", netProfitRate);
         }
         
-        // 2. 손절매
-        if (profitRate.compareTo(request.getStopLossPct()) <= 0) {
-            return String.format("손절매: %.2f%%", profitRate);
+        // 2. 손절매 (⭐ 가격 변동률 사용 - 기존 유지)
+        if (priceChangeRate.compareTo(request.getStopLossPct()) <= 0) {
+            return String.format("손절매: %.2f%%", priceChangeRate);
         }
         
-        // 3. 트레일링 스톱
+        // 3. 트레일링 스톱 (⭐ 기존 유지)
         if (request.getUseTrailingStop() && position.getHighestPrice() != null) {
             BigDecimal trailingDropRate = position.getHighestPrice().subtract(currentPrice)
                     .divide(position.getHighestPrice(), 4, RoundingMode.HALF_UP)
                     .multiply(new BigDecimal("100"));
             
+            // ⭐⭐⭐ [수정] 수익 확인도 netProfitRate 사용 ⭐⭐⭐
             if (trailingDropRate.compareTo(request.getTrailingStopPct()) >= 0 
-                    && profitRate.compareTo(BigDecimal.ZERO) > 0) {
+                    && netProfitRate.compareTo(BigDecimal.ZERO) > 0) {
                 return String.format("트레일링 스톱: 최고가 대비 -%.2f%%", trailingDropRate);
             }
         }

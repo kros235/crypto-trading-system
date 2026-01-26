@@ -1004,22 +1004,20 @@ const helpContents = {
           </div>
         </div>
         
-        <!-- ★★★ [신규 추가] 수수료 안내 박스 ★★★ -->
-        <div class="glossary-example-card mb-4" style="background-color: #1B5E20; border-color: #2E7D32; border-radius: 8px; padding: 16px;">
+        <div class="mb-4" style="padding: 16px 0;">
           <div class="d-flex align-center mb-2">
-            <span class="text-subtitle-1 font-weight-bold" style="color: #E8F5E9;">💡 수수료 자동 반영 안내</span>
+            <span class="text-subtitle-1 font-weight-bold">💡 수수료 자동 반영 안내</span>
           </div>
-          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #C8E6C9;">
-            <strong style="color: #A5D6A7;">✅ 목표 수익률 판단 시 거래 수수료가 자동으로 반영됩니다!</strong><br/><br/>
-            <strong style="color: #81C784;">업비트 수수료:</strong> 매수 0.05% + 매도 0.05% = 총 0.1%<br/><br/>
-            <strong style="color: #81C784;">계산 예시 (목표 4% 설정 시):</strong><br/>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8;">
+            <strong style="color: #4CAF50;">✅ 목표 수익률 판단 시 거래 수수료가 자동으로 반영됩니다!</strong><br/><br/>
+            <strong>업비트 수수료:</strong> 매수 0.05% + 매도 0.05% = 총 0.1%<br/>
+            <strong>계산 예시 (목표 4% 설정 시):</strong><br/>
             - 100만원 투입 → 매수 수수료 500원 차감 → 실제 매수 999,500원<br/>
             - 가격 4.1% 상승 시 → 매도금액 1,040,480원 - 수수료 520원<br/>
-            - 실수령액 약 1,039,960원 → <strong style="color: #FFEB3B;">실제 수익률 약 4.0%</strong><br/><br/>
-            ⚠️ <strong style="color: #FFE082;">손절매/트레일링 스톱</strong>은 가격 변동률 기준으로 판단합니다 (수수료 미반영)
+            - 실수령액 약 1,039,960원 → <strong style="color: #FF9800;">실제 수익률 약 4.0%</strong><br/>
+            ⚠️ <strong>손절매/트레일링 스톱</strong>은 가격 변동률 기준으로 판단. (수수료 미반영)
           </div>
         </div>
-        <!-- ★★★ [신규 추가 끝] ★★★ -->
         
         <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
           <div class="d-flex align-center mb-2">

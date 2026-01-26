@@ -1178,6 +1178,20 @@ const helpContents = {
             </table>
           </div>
         </div>
+        <div class="glossary-example-card mb-4" style="background-color: #1B5E20; border-color: #2E7D32; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #E8F5E9;">💡 백테스팅 수수료 반영</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #C8E6C9;">
+            <strong style="color: #A5D6A7;">✅ 백테스팅 결과에도 거래 수수료(0.05%)가 반영됩니다!</strong><br/><br/>
+            <strong style="color: #81C784;">적용 방식:</strong><br/>
+            - 목표 수익률 도달 판단: 수수료 차감 후 실제 수익률 기준<br/>
+            - 손절매/트레일링 스톱: 가격 변동률 기준 (수수료 미반영)<br/><br/>
+            <strong style="color: #81C784;">결과 메시지 예시:</strong><br/>
+            - "목표 수익률 도달: 4.41% <span style="color: #FFEB3B;">(수수료 반영)</span>"<br/>
+            - "손절매: -10.16%" (가격 기준)
+          </div>
+        </div>
       </div>
     `
   },

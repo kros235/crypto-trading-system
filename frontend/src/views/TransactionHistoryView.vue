@@ -302,9 +302,10 @@
                 <td class="font-weight-bold bg-grey-lighten-4">거래 시각</td>
                 <td>{{ formatDateTime(selectedTransaction.createdAt) }}</td>
               </tr>
+              <!-- [수정] 레이블 변경: "메모" → "📌 거래 사유", 스타일 추가 -->
               <tr v-if="selectedTransaction.note">
-                <td class="font-weight-bold bg-grey-lighten-4">메모</td>
-                <td>{{ selectedTransaction.note }}</td>
+                <td class="font-weight-bold bg-grey-lighten-4">📌 거래 사유</td>
+                <td style="color: #1976d2; font-size: 13px;">{{ selectedTransaction.note }}</td>
               </tr>
             </tbody>
           </v-table>

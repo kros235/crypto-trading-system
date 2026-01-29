@@ -35,6 +35,10 @@ public class RiskManagementService {
     // Key: "userId:coinSymbol", Value: 매수 금지 해제 시각
     private final Map<String, LocalDateTime> buyBlockedUntilMap = new ConcurrentHashMap<>();
 
+    // 일일 매도 금액 추적 (한도 복구용)
+    // Key: "userId:날짜(yyyy-MM-dd)", Value: 오늘 총 매도 금액
+    private final Map<String, BigDecimal> dailySellAmountMap = new ConcurrentHashMap<>();
+
 
     /**
      * 매수 가능 여부 체크 (모든 리스크 조건)
@@ -294,6 +298,57 @@ public class RiskManagementService {
     }
 
     /**
+     * 매도 시 일일 한도 복구 기록
+     * @param userId 사용자 ID
+     * @param sellAmount 매도 금액
+     * @param setting 거래 설정
+     */
+    public void recordSellForDailyLimitRecovery(String userId, BigDecimal sellAmount, TradingSetting setting) {
+        // 복구 옵션이 꺼져있으면 무시
+        if (!Boolean.TRUE.equals(setting.getUseDailyLimitRecovery())) {
+            return;
+        }
+        
+        String key = userId + ":" + LocalDate.now().toString();
+        BigDecimal currentRecovered = dailySellAmountMap.getOrDefault(key, BigDecimal.ZERO);
+        
+        // 현재 남은 한도 계산 (복구 전)
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
+        BigDecimal todayBuyTotal = transactionRepository.sumTodayBuyAmount(userId, startOfDay, endOfDay);
+        if (todayBuyTotal == null) {
+            todayBuyTotal = BigDecimal.ZERO;
+        }
+        
+        BigDecimal effectiveDailyLimit = calculateEffectiveDailyLimit(setting);
+        BigDecimal currentRemaining = effectiveDailyLimit.subtract(todayBuyTotal).add(currentRecovered);
+        
+        // 복구 가능한 최대 금액 = 일일 한도 - 현재 남은 한도
+        BigDecimal maxRecoverable = effectiveDailyLimit.subtract(currentRemaining);
+        if (maxRecoverable.compareTo(BigDecimal.ZERO) < 0) {
+            maxRecoverable = BigDecimal.ZERO;
+        }
+        
+        // 실제 복구 금액 = min(매도금액, 복구가능최대금액)
+        BigDecimal actualRecovery = sellAmount.min(maxRecoverable);
+        
+        if (actualRecovery.compareTo(BigDecimal.ZERO) > 0) {
+            dailySellAmountMap.put(key, currentRecovered.add(actualRecovery));
+            log.info("일일 한도 복구: userId={}, 매도금액={}, 실제복구={}, 총복구액={}", 
+                    userId, sellAmount, actualRecovery, currentRecovered.add(actualRecovery));
+        }
+    }
+
+    /**
+     * 일일 매도 복구 캐시 초기화 (자정에 호출)
+     */
+    public void clearDailySellAmountCache() {
+        String yesterday = LocalDate.now().minusDays(1).toString();
+        dailySellAmountMap.entrySet().removeIf(entry -> entry.getKey().contains(yesterday));
+        log.info("어제 일일 매도 복구 캐시 정리 완료");
+    }
+
+    /**
      * 긴급 정지 조건 체크 (dailyStopLossPct)
      */
     public boolean checkDailyStopLoss(String userId, TradingSetting setting) {
@@ -341,23 +396,39 @@ public class RiskManagementService {
     }
 
     /**
-     * 일일 남은 거래 가능 금액 조회 (dailyTradeLimitPct 적용)
+     * 일일 남은 거래 가능 금액 조회 (dailyTradeLimitPct 적용 + 한도 복구 옵션)
      */
     public BigDecimal getRemainingDailyLimit(String userId, TradingSetting setting) {
         LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
         LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
         
-        BigDecimal todayTotal = transactionRepository
+        BigDecimal todayBuyTotal = transactionRepository
                 .sumTodayBuyAmount(userId, startOfDay, endOfDay);
         
-        if (todayTotal == null) {
-            todayTotal = BigDecimal.ZERO;
+        if (todayBuyTotal == null) {
+            todayBuyTotal = BigDecimal.ZERO;
         }
         
         // dailyTradeLimitPct 비율 적용
         BigDecimal effectiveDailyLimit = calculateEffectiveDailyLimit(setting);
         
-        return effectiveDailyLimit.subtract(todayTotal);
+        // ⭐⭐⭐ Day 41 추가: 일일 한도 복구 옵션 적용 ⭐⭐⭐
+        BigDecimal recoveredAmount = BigDecimal.ZERO;
+        if (Boolean.TRUE.equals(setting.getUseDailyLimitRecovery())) {
+            String key = userId + ":" + LocalDate.now().toString();
+            recoveredAmount = dailySellAmountMap.getOrDefault(key, BigDecimal.ZERO);
+            log.debug("일일 한도 복구 적용: userId={}, 복구금액={}", userId, recoveredAmount);
+        }
+        
+        // 남은 한도 = 일일 한도 - 오늘 매수액 + 복구액
+        BigDecimal remaining = effectiveDailyLimit.subtract(todayBuyTotal).add(recoveredAmount);
+        
+        // 최대치는 일일 한도까지만 (복구액이 매수액보다 커도 한도 초과 불가)
+        if (remaining.compareTo(effectiveDailyLimit) > 0) {
+            remaining = effectiveDailyLimit;
+        }
+        
+        return remaining;
     }
 
     /**

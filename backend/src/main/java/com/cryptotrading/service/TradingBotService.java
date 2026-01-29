@@ -40,6 +40,7 @@ public class TradingBotService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final DiscordBotService discordBotService;
+    private final EmailService emailService; 
     
     private static final BigDecimal FEE_RATE = new BigDecimal("0.0005");  // 0.05%
     private static final int SCALE = 8;
@@ -227,17 +228,20 @@ public class TradingBotService {
                     .stopLossPrice(signal.getStopLossPrice())
                     .highestPrice(signal.getCurrentPrice())
                     .status(TransactionStatus.HOLDING)
+                    .note("[매수] " + signal.getReason())
                     .build();
             
             transactionRepository.save(transaction);
             
             // 알림 발송
+            // ⭐⭐⭐ [수정] reason 파라미터 추가 ⭐⭐⭐
             notificationService.notifyBuyExecuted(
                 userId, market, signal.getCurrentPrice(), 
-                transaction.getQuantity(), buyAmount
+                transaction.getQuantity(), buyAmount,
+                signal.getReason()  // ⭐⭐⭐ [추가] 매수 사유 전달 ⭐⭐⭐
             );
 
-            // ★★★ 추가: Discord DM 발송 ★★★
+            // Discord DM 발송
             User userEntity = userRepository.findById(userId).orElse(null);
             if (userEntity != null && userEntity.getDiscordUserId() != null) {
                 discordBotService.sendBuyNotification(
@@ -245,7 +249,21 @@ public class TradingBotService {
                     market,
                     transaction.getQuantity().toPlainString(),
                     String.format("%,.0f", signal.getCurrentPrice()),
-                    String.format("%,.0f", buyAmount)
+                    String.format("%,.0f", buyAmount),
+                    signal.getReason()  // ⭐⭐⭐ [추가] 매수 사유 전달 ⭐⭐⭐
+                );
+            }
+
+            // 이메일 발송
+            if (userEntity != null && userEntity.getEmail() != null && !userEntity.getEmail().isEmpty()) {
+                emailService.sendTradeNotification(
+                    userEntity.getEmail(),
+                    "BUY",
+                    market,
+                    transaction.getQuantity(),
+                    signal.getCurrentPrice(),
+                    buyAmount,
+                    signal.getReason()
                 );
             }
 
@@ -288,7 +306,7 @@ public class TradingBotService {
             BigDecimal profitLoss = sellAmount.subtract(fee)
                     .subtract(holding.getTotalAmount());
 
-            // ⭐ 추가: 수익률 계산
+            // 수익률 계산
             BigDecimal profitRate = holding.getTotalAmount().compareTo(BigDecimal.ZERO) > 0
                     ? profitLoss.divide(holding.getTotalAmount(), 4, RoundingMode.HALF_UP)
                             .multiply(new BigDecimal("100"))
@@ -299,10 +317,17 @@ public class TradingBotService {
             holding.setSoldPrice(sellPrice);
             holding.setProfitLoss(profitLoss);
             holding.setProfitLossPct(profitRate);
-            
+            // 기존 매수 사유에 매도 사유 추가
+            String existingNote = holding.getNote() != null ? holding.getNote() : "";
+            holding.setNote(existingNote + " → [매도] " + signal.getReason());
+
             transactionRepository.save(holding);
+
+            // 일일 한도 복구 기록
+            riskManagementService.recordSellForDailyLimitRecovery(holding.getUserId(), sellAmount, setting);
             
             // 알림 발송
+            // reason 파라미터 추가
             if (signal.getSignalType() == SignalType.STOP_LOSS) {
                 notificationService.notifyStopLoss(
                     holding.getUserId(), holding.getCoinSymbol(),
@@ -312,7 +337,8 @@ public class TradingBotService {
                 notificationService.notifySellExecuted(
                     holding.getUserId(), holding.getCoinSymbol(),
                     sellPrice, holding.getQuantity(), sellAmount,   
-                    profitLoss, profitRate
+                    profitLoss, profitRate,
+                    signal.getReason()  // ⭐⭐⭐ [추가] 매도 사유 전달 ⭐⭐⭐
                 );
             }
 
@@ -320,26 +346,28 @@ public class TradingBotService {
             User userEntity = userRepository.findById(holding.getUserId()).orElse(null);
             if (userEntity != null && userEntity.getDiscordUserId() != null) {
                 String profitSign = profitLoss.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
-                
-                if (signal.getSignalType() == SignalType.STOP_LOSS) {
-                    discordBotService.sendStopLossNotification(
-                        userEntity.getDiscordUserId(),
-                        holding.getCoinSymbol(),
-                        holding.getQuantity().toPlainString(),
-                        String.format("%,.0f", sellPrice),
-                        String.format("%,.0f", profitLoss),
-                        profitRate.setScale(2, RoundingMode.HALF_UP).toPlainString()
-                    );
-                } else {
-                    discordBotService.sendSellNotification(
-                        userEntity.getDiscordUserId(),
-                        holding.getCoinSymbol(),
-                        holding.getQuantity().toPlainString(),
-                        String.format("%,.0f", sellPrice),
-                        profitSign + String.format("%,.0f", profitLoss),
-                        profitSign + profitRate.setScale(2, RoundingMode.HALF_UP).toPlainString()
-                    );
-                }
+                discordBotService.sendSellNotification(
+                    userEntity.getDiscordUserId(),
+                    holding.getCoinSymbol(),
+                    holding.getQuantity().toPlainString(),
+                    String.format("%,.0f", sellPrice),
+                    profitSign + String.format("%,.0f", profitLoss),
+                    profitSign + profitRate.setScale(2, RoundingMode.HALF_UP).toPlainString(),
+                    signal.getReason()  // ⭐⭐⭐ [추가] 매도 사유 전달 ⭐⭐⭐
+                );
+            }
+
+            // 이메일 발송
+            if (userEntity != null && userEntity.getEmail() != null && !userEntity.getEmail().isEmpty()) {
+                emailService.sendTradeNotification(
+                    userEntity.getEmail(),
+                    "SELL",
+                    holding.getCoinSymbol(),
+                    holding.getQuantity(),
+                    sellPrice,
+                    sellAmount,
+                    signal.getReason()
+                );
             }
 
             // ⭐⭐⭐ [추가] 연속 손절/수익 실현 카운터 업데이트 ⭐⭐⭐

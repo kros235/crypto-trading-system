@@ -107,6 +107,10 @@ public class TradingSetting extends BaseEntity {
     @Column(name = "buy_amount_pct")
     private Integer buyAmountPct = 10;
 
+    // 일일 한도 복구 옵션 
+    @Column(name = "use_daily_limit_recovery")
+    private Boolean useDailyLimitRecovery = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "user_id", 
                 insertable = false, updatable = false)

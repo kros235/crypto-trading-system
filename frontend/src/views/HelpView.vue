@@ -942,6 +942,42 @@ RSI가 28이고, 거래량이 평소의 150%라면<br/>
   },
   { 
     category: 'risk', 
+    term: '일일 한도 복구', 
+    description: '매도 시 해당 금액만큼 일일 매수 한도가 복구됩니다.',
+    simpleDesc: '매도하면 그 금액만큼 오늘 살 수 있는 한도가 다시 생긴다',
+    exampleIcon: 'mdi-refresh',
+    exampleTitle: '🔄 복구 예시',
+    example: `<strong>⚙️ 동작 방식:</strong><br/>
+<strong style="color: #F44336;">OFF (기본):</strong> 매도해도 일일 한도 복구 안됨<br/>
+<strong style="color: #4CAF50;">ON:</strong> 매도 금액만큼 한도 복구 (최대 일일 한도까지)<br/><br/>
+📊 <strong>예시: 일일 한도 40만원</strong><br/><br/>
+<table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+<tr style="background-color: #1565C0;">
+<th style="padding: 8px; border: 1px solid #1976D2; color: white;">단계</th>
+<th style="padding: 8px; border: 1px solid #1976D2; color: white;">OFF 상태</th>
+<th style="padding: 8px; border: 1px solid #1976D2; color: white;">ON 상태</th>
+</tr>
+<tr>
+<td style="padding: 8px; border: 1px solid #E0E0E0;">1. 20만원 매수</td>
+<td style="padding: 8px; border: 1px solid #E0E0E0;">남은 한도: 20만원</td>
+<td style="padding: 8px; border: 1px solid #E0E0E0;">남은 한도: 20만원</td>
+</tr>
+<tr>
+<td style="padding: 8px; border: 1px solid #E0E0E0;">2. 20만원 매도</td>
+<td style="padding: 8px; border: 1px solid #E0E0E0; color: #F44336;">남은 한도: 20만원 ❌</td>
+<td style="padding: 8px; border: 1px solid #E0E0E0; color: #4CAF50;">남은 한도: 40만원 ✅</td>
+</tr>
+<tr>
+<td style="padding: 8px; border: 1px solid #E0E0E0;">3. 20만원 매수</td>
+<td style="padding: 8px; border: 1px solid #E0E0E0; color: #F44336;">남은 한도: 0원</td>
+<td style="padding: 8px; border: 1px solid #E0E0E0; color: #4CAF50;">남은 한도: 20만원</td>
+</tr>
+</table><br/>
+⚠️ <strong>주의:</strong> 일일 한도를 초과하는 금액은 복구되지 않습니다.<br/>
+예: 남은 한도 20만원에서 50만원 매도 → 20만원만 복구`
+  },
+  { 
+    category: 'risk', 
     term: '단일 종목 최대 비중', 
     description: '전체 투자금 대비 한 코인에 투자할 수 있는 최대 비율.',
     simpleDesc: '한 코인에 최대 얼마까지 투자할 것인가?',

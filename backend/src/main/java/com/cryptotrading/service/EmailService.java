@@ -19,7 +19,9 @@ import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList; 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.time.ZoneId;
@@ -152,7 +154,8 @@ public class EmailService {
      */
     @Async
     public void sendTradeNotification(String email, String type, String coinSymbol, 
-                                       BigDecimal quantity, BigDecimal price, BigDecimal totalAmount) {
+                                       BigDecimal quantity, BigDecimal price, BigDecimal totalAmount,
+                                       String reason) {
         if (!emailConfig.isEnabled() || email == null || email.isEmpty()) {
             return;
         }
@@ -168,6 +171,8 @@ public class EmailService {
         variables.put("price", KRW_FORMAT.format(price));
         variables.put("totalAmount", KRW_FORMAT.format(totalAmount));
         variables.put("timestamp", LocalDateTime.now().format(DATETIME_FORMAT));
+        // ⭐⭐⭐ [추가] reason 변수 추가 ⭐⭐⭐
+        variables.put("reason", reason != null && !reason.isEmpty() ? reason : "조건 충족");
         
         EmailNotificationDTO dto = EmailNotificationDTO.builder()
                 .to(email)
@@ -193,19 +198,38 @@ public class EmailService {
         Map<String, Object> variables = new HashMap<>();
         
         variables.put("date", report.getReportDate());
-        variables.put("realizedProfit", KRW_FORMAT.format(report.getRealizedProfit()));
-        variables.put("unrealizedProfit", KRW_FORMAT.format(report.getUnrealizedProfit()));
-        variables.put("totalProfit", KRW_FORMAT.format(report.getTotalProfit()));
+        variables.put("realizedProfit", KRW_FORMAT.format(report.getRealizedProfit().setScale(0, java.math.RoundingMode.HALF_UP)));
+        variables.put("unrealizedProfit", KRW_FORMAT.format(report.getUnrealizedProfit().setScale(0, java.math.RoundingMode.HALF_UP)));
+        variables.put("totalProfit", KRW_FORMAT.format(report.getTotalProfit().setScale(0, java.math.RoundingMode.HALF_UP)));
         
-        variables.put("totalProfitRate", report.getProfitRate());
+        // [수정] 수익률 소수점 2자리로 포맷팅
+        variables.put("totalProfitRate", report.getProfitRate().setScale(2, java.math.RoundingMode.HALF_UP));
+        
         variables.put("profitClass", report.getTotalProfit().compareTo(BigDecimal.ZERO) >= 0 ? "profit" : "loss");
         variables.put("buyCount", report.getBuyCount());
         variables.put("sellCount", report.getSellCount());
-        variables.put("totalInvestment", KRW_FORMAT.format(report.getTotalInvestment()));
+        variables.put("totalInvestment", KRW_FORMAT.format(report.getTotalInvestment().setScale(0, java.math.RoundingMode.HALF_UP)));
         
-        variables.put("totalEvaluation", KRW_FORMAT.format(report.getTotalHoldingValue()));
+        variables.put("totalEvaluation", KRW_FORMAT.format(report.getTotalHoldingValue().setScale(0, java.math.RoundingMode.HALF_UP)));
         
-        variables.put("holdings", report.getCoinSummaries());
+        // [수정] 코인별 손익 포맷팅된 리스트로 변환
+        List<Map<String, Object>> formattedHoldings = new ArrayList<>();
+        if (report.getCoinSummaries() != null) {
+            for (DailyReportDTO.CoinSummary coin : report.getCoinSummaries()) {
+                Map<String, Object> formatted = new HashMap<>();
+                formatted.put("coinSymbol", coin.getCoinSymbol());
+                formatted.put("holdingCount", coin.getHoldingCount());
+                formatted.put("totalQuantity", coin.getTotalQuantity().toPlainString());
+                formatted.put("averagePrice", KRW_FORMAT.format(coin.getAveragePrice()));
+                formatted.put("currentPrice", KRW_FORMAT.format(coin.getCurrentPrice()));
+                formatted.put("profitLoss", KRW_FORMAT.format(coin.getProfitLoss().setScale(0, java.math.RoundingMode.HALF_UP)));
+                formatted.put("profitRate", coin.getProfitRate().setScale(2, java.math.RoundingMode.HALF_UP));
+                formatted.put("isProfit", coin.getProfitLoss().compareTo(BigDecimal.ZERO) >= 0);
+                formattedHoldings.add(formatted);
+            }
+        }
+        variables.put("holdings", formattedHoldings);
+        
         variables.put("timestamp", LocalDateTime.now().format(DATETIME_FORMAT));
     
         EmailNotificationDTO dto = EmailNotificationDTO.builder()

@@ -144,6 +144,7 @@ public class BacktestService {
         if (state.getCurrentTradeDate() == null || !state.getCurrentTradeDate().equals(date)) {
             state.setCurrentTradeDate(date);
             state.setDailyBuyAmount(BigDecimal.ZERO);
+            state.setDailySellRecovery(BigDecimal.ZERO);  // 복구 금액도 초기화
             state.setDailyStopTriggered(false);
         
             // 당일 시작 잔고 계산
@@ -456,6 +457,34 @@ public class BacktestService {
                 .signal(signal)
                 .build());
 
+        // 일일 한도 복구 (옵션 ON인 경우) 
+        if (Boolean.TRUE.equals(request.getUseDailyLimitRecovery()) 
+                && request.getDailyTradeLimitPct() != null 
+                && request.getDailyTradeLimitPct() < 100) {
+            // 일일 한도 계산
+            BigDecimal effectiveDailyLimit = request.getInitialBalance()
+                    .multiply(new BigDecimal(request.getDailyTradeLimitPct()))
+                    .divide(new BigDecimal("100"), SCALE, RoundingMode.HALF_UP);
+            
+            // 현재 남은 한도 = 일일한도 - 오늘매수액 + 이미복구액
+            BigDecimal currentRemaining = effectiveDailyLimit
+                    .subtract(state.getDailyBuyAmount())
+                    .add(state.getDailySellRecovery());
+            
+            // 복구 가능한 최대 금액 = 일일한도 - 현재남은한도
+            BigDecimal maxRecoverable = effectiveDailyLimit.subtract(currentRemaining);
+            if (maxRecoverable.compareTo(BigDecimal.ZERO) < 0) {
+                maxRecoverable = BigDecimal.ZERO;
+            }
+            
+            // 실제 복구 금액 = min(매도금액, 복구가능최대금액)
+            BigDecimal actualRecovery = actualAmount.min(maxRecoverable);
+            state.setDailySellRecovery(state.getDailySellRecovery().add(actualRecovery));
+            
+            log.debug("백테스트 일일 한도 복구: {} 매도금액={}, 복구={}", 
+                    position.getCoinSymbol(), actualAmount, actualRecovery);
+        }
+
         // 연속 손절 카운터 업데이트
         if (signal.contains("손절") || signal.contains("stop") || profitRate.compareTo(BigDecimal.ZERO) < 0) {
             // 손절 발생
@@ -549,18 +578,28 @@ public class BacktestService {
                 .divide(new BigDecimal("100"), SCALE, RoundingMode.DOWN)
                 .min(state.getCashBalance());
 
-        // 3. ★★★ 신규: 일일 거래 한도 체크 ★★★
+        // 3. 일일 거래 한도 체크
         if (request.getDailyTradeLimitPct() != null && request.getDailyTradeLimitPct() < 100) {
             BigDecimal dailyLimit = request.getInitialBalance()
                     .multiply(new BigDecimal(request.getDailyTradeLimitPct()))
                     .divide(new BigDecimal("100"), 0, RoundingMode.DOWN);
         
-            if (state.getDailyBuyAmount().add(buyAmount).compareTo(dailyLimit) > 0) {
+            // ⭐⭐⭐ Day 41 수정: 복구 금액 반영한 남은 한도 계산 ⭐⭐⭐
+            BigDecimal remainingLimit = dailyLimit
+                    .subtract(state.getDailyBuyAmount())
+                    .add(state.getDailySellRecovery());
+            
+            // 최대치는 일일 한도까지만 (복구해도 원래 한도 초과 불가)
+            if (remainingLimit.compareTo(dailyLimit) > 0) {
+                remainingLimit = dailyLimit;
+            }
+            
+            if (buyAmount.compareTo(remainingLimit) > 0) {
                 return false;
             }
         }
 
-        // 4. ★★★ 신규: 단일 종목 비중 제한 체크 ★★★
+        // 4. 단일 종목 비중 제한 체크 
         if (request.getMaxPositionPct() != null && request.getMaxPositionPct() < 100) {
             BigDecimal maxPositionAmount = request.getInitialBalance()
                     .multiply(new BigDecimal(request.getMaxPositionPct()))
@@ -905,6 +944,7 @@ public class BacktestService {
 
         // 리스크 관리용 필드
         private BigDecimal dailyBuyAmount = BigDecimal.ZERO;  // 당일 매수 금액
+        private BigDecimal dailySellRecovery = BigDecimal.ZERO;  // 일일 매도 복구 금액
         private LocalDate currentTradeDate = null;            	  // 현재 거래일
         private BigDecimal dailyStartBalance = BigDecimal.ZERO; // 당일 시작 잔고
         private boolean dailyStopTriggered = false;           	  // 긴급 정지 발동 여부

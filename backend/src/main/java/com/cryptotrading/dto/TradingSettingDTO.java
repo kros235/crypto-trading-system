@@ -110,4 +110,7 @@ public class TradingSettingDTO {
     @Min(value = 1, message = "1회 매수 비율은 최소 1% 이상이어야 합니다")
     @Max(value = 50, message = "1회 매수 비율은 최대 50% 이하여야 합니다")
     private Integer buyAmountPct;
+
+    // 일일 한도 복구 옵션
+    private Boolean useDailyLimitRecovery;
 }

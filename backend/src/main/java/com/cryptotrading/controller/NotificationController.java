@@ -170,7 +170,8 @@ public class NotificationController {
                 "KRW-BTC",
                 new BigDecimal("0.001"),
                 new BigDecimal("50000000"),
-                new BigDecimal("50000")
+                new BigDecimal("50000"),
+                "테스트: MA 이격 -6.5%, RSI 28.5"
             );
         
             response.put("success", true);
@@ -208,7 +209,8 @@ public class NotificationController {
                 "KRW-BTC",
                 new BigDecimal("0.001"),
                 new BigDecimal("52000000"),
-                new BigDecimal("52000")
+                new BigDecimal("52000"),
+                "테스트: 목표 수익률 도달 (4.00%)"
             );
         
             response.put("success", true);
@@ -371,7 +373,8 @@ public class NotificationController {
             "KRW-BTC",
             "0.00012345",
             "150,000,000",
-            "50,000"
+            "50,000",
+            "테스트: MA 이격 -6.5%, RSI 28.5"  // ⭐⭐⭐ [추가] 테스트용 매수 사유 ⭐⭐⭐
         );
         
         response.put("success", true);
@@ -405,7 +408,8 @@ public class NotificationController {
             "0.00012345",
             "155,000,000",
             "+2,500",
-            "+5.00"
+            "+5.00",
+            "테스트: 목표 수익률 도달 (5.00%)"  // ⭐⭐⭐ [추가] 테스트용 매도 사유 ⭐⭐⭐
         );
         
         response.put("success", true);

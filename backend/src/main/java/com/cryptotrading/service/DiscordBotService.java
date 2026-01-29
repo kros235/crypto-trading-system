@@ -189,7 +189,8 @@ public class DiscordBotService {
      */
     @Async
     public void sendBuyNotification(String discordUserId, String coinSymbol, 
-                                     String quantity, String price, String totalAmount) {
+                                     String quantity, String price, String totalAmount, 
+                                     String reason) {
         if (!isEnabled() || discordUserId == null || discordUserId.isBlank()) {
             return;
         }
@@ -198,6 +199,9 @@ public class DiscordBotService {
             User user = jda.retrieveUserById(discordUserId).complete();
             if (user == null) return;
 
+            // ⭐⭐⭐ [추가] 사유 텍스트 처리 ⭐⭐⭐
+            String reasonText = (reason != null && !reason.isEmpty()) ? reason : "조건 충족";
+
             EmbedBuilder embed = new EmbedBuilder()
                     .setTitle("📈 매수 체결")
                     .setColor(Color.BLUE)
@@ -205,6 +209,7 @@ public class DiscordBotService {
                     .addField("수량", quantity, true)
                     .addField("매수가", price + "원", true)
                     .addField("총 금액", totalAmount + "원", false)
+                    .addField("📌 매수 사유", reasonText, false)  // ⭐⭐⭐ [추가] 매수 사유 필드 ⭐⭐⭐
                     .setFooter("코인 자동매매 시스템", null)
                     .setTimestamp(LocalDateTime.now().atZone(java.time.ZoneId.systemDefault()).toInstant());
 
@@ -226,7 +231,7 @@ public class DiscordBotService {
     @Async
     public void sendSellNotification(String discordUserId, String coinSymbol,
                                       String quantity, String sellPrice, 
-                                      String profitLoss, String profitRate) {
+                                      String profitLoss, String profitRate, String reason) {
         if (!isEnabled() || discordUserId == null || discordUserId.isBlank()) {
             return;
         }
@@ -239,6 +244,9 @@ public class DiscordBotService {
             Color color = isProfit ? Color.GREEN : Color.RED;
             String emoji = isProfit ? "🟢" : "🔴";
 
+            // ⭐⭐⭐ [추가] 사유 텍스트 처리 ⭐⭐⭐
+            String reasonText = (reason != null && !reason.isEmpty()) ? reason : "조건 충족";
+
             EmbedBuilder embed = new EmbedBuilder()
                     .setTitle("📉 매도 체결")
                     .setColor(color)
@@ -246,6 +254,7 @@ public class DiscordBotService {
                     .addField("수량", quantity, true)
                     .addField("매도가", sellPrice + "원", true)
                     .addField(emoji + " 손익", profitLoss + "원 (" + profitRate + "%)", false)
+                    .addField("📌 매도 사유", reasonText, false)  // ⭐⭐⭐ [추가] 매도 사유 필드 ⭐⭐⭐
                     .setFooter("코인 자동매매 시스템", null)
                     .setTimestamp(LocalDateTime.now().atZone(java.time.ZoneId.systemDefault()).toInstant());
 

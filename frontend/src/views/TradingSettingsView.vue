@@ -455,8 +455,30 @@
                     </v-chip>
                   </template>
                 </v-slider>
-                <p class="text-caption text-grey">
+               <p class="text-caption text-grey">
                   일일 한도 금액 기준으로 하루 최대 매수 가능 금액을 제한합니다 ({{ formatCurrency(settings.dailyLimitAmount * settings.dailyTradeLimitPct / 100) }})
+                </p>
+
+                <!-- ⭐⭐⭐ Day 41 추가: 일일 한도 복구 옵션 ⭐⭐⭐ -->
+                <div class="d-flex align-center mt-4 mb-2">
+                  <v-icon size="small" class="mr-1">mdi-refresh</v-icon>
+                  <span class="text-subtitle-2 text-grey">일일 한도 복구</span>
+                  <HelpButton 
+                    use-dialog 
+                    :dialog-title="helpContents.dailyLimitRecovery.title"
+                    :dialog-content="helpContents.dailyLimitRecovery.content"
+                    color="grey-darken-1"
+                  />
+                </div>
+                <v-switch
+                  v-model="settings.useDailyLimitRecovery"
+                  label="매도 시 일일 한도 복구"
+                  color="primary"
+                  hide-details
+                  density="compact"
+                />
+                <p class="text-caption text-grey mt-1">
+                  ON: 매도 금액만큼 일일 매수 한도가 복구됩니다 (최대 일일 한도까지)
                 </p>
 
                 <v-divider class="my-4" />
@@ -1669,6 +1691,73 @@ const helpContents = {
         </div>
       </div>
     `
+  },
+  dailyLimitRecovery: {
+    title: '🔄 일일 한도 복구 옵션',
+    content: `
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"매도하면 그 금액만큼 오늘 살 수 있는 한도가 다시 생긴다"</p>
+          </div>
+        </div>
+        
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">⚙️ 동작 방식</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            <strong style="color: #F44336;">OFF (기본):</strong> 매도해도 일일 한도 복구 안됨<br/>
+            <strong style="color: #4CAF50;">ON:</strong> 매도 금액만큼 한도 복구 (최대 일일 한도까지)
+          </div>
+        </div>
+        
+        <div class="mb-4" style="background-color: #E3F2FD; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #1565C0;">📊 예시: 일일 한도 40만원</span>
+          </div>
+          <div style="padding-left: 12px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead>
+                <tr style="background-color: #BBDEFB;">
+                  <th style="padding: 8px; border: 1px solid #90CAF9; text-align: center;">단계</th>
+                  <th style="padding: 8px; border: 1px solid #90CAF9; text-align: center;">OFF 상태</th>
+                  <th style="padding: 8px; border: 1px solid #90CAF9; text-align: center;">ON 상태</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #90CAF9;">1. 20만원 매수</td>
+                  <td style="padding: 8px; border: 1px solid #90CAF9;">남은 한도: 20만원</td>
+                  <td style="padding: 8px; border: 1px solid #90CAF9;">남은 한도: 20만원</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #90CAF9;">2. 20만원 매도</td>
+                  <td style="padding: 8px; border: 1px solid #90CAF9; color: #F44336;">남은 한도: 20만원 ❌</td>
+                  <td style="padding: 8px; border: 1px solid #90CAF9; color: #4CAF50;">남은 한도: 40만원 ✅</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #90CAF9;">3. 20만원 매수</td>
+                  <td style="padding: 8px; border: 1px solid #90CAF9; color: #F44336;">남은 한도: 0원</td>
+                  <td style="padding: 8px; border: 1px solid #90CAF9; color: #4CAF50;">남은 한도: 20만원</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="background-color: #FFF3E0; border-left: 4px solid #FF9800; padding: 12px; border-radius: 4px;">
+          <span style="font-size: 16px;">⚠️</span>
+          <span class="text-body-2" style="color: #E65100;">
+            <strong>주의:</strong> 일일 한도를 초과하는 금액은 복구되지 않습니다.<br/>
+            예: 남은 한도 20만원에서 50만원 매도 → 20만원만 복구
+          </span>
+        </div>
+      </div>
+    `
   }
 }
 
@@ -1728,7 +1817,9 @@ const defaultSettings = {
   dailyStopLossPct: -5,
   useMarketTrendFilter: false,
   cumulativeLossLimitPct: -10,
-  consecutiveStopLossLimit: 3
+  consecutiveStopLossLimit: 3,
+  buyAmountPct: 10,
+  useDailyLimitRecovery: false
 }
 
 // 유효성 검증 규칙
@@ -1831,7 +1922,8 @@ const loadSettings = async () => {
         useMarketTrendFilter: data.useMarketTrendFilter ?? false,
         cumulativeLossLimitPct: data.cumulativeLossLimitPct || -10,
         consecutiveStopLossLimit: data.consecutiveStopLossLimit || 3,
-        buyAmountPct: data.buyAmountPct || 10
+        buyAmountPct: data.buyAmountPct || 10,
+        useDailyLimitRecovery: data.useDailyLimitRecovery ?? false
       }
 
       hasExistingSettings.value = true
@@ -1931,7 +2023,8 @@ const saveSettings = async () => {
       dailyStopLossPct: Number(settings.value.dailyStopLossPct),
       useMarketTrendFilter: Boolean(settings.value.useMarketTrendFilter),
       cumulativeLossLimitPct: Number(settings.value.cumulativeLossLimitPct),
-      consecutiveStopLossLimit: Number(settings.value.consecutiveStopLossLimit)
+      consecutiveStopLossLimit: Number(settings.value.consecutiveStopLossLimit),
+      useDailyLimitRecovery: Boolean(settings.value.useDailyLimitRecovery)
     }
 
     console.log('Sending payload:', payload) // 디버깅용

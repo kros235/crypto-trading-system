@@ -125,4 +125,8 @@ public class BacktestRequestDTO {
     @Max(value = 50, message = "1회 매수 비율은 50% 이하")
     @Builder.Default
     private Integer buyAmountPct = 10;
+
+    // 일일 한도 복구 옵션
+    @Builder.Default
+    private Boolean useDailyLimitRecovery = false;
 }

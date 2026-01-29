@@ -33,6 +33,7 @@ public class NotificationDTO {
     private BigDecimal amount;
     private BigDecimal profitLoss;
     private BigDecimal profitRate;
+    private String reason;  // ⭐⭐⭐ [추가] 거래 사유 ⭐⭐⭐
     private LocalDateTime timestamp;
     private String additionalInfo;
 }

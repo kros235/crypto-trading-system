@@ -67,10 +67,13 @@
                 </thead>
                 <tbody>
                     <tr th:each="holding : ${holdings}">
-                        <td style="padding: 10px; border-bottom: 1px solid #eee;" th:text="${holding.coinSymbol}">KRW-BTC</td>
-                        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;" th:text="${holding.totalQuantity}">0.01</td>
-                        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;" 
-                            th:style="${holding.profitLoss >= 0 ? 'color: #4caf50;' : 'color: #f44336;'}"
+                        <td style="padding: 10px; border-bottom: 1px solid #eee;" 
+                            th:text="${holding.coinSymbol}">KRW-BTC</td>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;"
+                            th:text="${holding.totalQuantity}">0.001</td>
+                        <!-- 이미 포맷팅된 문자열 사용 -->
+                                        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;"
+                            th:style="${holding.isProfit ? 'color: #4caf50;' : 'color: #f44336;'}"
                             th:text="${holding.profitLoss + '원'}">+50,000원</td>
                     </tr>
                 </tbody>

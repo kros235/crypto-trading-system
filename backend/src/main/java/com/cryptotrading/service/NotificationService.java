@@ -33,7 +33,7 @@ public class NotificationService {
      * 매수 체결 알림
      */
     public void notifyBuyExecuted(String userId, String coinSymbol, BigDecimal price, 
-                                   BigDecimal quantity, BigDecimal amount) {
+                                   BigDecimal quantity, BigDecimal amount, String reason) {
         NotificationDTO notification = NotificationDTO.builder()
                 .type(NotificationType.BUY_EXECUTED)
                 .userId(userId)
@@ -41,13 +41,14 @@ public class NotificationService {
                 .price(price)
                 .quantity(quantity)
                 .amount(amount)
+                .reason(reason)  // ⭐⭐⭐ [추가] reason 설정 ⭐⭐⭐
                 .timestamp(LocalDateTime.now())
                 .build();
         
         String message = formatBuyMessage(notification);
         sendDiscordNotification(message, 0x00FF00);  // 녹색
         
-        log.info("매수 알림 발송: {} - {} {}원", userId, coinSymbol, amount);
+        log.info("매수 알림 발송: {} - {} {}원 (사유: {})", userId, coinSymbol, amount, reason);
     }
 
     /**
@@ -55,7 +56,7 @@ public class NotificationService {
      */
     public void notifySellExecuted(String userId, String coinSymbol, BigDecimal price,
                                     BigDecimal quantity, BigDecimal amount, 
-                                    BigDecimal profitLoss, BigDecimal profitRate) {
+                                    BigDecimal profitLoss, BigDecimal profitRate, String reason) {
         NotificationDTO notification = NotificationDTO.builder()
                 .type(NotificationType.SELL_EXECUTED)
                 .userId(userId)
@@ -65,6 +66,7 @@ public class NotificationService {
                 .amount(amount)
                 .profitLoss(profitLoss)
                 .profitRate(profitRate)
+                .reason(reason)  // ⭐⭐⭐ [추가] reason 설정 ⭐⭐⭐
                 .timestamp(LocalDateTime.now())
                 .build();
         
@@ -72,7 +74,7 @@ public class NotificationService {
         int color = profitLoss.compareTo(BigDecimal.ZERO) >= 0 ? 0x00FF00 : 0xFF0000;
         sendDiscordNotification(message, color);
         
-        log.info("매도 알림 발송: {} - {} {}원 (손익: {}원)", userId, coinSymbol, amount, profitLoss);
+        log.info("매도 알림 발송: {} - {} {}원 (손익: {}원, 사유: {})", userId, coinSymbol, amount, profitLoss, reason);
     }
 
     /**
@@ -138,6 +140,11 @@ public class NotificationService {
     // ============ Private Methods ============
 
     private String formatBuyMessage(NotificationDTO notification) {
+        // ⭐⭐⭐ [추가] 매수 사유 포맷팅 ⭐⭐⭐
+        String reasonText = notification.getReason() != null && !notification.getReason().isEmpty()
+                ? notification.getReason()
+                : "조건 충족";
+        
         return String.format("""
             💰 **매수 체결 알림**
             
@@ -145,6 +152,7 @@ public class NotificationService {
             💵 **매수가**: %s 원
             📦 **수량**: %s
             💳 **총액**: %s 원
+            📌 **매수 사유**: %s
             
             👤 사용자: %s
             ⏰ 체결 시간: %s
@@ -153,6 +161,7 @@ public class NotificationService {
             formatNumber(notification.getPrice()),
             formatQuantity(notification.getQuantity()),
             formatNumber(notification.getAmount()),
+            reasonText,  // ⭐⭐⭐ [추가] 매수 사유 ⭐⭐⭐
             notification.getUserId(),
             notification.getTimestamp().format(TIME_FORMATTER)
         );
@@ -162,6 +171,11 @@ public class NotificationService {
         String profitEmoji = notification.getProfitLoss().compareTo(BigDecimal.ZERO) >= 0 ? "📈" : "📉";
         String profitSign = notification.getProfitLoss().compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
         
+        // ⭐⭐⭐ [추가] 매도 사유 포맷팅 ⭐⭐⭐
+        String reasonText = notification.getReason() != null && !notification.getReason().isEmpty()
+                ? notification.getReason()
+                : "조건 충족";
+        
         return String.format("""
             💸 **매도 체결 알림**
             
@@ -169,8 +183,8 @@ public class NotificationService {
             💵 **매도가**: %s 원
             📦 **수량**: %s
             💳 **총액**: %s 원
-            
             %s **손익**: %s%s 원 (%s%s%%)
+            📌 **매도 사유**: %s
             
             👤 사용자: %s
             ⏰ 체결 시간: %s
@@ -182,6 +196,7 @@ public class NotificationService {
             profitEmoji,
             profitSign, formatNumber(notification.getProfitLoss()),
             profitSign, notification.getProfitRate().setScale(2, RoundingMode.HALF_UP),
+            reasonText,  // ⭐⭐⭐ [추가] 매도 사유 ⭐⭐⭐
             notification.getUserId(),
             notification.getTimestamp().format(TIME_FORMATTER)
         );

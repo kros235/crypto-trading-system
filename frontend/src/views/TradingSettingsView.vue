@@ -1967,7 +1967,8 @@ const createDefaultSettings = async () => {
       useMarketTrendFilter: Boolean(settings.value.useMarketTrendFilter),
       cumulativeLossLimitPct: Number(settings.value.cumulativeLossLimitPct),
       consecutiveStopLossLimit: Number(settings.value.consecutiveStopLossLimit),
-      buyAmountPct: Number(settings.value.buyAmountPct)
+      buyAmountPct: Number(settings.value.buyAmountPct),
+      useDailyLimitRecovery: Boolean(settings.value.useDailyLimitRecovery)
     }
     
     await tradingApi.createSettings(payload)
@@ -2024,6 +2025,7 @@ const saveSettings = async () => {
       useMarketTrendFilter: Boolean(settings.value.useMarketTrendFilter),
       cumulativeLossLimitPct: Number(settings.value.cumulativeLossLimitPct),
       consecutiveStopLossLimit: Number(settings.value.consecutiveStopLossLimit),
+      buyAmountPct: Number(settings.value.buyAmountPct),  
       useDailyLimitRecovery: Boolean(settings.value.useDailyLimitRecovery)
     }
 
@@ -2122,7 +2124,9 @@ const deleteSettings = async () => {
       dailyStopLossPct: Number(settings.value.dailyStopLossPct),
       useMarketTrendFilter: Boolean(settings.value.useMarketTrendFilter),
       cumulativeLossLimitPct: Number(settings.value.cumulativeLossLimitPct),
-      consecutiveStopLossLimit: Number(settings.value.consecutiveStopLossLimit)
+      consecutiveStopLossLimit: Number(settings.value.consecutiveStopLossLimit),
+      buyAmountPct: Number(settings.value.buyAmountPct), 
+      useDailyLimitRecovery: Boolean(settings.value.useDailyLimitRecovery)  
     }
     
     await tradingApi.createSettings(payload)

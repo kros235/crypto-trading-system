@@ -1918,7 +1918,8 @@ const settings = ref({
   cumulativeLossLimitPct: -10,
   consecutiveStopLossLimit: 3,
   buyAmountPct: 10,
-  usePerTradeLimit: true
+  usePerTradeLimit: true,
+  useDailyLimitRecovery: false
 })
 
 // 기본값 (초기화용)

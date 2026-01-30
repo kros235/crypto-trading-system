@@ -212,6 +212,30 @@
                       1회 매수 금액: {{ formatCurrency(settings.dailyLimitAmount * settings.buyAmountPct / 100) }}
                     </p>
                   </v-col>
+
+                  <!-- ⭐⭐⭐ 신규 추가: 1회 매수 한도 적용 옵션 ⭐⭐⭐ -->
+                  <v-col cols="12" md="4">
+                    <div class="d-flex align-center mb-1">
+                      <span class="text-body-2">1회 매수 한도 적용</span>
+                      <HelpButton 
+                        use-dialog 
+                        :dialog-title="helpContents.usePerTradeLimit.title"
+                        :dialog-content="helpContents.usePerTradeLimit.content"
+                        color="grey-darken-1"
+                      />
+                    </div>
+                    <v-switch
+                      v-model="settings.usePerTradeLimit"
+                      :label="settings.usePerTradeLimit ? '적용 (안정적)' : '미적용 (라운드로빈 우선)'"
+                      color="primary"
+                      hide-details
+                    />
+                    <p class="text-caption text-grey mt-1">
+                      {{ settings.usePerTradeLimit 
+                          ? `1회 최대 ${formatCurrency(settings.dailyLimitAmount * settings.buyAmountPct / 100)} 매수` 
+                          : '균등 분배 금액으로 매수 (한도 내)' }}
+                    </p>
+                  </v-col>
                 </v-row>
               </div>
 
@@ -1758,6 +1782,108 @@ const helpContents = {
         </div>
       </div>
     `
+  },
+  usePerTradeLimit: {
+    title: '💰 1회 매수 한도 적용 옵션',
+    content: `
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-2">
+              <strong>라운드로빈 매수</strong>는 여러 코인에 균등하게 분배해서 매수하는 방식입니다.
+            </p>
+            <p class="text-body-2 text-grey-darken-3 mb-0">
+              이 옵션은 <strong>균등 분배 금액</strong>과 <strong>1회 매수 한도</strong> 중 어느 것을 우선할지 결정합니다.
+            </p>
+          </div>
+        </div>
+        
+        <div class="mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">📋 비교</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead>
+                <tr style="background-color: #E3F2FD;">
+                  <th style="padding: 8px; border: 1px solid #90CAF9;">설정</th>
+                  <th style="padding: 8px; border: 1px solid #90CAF9;">적용 (ON)</th>
+                  <th style="padding: 8px; border: 1px solid #90CAF9;">미적용 (OFF)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #90CAF9;"><strong>특징</strong></td>
+                  <td style="padding: 8px; border: 1px solid #90CAF9;">안정적, 보수적</td>
+                  <td style="padding: 8px; border: 1px solid #90CAF9;">균등 분배 우선</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #90CAF9;"><strong>1회 매수 금액</strong></td>
+                  <td style="padding: 8px; border: 1px solid #90CAF9;">최대 한도 제한</td>
+                  <td style="padding: 8px; border: 1px solid #90CAF9;">균등 분배 금액</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #90CAF9;"><strong>일일 한도 활용</strong></td>
+                  <td style="padding: 8px; border: 1px solid #90CAF9;">낮을 수 있음</td>
+                  <td style="padding: 8px; border: 1px solid #90CAF9; color: #4CAF50;"><strong>최대한 활용</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">📊 예시</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 mb-2">일일 한도 50만원, 1회 비율 10% (1회 한도 5만원), 매수 신호 2개</p>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead>
+                <tr style="background-color: #FFF3E0;">
+                  <th style="padding: 8px; border: 1px solid #FFB74D;">코인</th>
+                  <th style="padding: 8px; border: 1px solid #FFB74D;">적용 (ON)</th>
+                  <th style="padding: 8px; border: 1px solid #FFB74D;">미적용 (OFF)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #FFB74D;">균등 분배</td>
+                  <td style="padding: 8px; border: 1px solid #FFB74D;">25만원씩</td>
+                  <td style="padding: 8px; border: 1px solid #FFB74D;">25만원씩</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #FFB74D;">ETH 매수</td>
+                  <td style="padding: 8px; border: 1px solid #FFB74D; color: #F44336;"><strong>5만원</strong> (한도 적용)</td>
+                  <td style="padding: 8px; border: 1px solid #FFB74D; color: #4CAF50;"><strong>25만원</strong></td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #FFB74D;">XRP 매수</td>
+                  <td style="padding: 8px; border: 1px solid #FFB74D; color: #F44336;"><strong>5만원</strong></td>
+                  <td style="padding: 8px; border: 1px solid #FFB74D; color: #4CAF50;"><strong>25만원</strong></td>
+                </tr>
+                <tr style="background-color: #ECEFF1;">
+                  <td style="padding: 8px; border: 1px solid #FFB74D;"><strong>총 사용</strong></td>
+                  <td style="padding: 8px; border: 1px solid #FFB74D; color: #F44336;"><strong>10만원 (20%)</strong></td>
+                  <td style="padding: 8px; border: 1px solid #FFB74D; color: #4CAF50;"><strong>50만원 (100%)</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="background-color: #E8F5E9; border-left: 4px solid #4CAF50; padding: 12px; border-radius: 4px;">
+          <span style="font-size: 16px;">💡</span>
+          <span class="text-body-2" style="color: #2E7D32;">
+            <strong>권장:</strong> 일일 한도를 최대한 활용하고 싶다면 <strong>OFF</strong>,<br/>
+            한 번에 큰 금액 투자를 피하고 싶다면 <strong>ON</strong>을 선택하세요.
+          </span>
+        </div>
+      </div>
+    `
   }
 }
 
@@ -1791,7 +1917,8 @@ const settings = ref({
   useMarketTrendFilter: false,
   cumulativeLossLimitPct: -10,
   consecutiveStopLossLimit: 3,
-  buyAmountPct: 10
+  buyAmountPct: 10,
+  usePerTradeLimit: true
 })
 
 // 기본값 (초기화용)
@@ -1819,7 +1946,8 @@ const defaultSettings = {
   cumulativeLossLimitPct: -10,
   consecutiveStopLossLimit: 3,
   buyAmountPct: 10,
-  useDailyLimitRecovery: false
+  useDailyLimitRecovery: false,
+  usePerTradeLimit: true
 }
 
 // 유효성 검증 규칙
@@ -1923,7 +2051,8 @@ const loadSettings = async () => {
         cumulativeLossLimitPct: data.cumulativeLossLimitPct || -10,
         consecutiveStopLossLimit: data.consecutiveStopLossLimit || 3,
         buyAmountPct: data.buyAmountPct || 10,
-        useDailyLimitRecovery: data.useDailyLimitRecovery ?? false
+        useDailyLimitRecovery: data.useDailyLimitRecovery ?? false,
+        usePerTradeLimit: data.usePerTradeLimit ?? true
       }
 
       hasExistingSettings.value = true
@@ -1968,7 +2097,8 @@ const createDefaultSettings = async () => {
       cumulativeLossLimitPct: Number(settings.value.cumulativeLossLimitPct),
       consecutiveStopLossLimit: Number(settings.value.consecutiveStopLossLimit),
       buyAmountPct: Number(settings.value.buyAmountPct),
-      useDailyLimitRecovery: Boolean(settings.value.useDailyLimitRecovery)
+      useDailyLimitRecovery: Boolean(settings.value.useDailyLimitRecovery),
+      usePerTradeLimit: Boolean(settings.value.usePerTradeLimit)
     }
     
     await tradingApi.createSettings(payload)
@@ -2026,7 +2156,8 @@ const saveSettings = async () => {
       cumulativeLossLimitPct: Number(settings.value.cumulativeLossLimitPct),
       consecutiveStopLossLimit: Number(settings.value.consecutiveStopLossLimit),
       buyAmountPct: Number(settings.value.buyAmountPct),  
-      useDailyLimitRecovery: Boolean(settings.value.useDailyLimitRecovery)
+      useDailyLimitRecovery: Boolean(settings.value.useDailyLimitRecovery),
+      usePerTradeLimit: Boolean(settings.value.usePerTradeLimit)
     }
 
     console.log('Sending payload:', payload) // 디버깅용
@@ -2126,7 +2257,8 @@ const deleteSettings = async () => {
       cumulativeLossLimitPct: Number(settings.value.cumulativeLossLimitPct),
       consecutiveStopLossLimit: Number(settings.value.consecutiveStopLossLimit),
       buyAmountPct: Number(settings.value.buyAmountPct), 
-      useDailyLimitRecovery: Boolean(settings.value.useDailyLimitRecovery)  
+      useDailyLimitRecovery: Boolean(settings.value.useDailyLimitRecovery),
+      usePerTradeLimit: Boolean(settings.value.usePerTradeLimit)
     }
     
     await tradingApi.createSettings(payload)

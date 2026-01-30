@@ -129,4 +129,7 @@ public class BacktestRequestDTO {
     // 일일 한도 복구 옵션
     @Builder.Default
     private Boolean useDailyLimitRecovery = false;
+
+    // ⭐⭐⭐ 신규 추가: 1회 매수 한도 적용 옵션 ⭐⭐⭐
+    private Boolean usePerTradeLimit;
 }

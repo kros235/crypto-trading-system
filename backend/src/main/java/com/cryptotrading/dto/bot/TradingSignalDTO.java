@@ -41,4 +41,7 @@ public class TradingSignalDTO {
     
     // 추천 거래량
     private BigDecimal suggestedAmount;  // 추천 매수/매도 금액
+
+    // 라운드로빈 우선순위 결정용
+    private BigDecimal dropRate;         // 이동평균선 대비 이격도 (%)
 }

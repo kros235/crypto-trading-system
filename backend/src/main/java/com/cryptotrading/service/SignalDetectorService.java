@@ -137,6 +137,7 @@ public class SignalDetectorService {
                     .reason(String.join(", ", reasons))
                     .conditionsMet(conditionsMet)
                     .totalConditions(totalConditions)
+                    .dropRate(dropRate)
                     .build();
         }
         

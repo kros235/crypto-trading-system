@@ -976,6 +976,62 @@ RSI가 28이고, 거래량이 평소의 150%라면<br/>
 ⚠️ <strong>주의:</strong> 일일 한도를 초과하는 금액은 복구되지 않습니다.<br/>
 예: 남은 한도 20만원에서 50만원 매도 → 20만원만 복구`
   },
+    { 
+    category: 'risk', 
+    term: '1회 매수 한도 적용', 
+    description: '라운드로빈 매수 시 1회 매수 한도를 적용할지 여부를 결정합니다.',
+    simpleDesc: '균등 분배 금액과 1회 매수 한도 중 어느 것을 우선할지 결정',
+    exampleIcon: 'mdi-scale-balance',
+    exampleTitle: '⚖️ 비교 예시',
+    example: `<strong>라운드로빈 매수란?</strong><br/>
+여러 코인에 매수 신호가 발생했을 때, 남은 일일 한도를 균등하게 분배하여 매수하는 방식입니다.<br/><br/>
+<strong>⚙️ 옵션 설명:</strong><br/>
+<strong style="color: #4CAF50;">ON (적용):</strong> 균등 분배 금액이 1회 한도보다 크면 1회 한도로 제한<br/>
+<strong style="color: #2196F3;">OFF (미적용):</strong> 균등 분배 금액 그대로 매수 (한도 내에서)<br/><br/>
+📊 <strong>예시: 일일 한도 100만원, 1회 비율 10%, ETH/XRP 매수 신호</strong><br/><br/>
+<table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+<tr style="background-color: #1565C0;">
+<th style="padding: 8px; border: 1px solid #1976D2; color: white;">항목</th>
+<th style="padding: 8px; border: 1px solid #1976D2; color: white;">ON (적용)</th>
+<th style="padding: 8px; border: 1px solid #1976D2; color: white;">OFF (미적용)</th>
+</tr>
+<tr>
+<td style="padding: 8px; border: 1px solid #E0E0E0;">균등 분배</td>
+<td style="padding: 8px; border: 1px solid #E0E0E0;">50만원씩</td>
+<td style="padding: 8px; border: 1px solid #E0E0E0;">50만원씩</td>
+</tr>
+<tr>
+<td style="padding: 8px; border: 1px solid #E0E0E0;">1회 한도</td>
+<td style="padding: 8px; border: 1px solid #E0E0E0;">10만원</td>
+<td style="padding: 8px; border: 1px solid #E0E0E0;">-</td>
+</tr>
+<tr>
+<td style="padding: 8px; border: 1px solid #E0E0E0;">ETH 매수</td>
+<td style="padding: 8px; border: 1px solid #E0E0E0; color: #F44336;"><strong>10만원</strong></td>
+<td style="padding: 8px; border: 1px solid #E0E0E0; color: #4CAF50;"><strong>50만원</strong></td>
+</tr>
+<tr>
+<td style="padding: 8px; border: 1px solid #E0E0E0;">XRP 매수</td>
+<td style="padding: 8px; border: 1px solid #E0E0E0; color: #F44336;"><strong>10만원</strong></td>
+<td style="padding: 8px; border: 1px solid #E0E0E0; color: #4CAF50;"><strong>50만원</strong></td>
+</tr>
+<tr style="background-color: #FFF8E1;">
+<td style="padding: 8px; border: 1px solid #E0E0E0; color: #E65100;"><strong>총 사용</strong></td>
+<td style="padding: 8px; border: 1px solid #E0E0E0; color: #D32F2F;"><strong>20만원 (20%)</strong></td>
+<td style="padding: 8px; border: 1px solid #E0E0E0; color: #2E7D32;"><strong>100만원 (100%)</strong></td>
+</tr>
+</table><br/>
+💡 <strong>언제 사용하나요?</strong><br/>
+- <strong style="color: #4CAF50;">ON:</strong> 한 번에 큰 금액 투자를 피하고 싶을 때 (보수적)<br/>
+- <strong style="color: #2196F3;">OFF:</strong> 일일 한도를 최대한 활용하고 싶을 때 (적극적)`,
+    table: {
+      headers: ['설정', '특징', '일일 한도 활용'],
+      rows: [
+        ['<strong>ON (적용)</strong>', '안정적, 보수적', '낮을 수 있음'],
+        ['<strong>OFF (미적용)</strong>', '균등 분배 우선', '최대한 활용 ✅']
+      ]
+    }
+  },
   { 
     category: 'risk', 
     term: '단일 종목 최대 비중', 

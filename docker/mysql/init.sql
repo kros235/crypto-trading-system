@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS trading_settings (
     consecutive_stop_loss_limit INT DEFAULT 3 COMMENT '연속 손절 제한 횟수',
     buy_amount_pct INT DEFAULT 10 COMMENT '1회 매수 비율 (%) - 기준 금액 대비',
     use_daily_limit_recovery BOOLEAN DEFAULT FALSE COMMENT '일일 한도 복구 옵션 - 매도 시 한도 복구',
+    use_per_trade_limit BOOLEAN DEFAULT TRUE COMMENT '1회 매수 한도 적용 - OFF 시 라운드로빈 균등분배 우선',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,

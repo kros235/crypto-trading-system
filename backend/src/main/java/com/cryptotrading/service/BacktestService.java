@@ -386,12 +386,28 @@ public class BacktestService {
      */
     private void executeBuy(String symbol, BigDecimal price, LocalDate date, 
                              String signal, BacktestRequestDTO request, SimulationState state) {
-        // 매수 금액: 초기 자본의 설정 비율% 또는 남은 현금
-        int buyAmountPct = request.getBuyAmountPct() != null ? request.getBuyAmountPct() : 10;
-        BigDecimal buyAmount = request.getInitialBalance()
-                .multiply(new BigDecimal(buyAmountPct))
-                .divide(new BigDecimal("100"), SCALE, RoundingMode.DOWN)
-                .min(state.getCashBalance());
+        // ⭐⭐⭐ 수정: 1회 매수 한도 옵션 적용 ⭐⭐⭐
+        boolean usePerTradeLimit = request.getUsePerTradeLimit() != null ? request.getUsePerTradeLimit() : true;
+        
+        BigDecimal buyAmount;
+        if (usePerTradeLimit) {
+            // 1회 한도 적용: 기존 동작
+            int buyAmountPct = request.getBuyAmountPct() != null ? request.getBuyAmountPct() : 10;
+            buyAmount = request.getInitialBalance()
+                    .multiply(new BigDecimal(buyAmountPct))
+                    .divide(new BigDecimal("100"), SCALE, RoundingMode.DOWN)
+                    .min(state.getCashBalance());
+        } else {
+            // 1회 한도 미적용: 남은 현금 전체 사용 가능 (단, 일일 한도 내에서)
+            BigDecimal dailyLimit = request.getDailyTradeLimitPct() != null 
+                    ? request.getInitialBalance()
+                        .multiply(new BigDecimal(request.getDailyTradeLimitPct()))
+                        .divide(new BigDecimal("100"), SCALE, RoundingMode.DOWN)
+                    : state.getCashBalance();
+            BigDecimal remainingDailyLimit = dailyLimit.subtract(state.getDailyBuyAmount())
+                    .add(state.getDailySellRecovery());
+            buyAmount = state.getCashBalance().min(remainingDailyLimit);
+        }
         
         if (buyAmount.compareTo(new BigDecimal("10000")) < 0) return;  // 최소 1만원
         

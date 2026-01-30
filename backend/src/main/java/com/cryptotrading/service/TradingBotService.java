@@ -20,6 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.cryptotrading.service.DiscordBotService;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
@@ -107,15 +110,14 @@ public class TradingBotService {
                 }
             }
             
-            // 4. 매수 신호 체크 (설정된 코인들)
-            List<String> targetCoins = setting.getCoinSymbols();
-            for (String market : targetCoins) {
-                try {
-                    processBuySignal(userId, market, setting, apiKeys, result);
-                } catch (Exception e) {
-                    log.error("매수 처리 실패: market={}, error={}", market, e.getMessage());
-                    result.addError(market + " 매수 실패: " + e.getMessage());
-                }
+            // 4. 매수 신호 체크 - 라운드로빈 방식으로 변경
+            // 기존: 순차 처리 (코드 순서대로 선착순 매수)
+            // 변경: 라운드로빈 (매수 신호 발생 코인에 균등 분배, 신호 강도 우선)
+            try {
+                processRoundRobinBuy(userId, setting, apiKeys, result);
+            } catch (Exception e) {
+                log.error("라운드로빈 매수 처리 실패: userId={}, error={}", userId, e.getMessage());
+                result.addError("라운드로빈 매수 실패: " + e.getMessage());
             }
             
             // 5. 보유 중인 거래의 최고가 업데이트
@@ -276,6 +278,273 @@ public class TradingBotService {
         }
     }
 
+    // 라운드로빈 방식 매수 처리
+    /**
+     * 라운드로빈 방식으로 매수 신호 처리
+     * - 매수 신호 발생 코인들에게 남은 한도를 균등 분배
+     * - 균등 분배 금액이 최소 금액 미만 시 신호 강도 순 우선 매수
+     */
+    private void processRoundRobinBuy(String userId, TradingSetting setting, 
+                                       String[] apiKeys, BotExecutionResult result) {
+        log.info("🔄 라운드로빈 매수 처리 시작: {}", userId);
+        
+        // ===== 1단계: 매수 후보 수집 =====
+        List<BuyCandidate> candidates = new ArrayList<>();
+        List<String> targetCoins = setting.getCoinSymbols();
+        
+        for (String market : targetCoins) {
+            try {
+                // 매수 신호 감지
+                TradingSignalDTO signal = signalDetectorService.detectBuySignal(market, setting, userId);
+                
+                if (signal.getSignalType() != SignalType.BUY) {
+                    log.debug("매수 신호 없음: {} - {}", market, signal.getReason());
+                    continue;
+                }
+                
+                // 리스크 사전 체크 (보유 건수만 체크, 금액은 나중에)
+                if (!riskManagementService.checkMaxHoldings(userId, market, setting)) {
+                    log.info("보유 건수 초과: {} - 최대 {}건", market, setting.getMaxHoldingsPerCoin());
+                    result.addSkipped(market + ": 보유 건수 초과");
+                    continue;
+                }
+                
+                // 비중 제한 고려한 최대 매수 가능 금액
+                BigDecimal maxBuyable = riskManagementService.getRemainingPositionAmount(userId, market, setting);
+                if (maxBuyable.compareTo(new BigDecimal("5000")) < 0) {
+                    log.info("비중 제한 초과: {} - 남은 가능액 {}원", market, maxBuyable);
+                    result.addSkipped(market + ": 비중 제한 초과");
+                    continue;
+                }
+                
+                log.info("✅ 매수 후보 추가: {} (강도: {}, 이격도: {}%, 최대매수가능: {}원)", 
+                        market, signal.getStrength(), signal.getDropRate(), maxBuyable);
+                candidates.add(new BuyCandidate(market, signal, maxBuyable));
+                
+            } catch (Exception e) {
+                log.error("매수 후보 수집 실패: market={}, error={}", market, e.getMessage());
+            }
+        }
+        
+        if (candidates.isEmpty()) {
+            log.info("매수 후보 없음 - 라운드로빈 종료");
+            return;
+        }
+        
+        log.info("📋 매수 후보 {}개 수집 완료", candidates.size());
+        
+        // ===== 2단계: 균등 분배 계산 =====
+        BigDecimal remainingLimit = riskManagementService.getRemainingDailyLimit(userId, setting);
+        log.info("💰 남은 일일 한도: {}원", remainingLimit);
+        
+        if (remainingLimit.compareTo(new BigDecimal("5000")) < 0) {
+            log.info("일일 한도 부족 - 라운드로빈 종료");
+            return;
+        }
+        
+        BigDecimal perCoinAmount = remainingLimit.divide(
+                new BigDecimal(candidates.size()), SCALE, RoundingMode.DOWN);
+        log.info("📊 균등 분배 금액: {}원 ({}개 코인)", perCoinAmount, candidates.size());
+        
+        // ===== 3단계: 최소 금액 체크 및 우선순위 선정 =====
+        final BigDecimal MIN_AMOUNT = new BigDecimal("5000");
+        
+        if (perCoinAmount.compareTo(MIN_AMOUNT) < 0) {
+            // 균등 분배 시 최소 금액 미달 → 우선순위 높은 코인만 선정
+            int maxCoins = remainingLimit.divide(MIN_AMOUNT, 0, RoundingMode.DOWN).intValue();
+            
+            if (maxCoins == 0) {
+                log.info("최소 금액 미달로 매수 불가 - 라운드로빈 종료");
+                return;
+            }
+            
+            log.info("⚠️ 균등 분배 {}원 < 최소 {}원 → 상위 {}개 코인만 선정", 
+                    perCoinAmount, MIN_AMOUNT, maxCoins);
+            
+            // 우선순위 정렬 (신호 강도 → 이격도)
+            candidates.sort((a, b) -> b.compareTo(a)); // 내림차순 (우선순위 높은 것 먼저)
+            
+            // 로그: 정렬 결과
+            for (int i = 0; i < candidates.size(); i++) {
+                BuyCandidate c = candidates.get(i);
+                log.info("  {}순위: {} (강도: {}, 이격도: {}%)", 
+                        i + 1, c.getMarket(), c.getSignal().getStrength(), c.getSignal().getDropRate());
+            }
+            
+            // 상위 N개만 선택
+            candidates = candidates.subList(0, Math.min(maxCoins, candidates.size()));
+            
+            // 재분배
+            perCoinAmount = remainingLimit.divide(
+                    new BigDecimal(candidates.size()), SCALE, RoundingMode.DOWN);
+            log.info("📊 재분배 금액: {}원 ({}개 코인)", perCoinAmount, candidates.size());
+        }
+        
+        // ===== 4단계: 매수 실행 =====
+        BigDecimal usedAmount = BigDecimal.ZERO;
+        BigDecimal carryOver = BigDecimal.ZERO; // 비중 제한으로 못 쓴 금액
+        
+        for (int i = 0; i < candidates.size(); i++) {
+            BuyCandidate candidate = candidates.get(i);
+            
+            // 분배 금액 + 이월 금액
+            BigDecimal allocatedAmount = perCoinAmount.add(carryOver);
+            
+            // 실제 매수 금액 = min(분배금액, 비중제한잔여, 1회매수비율)
+            int buyAmountPct = setting.getBuyAmountPct() != null ? setting.getBuyAmountPct() : 10;
+            // ⭐⭐⭐ 수정: 1회 매수 한도 옵션 적용 ⭐⭐⭐
+            boolean usePerTradeLimit = setting.getUsePerTradeLimit() != null ? setting.getUsePerTradeLimit() : true;
+            
+            BigDecimal maxPerTrade;
+            if (usePerTradeLimit) {
+                // 1회 한도 적용: 기존 동작 (일일한도 × 1회비율%)
+                maxPerTrade = setting.getDailyLimitAmount()
+                        .multiply(new BigDecimal(buyAmountPct))
+                        .divide(new BigDecimal("100"), SCALE, RoundingMode.HALF_UP);
+            } else {
+                // 1회 한도 미적용: 균등 분배 금액 그대로 사용 (사실상 무제한)
+                maxPerTrade = remainingLimit;
+            }
+            
+            BigDecimal actualAmount = allocatedAmount
+                    .min(candidate.getMaxBuyableAmount())
+                    .min(maxPerTrade);
+            
+            // 최소 금액 체크
+            if (actualAmount.compareTo(MIN_AMOUNT) < 0) {
+                log.info("❌ {} 매수 스킵: 실제 금액 {}원 < 최소 {}원", 
+                        candidate.getMarket(), actualAmount, MIN_AMOUNT);
+                carryOver = carryOver.add(perCoinAmount); // 다음 코인에 이월
+                continue;
+            }
+            
+            // 이월 금액 계산 (비중 제한으로 못 쓴 부분)
+            if (actualAmount.compareTo(allocatedAmount) < 0) {
+                carryOver = allocatedAmount.subtract(actualAmount);
+                log.info("💫 비중 제한으로 {}원 이월 → 다음 코인에 재분배", carryOver);
+            } else {
+                carryOver = BigDecimal.ZERO;
+            }
+            
+            // 실제 매수 실행
+            try {
+                executeBuyOrder(userId, candidate.getMarket(), actualAmount, 
+                        candidate.getSignal(), apiKeys, result);
+                usedAmount = usedAmount.add(actualAmount);
+                log.info("✅ {} 매수 완료: {}원", candidate.getMarket(), actualAmount);
+            } catch (Exception e) {
+                log.error("❌ {} 매수 실패: {}", candidate.getMarket(), e.getMessage());
+                result.addError(candidate.getMarket() + " 매수 실패: " + e.getMessage());
+                carryOver = carryOver.add(actualAmount); // 실패한 금액 이월
+            }
+        }
+        
+        log.info("🔄 라운드로빈 매수 완료: 총 {}원 사용 (한도 {}원)", usedAmount, remainingLimit);
+    }
+
+    /**
+     * 실제 매수 주문 실행 (라운드로빈에서 호출)
+     */
+    private void executeBuyOrder(String userId, String market, BigDecimal buyAmount,
+                                  TradingSignalDTO signal, String[] apiKeys, 
+                                  BotExecutionResult result) {
+        log.info("매수 주문 실행: {} - {}원", market, buyAmount);
+        
+        // 업비트 매수 주문
+        UpbitOrderDTO order = upbitApiService.orderBuy(apiKeys[0], apiKeys[1], market, buyAmount);
+        
+        // 체결 수량 확인 (최대 3회 재시도)
+        BigDecimal executedVolume = BigDecimal.ZERO;
+        int retryCount = 0;
+        final int MAX_RETRY = 3;
+        
+        while (retryCount < MAX_RETRY) {
+            try {
+                Thread.sleep(500);
+                UpbitOrderDTO orderStatus = upbitApiService.getOrder(apiKeys[0], apiKeys[1], order.getUuid());
+                
+                if (orderStatus.getExecutedVolume() != null && 
+                    orderStatus.getExecutedVolume().compareTo(BigDecimal.ZERO) > 0) {
+                    executedVolume = orderStatus.getExecutedVolume();
+                    break;
+                }
+                
+                if ("done".equals(orderStatus.getState())) {
+                    executedVolume = orderStatus.getExecutedVolume() != null 
+                            ? orderStatus.getExecutedVolume() : BigDecimal.ZERO;
+                    break;
+                }
+                
+                retryCount++;
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+        
+        // 체결 수량 조회 실패 시 추정
+        if (executedVolume.compareTo(BigDecimal.ZERO) == 0) {
+            BigDecimal fee = buyAmount.multiply(FEE_RATE);
+            BigDecimal actualBuyAmount = buyAmount.subtract(fee);
+            executedVolume = actualBuyAmount.divide(signal.getCurrentPrice(), SCALE, RoundingMode.DOWN);
+            log.warn("체결 수량 조회 실패, 추정 수량 사용: {} - {}개", market, executedVolume);
+        }
+        
+        // 거래 내역 저장
+        Transaction transaction = Transaction.builder()
+                .userId(userId)
+                .coinSymbol(market)
+                .type(TransactionType.BUY)
+                .quantity(executedVolume)
+                .price(signal.getCurrentPrice())
+                .fee(buyAmount.multiply(FEE_RATE))
+                .totalAmount(buyAmount)
+                .targetSellPrice(signal.getTargetPrice())
+                .stopLossPrice(signal.getStopLossPrice())
+                .highestPrice(signal.getCurrentPrice())
+                .status(TransactionStatus.HOLDING)
+                .note("[매수] " + signal.getReason())
+                .build();
+        
+        transactionRepository.save(transaction);
+        
+        // 알림 발송
+        notificationService.notifyBuyExecuted(
+            userId, market, signal.getCurrentPrice(), 
+            transaction.getQuantity(), buyAmount,
+            signal.getReason()
+        );
+
+        // Discord DM 발송
+        User userEntity = userRepository.findById(userId).orElse(null);
+        if (userEntity != null && userEntity.getDiscordUserId() != null) {
+            discordBotService.sendBuyNotification(
+                userEntity.getDiscordUserId(),
+                market,
+                transaction.getQuantity().toPlainString(),
+                String.format("%,.0f", signal.getCurrentPrice()),
+                String.format("%,.0f", buyAmount),
+                signal.getReason()
+            );
+        }
+
+        // 이메일 발송
+        if (userEntity != null && userEntity.getEmail() != null && !userEntity.getEmail().isEmpty()) {
+            emailService.sendTradeNotification(
+                userEntity.getEmail(),
+                "BUY",
+                market,
+                transaction.getQuantity(),
+                signal.getCurrentPrice(),
+                buyAmount,
+                signal.getReason()
+            );
+        }
+
+        result.addBuy(market, buyAmount);
+        log.info("매수 완료: {} - {}원 (주문ID: {})", market, buyAmount, order.getUuid());
+    }
+
     /**
      * 매도 신호 처리
      */
@@ -429,6 +698,46 @@ public class TradingBotService {
         
         log.info("========== 전체 사용자 자동매매 완료: {}명 처리 ==========", results.size());
         return results;
+    }
+
+    // 라운드로빈 매수 후보 클래스
+    /**
+     * 매수 후보 정보를 담는 내부 클래스
+     */
+    @Data
+    @AllArgsConstructor
+    private static class BuyCandidate {
+        private String market;              // 코인 마켓 (예: KRW-BTC)
+        private TradingSignalDTO signal;    // 매수 신호 정보
+        private BigDecimal maxBuyableAmount; // 비중 제한 고려한 최대 매수 가능 금액
+        
+        /**
+         * 우선순위 비교 (신호 강도 → 이격도)
+         * 강도가 높을수록, 이격도가 낮을수록(더 많이 하락) 우선
+         */
+        public int compareTo(BuyCandidate other) {
+            // 1. 신호 강도 비교 (STRONG > MODERATE > WEAK)
+            int strengthCompare = getStrengthOrder(this.signal.getStrength()) 
+                    - getStrengthOrder(other.signal.getStrength());
+            if (strengthCompare != 0) {
+                return strengthCompare; // 양수면 this가 우선
+            }
+            
+            // 2. 이격도 비교 (더 많이 하락한 코인 우선, 즉 dropRate가 더 작은 것)
+            BigDecimal thisDropRate = this.signal.getDropRate() != null 
+                    ? this.signal.getDropRate() : BigDecimal.ZERO;
+            BigDecimal otherDropRate = other.signal.getDropRate() != null 
+                    ? other.signal.getDropRate() : BigDecimal.ZERO;
+            return thisDropRate.compareTo(otherDropRate); // 음수면 this가 더 많이 하락
+        }
+        
+        private int getStrengthOrder(TradingSignalDTO.SignalStrength strength) {
+            return switch (strength) {
+                case STRONG -> 3;
+                case MODERATE -> 2;
+                case WEAK -> 1;
+            };
+        }
     }
 
     /**

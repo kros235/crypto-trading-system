@@ -27,6 +27,7 @@ export interface BacktestRequest {
   consecutiveStopLossLimit?: number
   buyAmountPct?: number
   useDailyLimitRecovery?: boolean // 일일 한도 복구 옵션
+  usePerTradeLimit?: boolean      // 1회 매수 한도 적용 옵션
 }
 
 // 백테스트 결과

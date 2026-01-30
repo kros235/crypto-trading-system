@@ -111,6 +111,10 @@ public class TradingSetting extends BaseEntity {
     @Column(name = "use_daily_limit_recovery")
     private Boolean useDailyLimitRecovery = false;
 
+    // ⭐⭐⭐ 신규 추가: 1회 매수 한도 적용 옵션 ⭐⭐⭐
+    @Column(name = "use_per_trade_limit")
+    private Boolean usePerTradeLimit = true;  // 기본값: true (기존 동작 유지)
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "user_id", 
                 insertable = false, updatable = false)

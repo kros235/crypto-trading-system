@@ -113,4 +113,7 @@ public class TradingSettingDTO {
 
     // 일일 한도 복구 옵션
     private Boolean useDailyLimitRecovery;
+
+    // ⭐⭐⭐ 신규 추가: 1회 매수 한도 적용 옵션 ⭐⭐⭐
+    private Boolean usePerTradeLimit;
 }

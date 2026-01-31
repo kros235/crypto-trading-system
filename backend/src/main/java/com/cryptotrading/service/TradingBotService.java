@@ -150,13 +150,25 @@ public class TradingBotService {
         
         log.info("매수 신호 감지: {} - {} (강도: {})", market, signal.getReason(), signal.getStrength());
         
-        // 매수 금액 계산 (일일 한도의 설정 비율% 또는 남은 한도)
+        // ⭐⭐⭐ 수정: 매수 금액 계산 로직 변경 ⭐⭐⭐
+        // - dailyLimitAmount 대신 남은 일일 한도 사용 (총자산 스냅샷 기준)
+        // - buyAmountPct 대신 fixedBuyAmount 사용
         BigDecimal remainingLimit = riskManagementService.getRemainingDailyLimit(userId, setting);
-        int buyAmountPct = setting.getBuyAmountPct() != null ? setting.getBuyAmountPct() : 10;
-        BigDecimal buyAmount = setting.getDailyLimitAmount()
-                .multiply(new BigDecimal(buyAmountPct))
-                .divide(new BigDecimal("100"), SCALE, RoundingMode.HALF_UP)
-                .min(remainingLimit);
+        
+        // 매수 방식에 따른 금액 계산
+        boolean useRoundRobin = setting.getUseRoundRobin() != null ? setting.getUseRoundRobin() : true;
+        BigDecimal buyAmount;
+        
+        if (useRoundRobin) {
+            // 라운드로빈: 이 메서드에서는 단일 코인이므로 남은 한도 전체 사용
+            buyAmount = remainingLimit;
+        } else {
+            // 고정 금액: fixedBuyAmount 사용
+            BigDecimal fixedAmount = setting.getFixedBuyAmount() != null 
+                    ? setting.getFixedBuyAmount() 
+                    : new BigDecimal("10000");
+            buyAmount = fixedAmount.min(remainingLimit);
+        }
         
         if (buyAmount.compareTo(new BigDecimal("5000")) < 0) {  // 최소 5000원
             log.info("매수 금액 부족: {} ({}원)", market, buyAmount);
@@ -333,24 +345,48 @@ public class TradingBotService {
         
         log.info("📋 매수 후보 {}개 수집 완료", candidates.size());
         
-        // ===== 2단계: 균등 분배 계산 =====
+        // ===== 2단계: 매수 방식 확인 및 금액 계산 =====
         BigDecimal remainingLimit = riskManagementService.getRemainingDailyLimit(userId, setting);
         log.info("💰 남은 일일 한도: {}원", remainingLimit);
         
         if (remainingLimit.compareTo(new BigDecimal("5000")) < 0) {
-            log.info("일일 한도 부족 - 라운드로빈 종료");
+            log.info("일일 한도 부족 - 매수 처리 종료");
             return;
         }
         
-        BigDecimal perCoinAmount = remainingLimit.divide(
-                new BigDecimal(candidates.size()), SCALE, RoundingMode.DOWN);
-        log.info("📊 균등 분배 금액: {}원 ({}개 코인)", perCoinAmount, candidates.size());
+        // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin (의미 변경) ⭐⭐⭐
+        // true: 라운드로빈 (균등 분배)
+        // false: 고정 금액 (fixedBuyAmount)
+        boolean useRoundRobin = setting.getUseRoundRobin() != null ? setting.getUseRoundRobin() : true;
+        
+        BigDecimal perCoinAmount;
+        BigDecimal fixedBuyAmount = setting.getFixedBuyAmount() != null 
+                ? setting.getFixedBuyAmount() 
+                : new BigDecimal("10000");
+        
+        if (useRoundRobin) {
+            // 라운드로빈: 남은 한도를 코인 수로 균등 분배
+            perCoinAmount = remainingLimit.divide(
+                    new BigDecimal(candidates.size()), SCALE, RoundingMode.DOWN);
+            log.info("📊 [라운드로빈] 균등 분배 금액: {}원 ({}개 코인)", perCoinAmount, candidates.size());
+        } else {
+            // 고정 금액: 각 코인에 fixedBuyAmount만큼 매수
+            perCoinAmount = fixedBuyAmount;
+            log.info("📊 [고정금액] 1회 매수 금액: {}원", perCoinAmount);
+        }
         
         // ===== 3단계: 최소 금액 체크 및 우선순위 선정 =====
         final BigDecimal MIN_AMOUNT = new BigDecimal("5000");
         
         if (perCoinAmount.compareTo(MIN_AMOUNT) < 0) {
-            // 균등 분배 시 최소 금액 미달 → 우선순위 높은 코인만 선정
+            // ⭐⭐⭐ 수정: 고정 금액 모드에서 최소 금액 미달 시 매수 불가 ⭐⭐⭐
+            if (!useRoundRobin) {
+                log.warn("⚠️ [고정금액] 설정 금액 {}원 < 최소 {}원 - 매수 불가", perCoinAmount, MIN_AMOUNT);
+                log.warn("   → 거래 설정에서 '1회 매수 금액'을 5,000원 이상으로 설정해주세요.");
+                return;
+            }
+            
+            // 라운드로빈 모드: 우선순위 높은 코인만 선정
             int maxCoins = remainingLimit.divide(MIN_AMOUNT, 0, RoundingMode.DOWN).intValue();
             
             if (maxCoins == 0) {
@@ -358,7 +394,7 @@ public class TradingBotService {
                 return;
             }
             
-            log.info("⚠️ 균등 분배 {}원 < 최소 {}원 → 상위 {}개 코인만 선정", 
+            log.info("⚠️ [라운드로빈] 균등 분배 {}원 < 최소 {}원 → 상위 {}개 코인만 선정", 
                     perCoinAmount, MIN_AMOUNT, maxCoins);
             
             // 우선순위 정렬 (신호 강도 → 이격도)
@@ -377,53 +413,62 @@ public class TradingBotService {
             // 재분배
             perCoinAmount = remainingLimit.divide(
                     new BigDecimal(candidates.size()), SCALE, RoundingMode.DOWN);
-            log.info("📊 재분배 금액: {}원 ({}개 코인)", perCoinAmount, candidates.size());
+            log.info("📊 [라운드로빈] 재분배 금액: {}원 ({}개 코인)", perCoinAmount, candidates.size());
         }
         
         // ===== 4단계: 매수 실행 =====
         BigDecimal usedAmount = BigDecimal.ZERO;
-        BigDecimal carryOver = BigDecimal.ZERO; // 비중 제한으로 못 쓴 금액
+        BigDecimal carryOver = BigDecimal.ZERO; // 비중 제한으로 못 쓴 금액 (라운드로빈에서만 사용)
         
         for (int i = 0; i < candidates.size(); i++) {
             BuyCandidate candidate = candidates.get(i);
             
-            // 분배 금액 + 이월 금액
-            BigDecimal allocatedAmount = perCoinAmount.add(carryOver);
+            // ⭐⭐⭐ 수정: 매수 방식에 따른 금액 계산 ⭐⭐⭐
+            BigDecimal actualAmount;
             
-            // 실제 매수 금액 = min(분배금액, 비중제한잔여, 1회매수비율)
-            int buyAmountPct = setting.getBuyAmountPct() != null ? setting.getBuyAmountPct() : 10;
-            // ⭐⭐⭐ 수정: 1회 매수 한도 옵션 적용 ⭐⭐⭐
-            boolean usePerTradeLimit = setting.getUsePerTradeLimit() != null ? setting.getUsePerTradeLimit() : true;
-            
-            BigDecimal maxPerTrade;
-            if (usePerTradeLimit) {
-                // 1회 한도 적용: 기존 동작 (일일한도 × 1회비율%)
-                maxPerTrade = setting.getDailyLimitAmount()
-                        .multiply(new BigDecimal(buyAmountPct))
-                        .divide(new BigDecimal("100"), SCALE, RoundingMode.HALF_UP);
+            if (useRoundRobin) {
+                // 라운드로빈: 분배 금액 + 이월 금액
+                BigDecimal allocatedAmount = perCoinAmount.add(carryOver);
+                actualAmount = allocatedAmount.min(candidate.getMaxBuyableAmount());
+                
+                // 일일 한도 초과 체크
+                if (usedAmount.add(actualAmount).compareTo(remainingLimit) > 0) {
+                    actualAmount = remainingLimit.subtract(usedAmount);
+                }
             } else {
-                // 1회 한도 미적용: 균등 분배 금액 그대로 사용 (사실상 무제한)
-                maxPerTrade = remainingLimit;
+                // 고정 금액: fixedBuyAmount 사용 (비중 제한 적용)
+                actualAmount = fixedBuyAmount.min(candidate.getMaxBuyableAmount());
+                
+                // 남은 한도 체크
+                BigDecimal currentRemaining = remainingLimit.subtract(usedAmount);
+                if (actualAmount.compareTo(currentRemaining) > 0) {
+                    log.info("⚠️ {} 일일 한도 부족: 필요 {}원, 남은 한도 {}원 - 스킵", 
+                            candidate.getMarket(), actualAmount, currentRemaining);
+                    result.addSkipped(candidate.getMarket() + ": 일일 한도 부족");
+                    continue;
+                }
             }
-            
-            BigDecimal actualAmount = allocatedAmount
-                    .min(candidate.getMaxBuyableAmount())
-                    .min(maxPerTrade);
             
             // 최소 금액 체크
             if (actualAmount.compareTo(MIN_AMOUNT) < 0) {
                 log.info("❌ {} 매수 스킵: 실제 금액 {}원 < 최소 {}원", 
                         candidate.getMarket(), actualAmount, MIN_AMOUNT);
-                carryOver = carryOver.add(perCoinAmount); // 다음 코인에 이월
+                // ⭐⭐⭐ 수정: 라운드로빈에서만 이월 처리 ⭐⭐⭐
+                if (useRoundRobin) {
+                    carryOver = carryOver.add(perCoinAmount); // 다음 코인에 이월
+                }
                 continue;
             }
             
-            // 이월 금액 계산 (비중 제한으로 못 쓴 부분)
-            if (actualAmount.compareTo(allocatedAmount) < 0) {
-                carryOver = allocatedAmount.subtract(actualAmount);
-                log.info("💫 비중 제한으로 {}원 이월 → 다음 코인에 재분배", carryOver);
-            } else {
-                carryOver = BigDecimal.ZERO;
+            // ⭐⭐⭐ 수정: 이월 금액 계산 (라운드로빈에서만) ⭐⭐⭐
+            if (useRoundRobin) {
+                BigDecimal allocatedAmount = perCoinAmount.add(carryOver);
+                if (actualAmount.compareTo(allocatedAmount) < 0) {
+                    carryOver = allocatedAmount.subtract(actualAmount);
+                    log.info("💫 [라운드로빈] 비중 제한으로 {}원 이월 → 다음 코인에 재분배", carryOver);
+                } else {
+                    carryOver = BigDecimal.ZERO;
+                }
             }
             
             // 실제 매수 실행
@@ -439,7 +484,13 @@ public class TradingBotService {
             }
         }
         
-        log.info("🔄 라운드로빈 매수 완료: 총 {}원 사용 (한도 {}원)", usedAmount, remainingLimit);
+        // ⭐⭐⭐ 수정: 매수 방식에 따른 로그 ⭐⭐⭐
+        if (useRoundRobin) {
+            log.info("🔄 [라운드로빈] 매수 완료: 총 {}원 사용 (한도 {}원)", usedAmount, remainingLimit);
+        } else {
+            log.info("💵 [고정금액] 매수 완료: 총 {}원 사용 (1회 {}원 × {}건)", 
+                    usedAmount, fixedBuyAmount, result.getBuyCount());
+        }
     }
 
     /**

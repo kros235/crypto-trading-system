@@ -171,69 +171,75 @@
 
                   <!-- ⭐ 위치 변경: 일일 거래 한도 -->
                   <v-col cols="12" md="4">
-                    <v-text-field
-                      v-model.number="settings.dailyLimitAmount"
-                      label="일일 거래 한도 (기준 금액)"
-                      type="number"
-                      :rules="[rules.required, rules.positive]"
-                      variant="outlined"
-                      suffix="원"
-                      hint="리스크 관리에서 비율 계산의 기준이 됩니다"
-                      persistent-hint
-                    />
+                    <!-- ⭐⭐⭐ 수정: 입력 필드 → 안내 메시지로 변경 ⭐⭐⭐ -->
+                    <v-alert
+                      type="info"
+                      variant="text"
+                      density="compact"
+                      class="mb-0"
+                    >
+                      <div class="text-subtitle-2 font-weight-bold mb-1">
+                        💰 일일 한도 기준
+                      </div>
+                      <div class="text-caption">
+                        매일 00:00 KST에 업비트 총자산을 자동 조회하여, 일일 거래 한도의 기준으로 사용합니다.
+                      </div>
+                      <div class="text-caption text-grey mt-1">
+                        (수동 입력 불필요 - 시스템 자동 계산)
+                      </div>
+                    </v-alert>
                   </v-col>
 
-                  <!-- ⭐ 위치 변경: 1회 매수 비율 -->
+                  <!-- ⭐⭐⭐ 수정: 1회 매수 비율(%) → 1회 고정 매수 금액(원) ⭐⭐⭐ -->
                   <v-col cols="12" md="4">
                     <div class="d-flex align-center mb-1">
-                      <span class="text-body-2">1회 매수 비율</span>
+                      <span class="text-body-2">1회 매수 금액</span>
                       <HelpButton 
                         use-dialog 
-                        :dialog-title="helpContents.buyAmountPct.title"
-                        :dialog-content="helpContents.buyAmountPct.content"
+                        :dialog-title="helpContents.fixedBuyAmount.title"
+                        :dialog-content="helpContents.fixedBuyAmount.content"
                         color="grey-darken-1"
                       />
                     </div>
-                    <v-slider
-                      v-model="settings.buyAmountPct"
-                      :min="1"
-                      :max="50"
-                      :step="1"
-                      thumb-label
-                      color="primary"
-                    >
-                      <template v-slot:append>
-                        <v-chip size="small" color="primary">
-                          {{ settings.buyAmountPct }}%
-                        </v-chip>
-                      </template>
-                    </v-slider>
-                    <p class="text-caption text-grey mt-n2">
-                      1회 매수 금액: {{ formatCurrency(settings.dailyLimitAmount * settings.buyAmountPct / 100) }}
+                    <v-text-field
+                      v-model.number="settings.fixedBuyAmount"
+                      type="number"
+                      :rules="[
+                        (v: number) => v >= 5000 || '최소 5,000원 이상 (업비트 최소 주문금액)',
+                        (v: number) => v <= 10000000 || '최대 1,000만원 이하'
+                      ]"
+                      variant="outlined"
+                      suffix="원"
+                      density="compact"
+                      hint="라운드로빈 OFF 시 각 코인에 이 금액만큼 매수"
+                      persistent-hint
+                    />
+                    <p class="text-caption text-warning mt-1" v-if="settings.fixedBuyAmount < 5000">
+                      ⚠️ 업비트 최소 주문금액은 5,000원입니다
                     </p>
                   </v-col>
 
-                  <!-- ⭐⭐⭐ 신규 추가: 1회 매수 한도 적용 옵션 ⭐⭐⭐ -->
+                  <!-- ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin (매수 방식 선택) ⭐⭐⭐ -->
                   <v-col cols="12" md="4">
                     <div class="d-flex align-center mb-1">
-                      <span class="text-body-2">1회 매수 한도 적용</span>
+                      <span class="text-body-2">매수 방식</span>
                       <HelpButton 
                         use-dialog 
-                        :dialog-title="helpContents.usePerTradeLimit.title"
-                        :dialog-content="helpContents.usePerTradeLimit.content"
+                        :dialog-title="helpContents.useRoundRobin.title"
+                        :dialog-content="helpContents.useRoundRobin.content"
                         color="grey-darken-1"
                       />
                     </div>
                     <v-switch
-                      v-model="settings.usePerTradeLimit"
-                      :label="settings.usePerTradeLimit ? '적용 (안정적)' : '미적용 (라운드로빈 우선)'"
+                      v-model="settings.useRoundRobin"
+                      :label="settings.useRoundRobin ? '🔄 라운드로빈' : '💵 고정 금액'"
                       color="primary"
                       hide-details
                     />
                     <p class="text-caption text-grey mt-1">
-                      {{ settings.usePerTradeLimit 
-                          ? `1회 최대 ${formatCurrency(settings.dailyLimitAmount * settings.buyAmountPct / 100)} 매수` 
-                          : '균등 분배 금액으로 매수 (한도 내)' }}
+                      {{ settings.useRoundRobin 
+                          ? '남은 일일 한도를 매수 신호 수로 균등 분배' 
+                          : `각 코인에 ${formatCurrency(settings.fixedBuyAmount)} 매수` }}
                     </p>
                   </v-col>
                 </v-row>
@@ -480,7 +486,9 @@
                   </template>
                 </v-slider>
                <p class="text-caption text-grey">
-                  일일 한도 금액 기준으로 하루 최대 매수 가능 금액을 제한합니다 ({{ formatCurrency(settings.dailyLimitAmount * settings.dailyTradeLimitPct / 100) }})
+                  <!-- ⭐⭐⭐ 수정: dailyLimitAmount 대신 총자산 기준 안내 ⭐⭐⭐ -->
+                  총자산 × {{ settings.dailyTradeLimitPct }}% = 일일 매수 한도<br/>
+                  <span class="text-grey-darken-1">(매일 00:00 KST 총자산 자동 조회)</span>
                 </p>
 
                 <!-- ⭐⭐⭐ Day 41 추가: 일일 한도 복구 옵션 ⭐⭐⭐ -->
@@ -1417,75 +1425,30 @@ const helpContents = {
   },
 
   // 1회 매수 비율 도움말
-  buyAmountPct: {
-    title: '💵 1회 매수 비율',
+  // ⭐⭐⭐ 수정: buyAmountPct → fixedBuyAmount ⭐⭐⭐
+  fixedBuyAmount: {
+    title: '1회 매수 금액',
     content: `
-      <div class="glossary-detail pa-3">
-        <div class="glossary-section mb-4">
-          <div class="d-flex align-center mb-2">
-            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
-          </div>
-          <div style="padding-left: 24px;">
-            <p class="text-body-2 text-grey-darken-3 mb-0">
-              "매수 신호가 발생했을 때, 기준 금액의 몇 %를 투자할 것인가?"를 설정합니다.
-            </p>
-          </div>
-        </div>
+      <div style="font-size: 14px; line-height: 1.6;">
+        <p><strong>1회 매수 금액</strong>은 '고정 금액' 매수 방식에서 각 코인에 매수할 금액입니다.</p>
         
-        <div class="mb-4">
-          <div class="d-flex align-center mb-2">
-            <span class="text-subtitle-1 font-weight-bold">📐 계산 예시</span>
-          </div>
-          <div style="padding-left: 24px;">
-            <p class="text-body-2 text-grey-darken-3">
-              기준 금액이 <strong>100만원</strong>일 때:<br>
-              • 10% 설정 → 1회 매수 시 <strong>10만원</strong><br>
-              • 5% 설정 → 1회 매수 시 <strong>5만원</strong> (더 분산 투자)<br>
-              • 20% 설정 → 1회 매수 시 <strong>20만원</strong> (집중 투자)
-            </p>
-          </div>
-        </div>
-
-        <div class="mb-2">
-          <div class="d-flex align-center mb-2">
-            <span class="text-subtitle-1 font-weight-bold">📋 설정값 안내</span>
-          </div>
-          <div style="padding-left: 24px;">
-            <table style="width: 100%; border-collapse: collapse; border: 1px solid #E0E0E0; border-radius: 8px; overflow: hidden; font-size: 13px;">
-              <thead>
-                <tr style="background-color: #ECEFF1;">
-                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">설정값</th>
-                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">특징</th>
-                  <th style="padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid #E0E0E0;">적합한 상황</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE;">5%</td>
-                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE;">소액 분산</td>
-                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE;">여러 코인에 분산 투자</td>
-                </tr>
-                <tr style="background-color: #E3F2FD;">
-                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE; color: #1565C0;"><strong>10%</strong></td>
-                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE; color: #1565C0;">균형</td>
-                  <td style="padding: 8px 12px; border-bottom: 1px solid #EEEEEE; color: #1565C0;">기본값 ✅</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 12px;">20%</td>
-                  <td style="padding: 8px 12px;">집중 투자</td>
-                  <td style="padding: 8px 12px;">확신 있는 신호에 집중</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="mt-3 pa-2" style="background-color: #FFF3E0; border-radius: 8px;">
-          <span style="font-size: 16px;">💡</span>
-          <span class="text-caption text-orange-darken-3">
-            <strong>팁:</strong> 낮은 비율(5%)은 더 많은 매수 기회, 높은 비율(20%)은 적은 기회에 집중 투자합니다.
-          </span>
-        </div>
+        <p style="margin-top: 8px;"><strong>📌 적용 조건:</strong></p>
+        <ul style="margin-left: 16px;">
+          <li>매수 방식이 '고정 금액'일 때만 사용</li>
+          <li>'라운드로빈' 방식에서는 자동 균등 분배</li>
+        </ul>
+        
+        <p style="margin-top: 8px;"><strong>⚠️ 제한사항:</strong></p>
+        <ul style="margin-left: 16px;">
+          <li>최소: 5,000원 (업비트 최소 주문금액)</li>
+          <li>최대: 1,000만원</li>
+          <li>KRW 잔고가 설정 금액보다 적으면 매수하지 않음</li>
+        </ul>
+        
+        <p style="margin-top: 8px;"><strong>💡 예시:</strong></p>
+        <span style="background: #f5f5f5; padding: 2px 6px; border-radius: 4px;">
+          10,000원 설정 → BTC, ETH 매수 신호 시 각각 10,000원씩 매수
+        </span>
       </div>
     `
   },
@@ -1783,105 +1746,32 @@ const helpContents = {
       </div>
     `
   },
-  usePerTradeLimit: {
-    title: '💰 1회 매수 한도 적용 옵션',
+  // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
+  useRoundRobin: {
+    title: '매수 방식 선택',
     content: `
-      <div class="glossary-detail pa-3">
-        <div class="glossary-section mb-4">
-          <div class="d-flex align-center mb-2">
-            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
-          </div>
-          <div style="padding-left: 24px;">
-            <p class="text-body-2 text-grey-darken-3 mb-2">
-              <strong>라운드로빈 매수</strong>는 여러 코인에 균등하게 분배해서 매수하는 방식입니다.
-            </p>
-            <p class="text-body-2 text-grey-darken-3 mb-0">
-              이 옵션은 <strong>균등 분배 금액</strong>과 <strong>1회 매수 한도</strong> 중 어느 것을 우선할지 결정합니다.
-            </p>
-          </div>
-        </div>
+      <div style="font-size: 14px; line-height: 1.6;">
+        <p><strong>매수 방식</strong>은 매수 신호 발생 시 금액을 결정하는 방법입니다.</p>
         
-        <div class="mb-4">
-          <div class="d-flex align-center mb-2">
-            <span class="text-subtitle-1 font-weight-bold">📋 비교</span>
-          </div>
-          <div style="padding-left: 24px;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-              <thead>
-                <tr style="background-color: #E3F2FD;">
-                  <th style="padding: 8px; border: 1px solid #90CAF9;">설정</th>
-                  <th style="padding: 8px; border: 1px solid #90CAF9;">적용 (ON)</th>
-                  <th style="padding: 8px; border: 1px solid #90CAF9;">미적용 (OFF)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style="padding: 8px; border: 1px solid #90CAF9;"><strong>특징</strong></td>
-                  <td style="padding: 8px; border: 1px solid #90CAF9;">안정적, 보수적</td>
-                  <td style="padding: 8px; border: 1px solid #90CAF9;">균등 분배 우선</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px; border: 1px solid #90CAF9;"><strong>1회 매수 금액</strong></td>
-                  <td style="padding: 8px; border: 1px solid #90CAF9;">최대 한도 제한</td>
-                  <td style="padding: 8px; border: 1px solid #90CAF9;">균등 분배 금액</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px; border: 1px solid #90CAF9;"><strong>일일 한도 활용</strong></td>
-                  <td style="padding: 8px; border: 1px solid #90CAF9;">낮을 수 있음</td>
-                  <td style="padding: 8px; border: 1px solid #90CAF9; color: #4CAF50;"><strong>최대한 활용</strong></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="mb-4">
-          <div class="d-flex align-center mb-2">
-            <span class="text-subtitle-1 font-weight-bold">📊 예시</span>
-          </div>
-          <div style="padding-left: 24px;">
-            <p class="text-body-2 mb-2">일일 한도 50만원, 1회 비율 10% (1회 한도 5만원), 매수 신호 2개</p>
-            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-              <thead>
-                <tr style="background-color: #FFF3E0;">
-                  <th style="padding: 8px; border: 1px solid #FFB74D;">코인</th>
-                  <th style="padding: 8px; border: 1px solid #FFB74D;">적용 (ON)</th>
-                  <th style="padding: 8px; border: 1px solid #FFB74D;">미적용 (OFF)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style="padding: 8px; border: 1px solid #FFB74D;">균등 분배</td>
-                  <td style="padding: 8px; border: 1px solid #FFB74D;">25만원씩</td>
-                  <td style="padding: 8px; border: 1px solid #FFB74D;">25만원씩</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px; border: 1px solid #FFB74D;">ETH 매수</td>
-                  <td style="padding: 8px; border: 1px solid #FFB74D; color: #F44336;"><strong>5만원</strong> (한도 적용)</td>
-                  <td style="padding: 8px; border: 1px solid #FFB74D; color: #4CAF50;"><strong>25만원</strong></td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px; border: 1px solid #FFB74D;">XRP 매수</td>
-                  <td style="padding: 8px; border: 1px solid #FFB74D; color: #F44336;"><strong>5만원</strong></td>
-                  <td style="padding: 8px; border: 1px solid #FFB74D; color: #4CAF50;"><strong>25만원</strong></td>
-                </tr>
-                <tr style="background-color: #ECEFF1;">
-                  <td style="padding: 8px; border: 1px solid #FFB74D;"><strong>총 사용</strong></td>
-                  <td style="padding: 8px; border: 1px solid #FFB74D; color: #F44336;"><strong>10만원 (20%)</strong></td>
-                  <td style="padding: 8px; border: 1px solid #FFB74D; color: #4CAF50;"><strong>50만원 (100%)</strong></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div style="background-color: #E8F5E9; border-left: 4px solid #4CAF50; padding: 12px; border-radius: 4px;">
-          <span style="font-size: 16px;">💡</span>
-          <span class="text-body-2" style="color: #2E7D32;">
-            <strong>권장:</strong> 일일 한도를 최대한 활용하고 싶다면 <strong>OFF</strong>,<br/>
-            한 번에 큰 금액 투자를 피하고 싶다면 <strong>ON</strong>을 선택하세요.
-          </span>
-        </div>
+        <p style="margin-top: 12px;"><strong>🔄 라운드로빈 (ON)</strong></p>
+        <ul style="margin-left: 16px;">
+          <li>남은 일일 한도를 매수 신호 수로 <strong>균등 분배</strong></li>
+          <li>여러 코인에 동시 매수 신호 시 분산 투자</li>
+          <li>비중 제한으로 못 쓴 금액은 다음 코인에 이월</li>
+        </ul>
+        <p style="background: #e3f2fd; padding: 8px; border-radius: 4px; margin-top: 4px;">
+          예: 한도 100,000원 ÷ 3개 신호 = 각 33,333원
+        </p>
+        
+        <p style="margin-top: 12px;"><strong>💵 고정 금액 (OFF)</strong></p>
+        <ul style="margin-left: 16px;">
+          <li>'1회 매수 금액'에 설정한 금액만큼 <strong>정확히 매수</strong></li>
+          <li>일일 한도 내에서 순차적으로 매수</li>
+          <li>한도 부족 시 해당 코인 스킵</li>
+        </ul>
+        <p style="background: #fff3e0; padding: 8px; border-radius: 4px; margin-top: 4px;">
+          예: 10,000원 설정 → BTC 10,000원, ETH 10,000원, XRP 10,000원
+        </p>
       </div>
     `
   }
@@ -1901,7 +1791,8 @@ const settings = ref({
   sellTargetPct: 4,           
   stopLossPct: -8,            
   maxHoldingsPerCoin: 2,      
-  dailyLimitAmount: 1000000,
+  // ⭐⭐⭐ 수정: dailyLimitAmount는 deprecated (UI에서는 유지하되 실제 로직에서 사용 안함) ⭐⭐⭐
+  dailyLimitAmount: 1000000,  // 하위 호환성 유지
   useTrailingStop: true,      
   trailingStopPct: 4,        
   useAiAnalysis: false,
@@ -1917,9 +1808,11 @@ const settings = ref({
   useMarketTrendFilter: false,
   cumulativeLossLimitPct: -10,
   consecutiveStopLossLimit: 3,
-  buyAmountPct: 10,
-  usePerTradeLimit: true,
-  useDailyLimitRecovery: false
+  // ⭐⭐⭐ 수정: buyAmountPct → fixedBuyAmount ⭐⭐⭐
+  fixedBuyAmount: 10000,      // 1회 고정 매수 금액 (원)
+  useDailyLimitRecovery: false,
+  // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
+  useRoundRobin: true         // 매수 방식: true=라운드로빈, false=고정금액
 })
 
 // 기본값 (초기화용)
@@ -1930,7 +1823,7 @@ const defaultSettings = {
   sellTargetPct: 4,           
   stopLossPct: -8,            
   maxHoldingsPerCoin: 2,  
-  dailyLimitAmount: 1000000,
+  dailyLimitAmount: 1000000,  // deprecated (하위 호환성)
   useTrailingStop: true,      
   trailingStopPct: 4,
   useAiAnalysis: false,
@@ -1946,9 +1839,11 @@ const defaultSettings = {
   useMarketTrendFilter: false,
   cumulativeLossLimitPct: -10,
   consecutiveStopLossLimit: 3,
-  buyAmountPct: 10,
+  // ⭐⭐⭐ 수정: buyAmountPct → fixedBuyAmount ⭐⭐⭐
+  fixedBuyAmount: 10000,      // 기본값: 10,000원
   useDailyLimitRecovery: false,
-  usePerTradeLimit: true
+  // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
+  useRoundRobin: true         // 기본값: 라운드로빈 방식
 }
 
 // 유효성 검증 규칙
@@ -2051,9 +1946,11 @@ const loadSettings = async () => {
         useMarketTrendFilter: data.useMarketTrendFilter ?? false,
         cumulativeLossLimitPct: data.cumulativeLossLimitPct || -10,
         consecutiveStopLossLimit: data.consecutiveStopLossLimit || 3,
-        buyAmountPct: data.buyAmountPct || 10,
+        // ⭐⭐⭐ 수정: buyAmountPct → fixedBuyAmount ⭐⭐⭐
+        fixedBuyAmount: data.fixedBuyAmount || 10000,
         useDailyLimitRecovery: data.useDailyLimitRecovery ?? false,
-        usePerTradeLimit: data.usePerTradeLimit ?? true
+        // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
+        useRoundRobin: data.useRoundRobin ?? true
       }
 
       hasExistingSettings.value = true
@@ -2097,9 +1994,11 @@ const createDefaultSettings = async () => {
       useMarketTrendFilter: Boolean(settings.value.useMarketTrendFilter),
       cumulativeLossLimitPct: Number(settings.value.cumulativeLossLimitPct),
       consecutiveStopLossLimit: Number(settings.value.consecutiveStopLossLimit),
-      buyAmountPct: Number(settings.value.buyAmountPct),
+      // ⭐⭐⭐ 수정: buyAmountPct → fixedBuyAmount ⭐⭐⭐
+      fixedBuyAmount: Number(settings.value.fixedBuyAmount),
       useDailyLimitRecovery: Boolean(settings.value.useDailyLimitRecovery),
-      usePerTradeLimit: Boolean(settings.value.usePerTradeLimit)
+      // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
+      useRoundRobin: Boolean(settings.value.useRoundRobin)
     }
     
     await tradingApi.createSettings(payload)
@@ -2156,9 +2055,11 @@ const saveSettings = async () => {
       useMarketTrendFilter: Boolean(settings.value.useMarketTrendFilter),
       cumulativeLossLimitPct: Number(settings.value.cumulativeLossLimitPct),
       consecutiveStopLossLimit: Number(settings.value.consecutiveStopLossLimit),
-      buyAmountPct: Number(settings.value.buyAmountPct),  
+      // ⭐⭐⭐ 수정: buyAmountPct → fixedBuyAmount ⭐⭐⭐
+      fixedBuyAmount: Number(settings.value.fixedBuyAmount),
       useDailyLimitRecovery: Boolean(settings.value.useDailyLimitRecovery),
-      usePerTradeLimit: Boolean(settings.value.usePerTradeLimit)
+      // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
+      useRoundRobin: Boolean(settings.value.useRoundRobin)
     }
 
     console.log('Sending payload:', payload) // 디버깅용
@@ -2257,9 +2158,11 @@ const deleteSettings = async () => {
       useMarketTrendFilter: Boolean(settings.value.useMarketTrendFilter),
       cumulativeLossLimitPct: Number(settings.value.cumulativeLossLimitPct),
       consecutiveStopLossLimit: Number(settings.value.consecutiveStopLossLimit),
-      buyAmountPct: Number(settings.value.buyAmountPct), 
+      // ⭐⭐⭐ 수정: buyAmountPct → fixedBuyAmount ⭐⭐⭐
+      fixedBuyAmount: Number(settings.value.fixedBuyAmount),
       useDailyLimitRecovery: Boolean(settings.value.useDailyLimitRecovery),
-      usePerTradeLimit: Boolean(settings.value.usePerTradeLimit)
+      // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
+      useRoundRobin: Boolean(settings.value.useRoundRobin)
     }
     
     await tradingApi.createSettings(payload)

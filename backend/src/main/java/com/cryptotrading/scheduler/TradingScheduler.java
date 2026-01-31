@@ -14,6 +14,7 @@ import com.cryptotrading.repository.UserRepository;
 import com.cryptotrading.repository.TradingSettingRepository; 
 import com.cryptotrading.repository.CoinNewsRepository;
 import com.cryptotrading.dto.notification.DailyReportDTO;
+import com.cryptotrading.service.RiskManagementService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +43,9 @@ public class TradingScheduler {
     private final NewsAnalysisService newsAnalysisService;
     private final CoinNewsRepository coinNewsRepository;
     private final TradingSettingRepository tradingSettingRepository;
+    
+    // ⭐⭐⭐ [추가] RiskManagementService (총자산 스냅샷 관리) ⭐⭐⭐
+    private final RiskManagementService riskManagementService;
     
     // ⭐⭐⭐ [추가] Redis Template (한 번만 선언) ⭐⭐⭐
     private final StringRedisTemplate redisTemplate;
@@ -222,6 +226,21 @@ public class TradingScheduler {
         }
    
         log.info("========== 일일 리포트 발송 완료 ==========");
+    }
+
+     /**
+     * ⭐⭐⭐ 신규: 자정에 어제 총자산 스냅샷 캐시 정리 (00:05 KST) ⭐⭐⭐
+     */
+    @Scheduled(cron = "0 5 0 * * *", zone = "Asia/Seoul")
+    public void clearYesterdaySnapshotCache() {
+        log.info("=== 총자산 스냅샷 캐시 정리 시작 (00:05 KST) ===");
+        try {
+            riskManagementService.clearYesterdayTotalAssetSnapshot();
+            riskManagementService.clearDailySellAmountCache();
+            log.info("=== 총자산 스냅샷 캐시 정리 완료 ===");
+        } catch (Exception e) {
+            log.error("총자산 스냅샷 캐시 정리 실패: {}", e.getMessage());
+        }
     }
 
     // ======================================================

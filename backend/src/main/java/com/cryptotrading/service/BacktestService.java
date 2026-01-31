@@ -386,30 +386,43 @@ public class BacktestService {
      */
     private void executeBuy(String symbol, BigDecimal price, LocalDate date, 
                              String signal, BacktestRequestDTO request, SimulationState state) {
-        // ⭐⭐⭐ 수정: 1회 매수 한도 옵션 적용 ⭐⭐⭐
-        boolean usePerTradeLimit = request.getUsePerTradeLimit() != null ? request.getUsePerTradeLimit() : true;
+        // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin (의미 변경) ⭐⭐⭐
+        // true: 라운드로빈 (남은 한도 균등 분배)
+        // false: 고정 금액 (fixedBuyAmount 사용)
+        boolean useRoundRobin = request.getUseRoundRobin() != null ? request.getUseRoundRobin() : true;
         
-        BigDecimal buyAmount;
-        if (usePerTradeLimit) {
-            // 1회 한도 적용: 기존 동작
-            int buyAmountPct = request.getBuyAmountPct() != null ? request.getBuyAmountPct() : 10;
-            buyAmount = request.getInitialBalance()
-                    .multiply(new BigDecimal(buyAmountPct))
+        // 일일 한도 계산
+        BigDecimal dailyLimit = request.getDailyTradeLimitPct() != null 
+                ? request.getInitialBalance()
+                    .multiply(new BigDecimal(request.getDailyTradeLimitPct()))
                     .divide(new BigDecimal("100"), SCALE, RoundingMode.DOWN)
-                    .min(state.getCashBalance());
-        } else {
-            // 1회 한도 미적용: 남은 현금 전체 사용 가능 (단, 일일 한도 내에서)
-            BigDecimal dailyLimit = request.getDailyTradeLimitPct() != null 
-                    ? request.getInitialBalance()
-                        .multiply(new BigDecimal(request.getDailyTradeLimitPct()))
-                        .divide(new BigDecimal("100"), SCALE, RoundingMode.DOWN)
-                    : state.getCashBalance();
-            BigDecimal remainingDailyLimit = dailyLimit.subtract(state.getDailyBuyAmount())
-                    .add(state.getDailySellRecovery());
-            buyAmount = state.getCashBalance().min(remainingDailyLimit);
+                : request.getInitialBalance();
+        
+        // 남은 일일 한도 (복구 금액 포함)
+        BigDecimal remainingDailyLimit = dailyLimit.subtract(state.getDailyBuyAmount());
+        if (Boolean.TRUE.equals(request.getUseDailyLimitRecovery())) {
+            remainingDailyLimit = remainingDailyLimit.add(state.getDailySellRecovery());
+            // 최대치는 일일 한도까지만
+            if (remainingDailyLimit.compareTo(dailyLimit) > 0) {
+                remainingDailyLimit = dailyLimit;
+            }
         }
         
-        if (buyAmount.compareTo(new BigDecimal("10000")) < 0) return;  // 최소 1만원
+        BigDecimal buyAmount;
+        if (useRoundRobin) {
+            // ⭐⭐⭐ 라운드로빈: 남은 한도를 매수 후보 수로 균등 분배 ⭐⭐⭐
+            // 백테스팅에서는 단일 코인 처리이므로 남은 한도 전체 사용
+            buyAmount = remainingDailyLimit.min(state.getCashBalance());
+        } else {
+            // ⭐⭐⭐ 고정 금액: fixedBuyAmount 사용 ⭐⭐⭐
+            BigDecimal fixedAmount = request.getFixedBuyAmount() != null 
+                    ? request.getFixedBuyAmount() 
+                    : new BigDecimal("10000");
+            buyAmount = fixedAmount.min(remainingDailyLimit).min(state.getCashBalance());
+        }
+        
+        // ⭐⭐⭐ 수정: 최소 금액 5,000원 (업비트 최소 주문금액) ⭐⭐⭐
+        if (buyAmount.compareTo(new BigDecimal("5000")) < 0) return;
         
         BigDecimal fee = buyAmount.multiply(FEE_RATE);
         BigDecimal actualAmount = buyAmount.subtract(fee);
@@ -587,18 +600,32 @@ public class BacktestService {
             return false;
         }
 
-         // 예상 매수 금액 계산 (executeBuy와 동일한 로직)
-        int buyAmountPct = request.getBuyAmountPct() != null ? request.getBuyAmountPct() : 10;
-        BigDecimal buyAmount = request.getInitialBalance()
-                .multiply(new BigDecimal(buyAmountPct))
-                .divide(new BigDecimal("100"), SCALE, RoundingMode.DOWN)
-                .min(state.getCashBalance());
+        // ⭐⭐⭐ 수정: 예상 매수 금액 계산 (executeBuy와 동일한 로직) ⭐⭐⭐
+        boolean useRoundRobin = request.getUseRoundRobin() != null ? request.getUseRoundRobin() : true;
+        
+        // 일일 한도 계산
+        BigDecimal dailyLimit = request.getDailyTradeLimitPct() != null 
+                ? request.getInitialBalance()
+                    .multiply(new BigDecimal(request.getDailyTradeLimitPct()))
+                    .divide(new BigDecimal("100"), SCALE, RoundingMode.DOWN)
+                : request.getInitialBalance();
+        
+        BigDecimal buyAmount;
+        if (useRoundRobin) {
+            // 라운드로빈: 남은 한도 사용 (canBuy에서는 단순화)
+            buyAmount = dailyLimit.subtract(state.getDailyBuyAmount())
+                    .min(state.getCashBalance());
+        } else {
+            // 고정 금액: fixedBuyAmount 사용
+            BigDecimal fixedAmount = request.getFixedBuyAmount() != null 
+                    ? request.getFixedBuyAmount() 
+                    : new BigDecimal("10000");
+            buyAmount = fixedAmount.min(state.getCashBalance());
+        }
 
         // 3. 일일 거래 한도 체크
         if (request.getDailyTradeLimitPct() != null && request.getDailyTradeLimitPct() < 100) {
-            BigDecimal dailyLimit = request.getInitialBalance()
-                    .multiply(new BigDecimal(request.getDailyTradeLimitPct()))
-                    .divide(new BigDecimal("100"), 0, RoundingMode.DOWN);
+            // dailyLimit은 이미 위에서 계산됨 - 재선언 제거
         
             // ⭐⭐⭐ Day 41 수정: 복구 금액 반영한 남은 한도 계산 ⭐⭐⭐
             BigDecimal remainingLimit = dailyLimit

@@ -13,6 +13,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 
 import java.util.Map;
@@ -26,6 +27,12 @@ public class RiskManagementService {
     private final TransactionRepository transactionRepository;
 
     private final TechnicalIndicatorService technicalIndicatorService;
+
+    // ⭐⭐⭐ 신규 추가: 업비트 API 서비스 (총자산 조회용) ⭐⭐⭐
+    private final UpbitApiService upbitApiService;
+    
+    // ⭐⭐⭐ 신규 추가: 사용자별 API 키 조회용 ⭐⭐⭐
+    private final UserService userService;
     
     private static final int SCALE = 8;
 
@@ -38,6 +45,11 @@ public class RiskManagementService {
     // 일일 매도 금액 추적 (한도 복구용)
     // Key: "userId:날짜(yyyy-MM-dd)", Value: 오늘 총 매도 금액
     private final Map<String, BigDecimal> dailySellAmountMap = new ConcurrentHashMap<>();
+
+    // ⭐⭐⭐ 신규 추가: 일일 총자산 스냅샷 캐시 ⭐⭐⭐
+    // Key: "userId:날짜(yyyy-MM-dd)", Value: 당일 00:00 KST 기준 총자산 (KRW + 코인 평가액)
+    // 하루 동안 고정되어 급등/급락에도 일일 한도가 변동되지 않음
+    private final Map<String, BigDecimal> dailyTotalAssetSnapshot = new ConcurrentHashMap<>();
 
 
     /**
@@ -92,11 +104,12 @@ public class RiskManagementService {
 
 
     /**
-     * 일일 거래 한도 체크 (dailyTradeLimitPct 적용)
+     * ⭐⭐⭐ 수정: 일일 거래 한도 체크 (총자산 스냅샷 기준) ⭐⭐⭐
      */
     public boolean checkDailyLimit(String userId, BigDecimal newAmount, TradingSetting setting) {
-        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
-        LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
+        // KST 기준 오늘
+        LocalDateTime startOfDay = LocalDate.now(java.time.ZoneId.of("Asia/Seoul")).atStartOfDay();
+        LocalDateTime endOfDay = LocalDate.now(java.time.ZoneId.of("Asia/Seoul")).atTime(LocalTime.MAX);
         
         // 오늘 매수한 총 금액 조회
         BigDecimal todayTotal = transactionRepository
@@ -106,15 +119,17 @@ public class RiskManagementService {
             todayTotal = BigDecimal.ZERO;
         }
         
-        // dailyTradeLimitPct 비율 적용
-        BigDecimal effectiveDailyLimit = calculateEffectiveDailyLimit(setting);
+        // ⭐⭐⭐ 수정: 총자산 스냅샷 기준으로 일일 한도 계산 ⭐⭐⭐
+        BigDecimal effectiveDailyLimit = calculateEffectiveDailyLimit(userId, setting);
         
         BigDecimal afterBuy = todayTotal.add(newAmount);
         boolean withinLimit = afterBuy.compareTo(effectiveDailyLimit) <= 0;
         
-        log.debug("일일 한도 체크: 오늘 매수액={}, 신규={}, 실제한도={} (기준액={} x {}%), 통과={}", 
+        // ⭐⭐⭐ 수정: 로그에서 dailyLimitAmount 대신 총자산 표시 ⭐⭐⭐
+        BigDecimal totalAsset = getDailyTotalAssetSnapshot(userId);
+        log.debug("일일 한도 체크: 오늘 매수액={}, 신규={}, 실제한도={} (총자산={} x {}%), 통과={}", 
                 todayTotal, newAmount, effectiveDailyLimit, 
-                setting.getDailyLimitAmount(), setting.getDailyTradeLimitPct(), withinLimit);
+                totalAsset, setting.getDailyTradeLimitPct(), withinLimit);
         
         return withinLimit;
     }
@@ -155,8 +170,9 @@ public class RiskManagementService {
         // 매수 후 해당 종목 총 금액
         BigDecimal afterBuyAmount = currentHoldingAmount.add(newAmount);
         
-        // 최대 허용 금액 = 일일 한도 금액 × maxPositionPct / 100
-        BigDecimal maxAllowedAmount = setting.getDailyLimitAmount()
+        // ⭐⭐⭐ 수정: 최대 허용 금액 = 총자산 스냅샷 × maxPositionPct / 100 ⭐⭐⭐
+        BigDecimal totalAsset = getDailyTotalAssetSnapshot(userId);
+        BigDecimal maxAllowedAmount = totalAsset
                 .multiply(new BigDecimal(maxPositionPct))
                 .divide(new BigDecimal("100"), SCALE, RoundingMode.HALF_UP);
         
@@ -214,8 +230,8 @@ public class RiskManagementService {
                 totalProfitLoss = BigDecimal.ZERO;
             }
             
-            // 초기 자본은 일일 한도 금액으로 추정 (설정에서)
-            BigDecimal initialCapital = setting.getDailyLimitAmount();
+            // ⭐⭐⭐ 수정: 초기 자본은 총자산 스냅샷 사용 ⭐⭐⭐
+            BigDecimal initialCapital = getDailyTotalAssetSnapshot(userId);
             if (initialCapital == null || initialCapital.compareTo(BigDecimal.ZERO) <= 0) {
                 initialCapital = new BigDecimal("1000000"); // 기본값
             }
@@ -369,16 +385,18 @@ public class RiskManagementService {
             todayProfitLoss = BigDecimal.ZERO;
         }
         
-        // 손실 한도 금액 = 일일 한도 금액 × dailyStopLossPct / 100 (음수)
-        BigDecimal stopLossLimit = setting.getDailyLimitAmount()
+       // ⭐⭐⭐ 수정: 손실 한도 금액 = 총자산 스냅샷 × dailyStopLossPct / 100 (음수) ⭐⭐⭐
+        BigDecimal totalAsset = getDailyTotalAssetSnapshot(userId);
+        BigDecimal stopLossLimit = totalAsset
                 .multiply(new BigDecimal(dailyStopLossPct))
                 .divide(new BigDecimal("100"), SCALE, RoundingMode.HALF_UP);
         
         // 오늘 손익이 손실 한도보다 크면 통과 (손실 한도는 음수)
         boolean withinLimit = todayProfitLoss.compareTo(stopLossLimit) > 0;
         
-        log.debug("긴급 정지 체크: 오늘손익={}, 손실한도={} (기준액={} x {}%), 통과={}", 
-                todayProfitLoss, stopLossLimit, setting.getDailyLimitAmount(), dailyStopLossPct, withinLimit);
+        // ⭐⭐⭐ 수정: 로그에서 dailyLimitAmount 대신 총자산 표시 ⭐⭐⭐
+        log.debug("긴급 정지 체크: 오늘손익={}, 손실한도={} (총자산={} x {}%), 통과={}", 
+                todayProfitLoss, stopLossLimit, totalAsset, dailyStopLossPct, withinLimit);
         
         if (!withinLimit) {
             log.warn("⚠️ 긴급 정지 발동! userId={}, 오늘손익={}, 손실한도={}", 
@@ -396,11 +414,12 @@ public class RiskManagementService {
     }
 
     /**
-     * 일일 남은 거래 가능 금액 조회 (dailyTradeLimitPct 적용 + 한도 복구 옵션)
+     * ⭐⭐⭐ 수정: 일일 남은 거래 가능 금액 조회 (총자산 스냅샷 기준) ⭐⭐⭐
      */
     public BigDecimal getRemainingDailyLimit(String userId, TradingSetting setting) {
-        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
-        LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
+        // KST 기준 오늘 시작/끝
+        LocalDateTime startOfDay = LocalDate.now(java.time.ZoneId.of("Asia/Seoul")).atStartOfDay();
+        LocalDateTime endOfDay = LocalDate.now(java.time.ZoneId.of("Asia/Seoul")).atTime(LocalTime.MAX);
         
         BigDecimal todayBuyTotal = transactionRepository
                 .sumTodayBuyAmount(userId, startOfDay, endOfDay);
@@ -409,8 +428,8 @@ public class RiskManagementService {
             todayBuyTotal = BigDecimal.ZERO;
         }
         
-        // dailyTradeLimitPct 비율 적용
-        BigDecimal effectiveDailyLimit = calculateEffectiveDailyLimit(setting);
+        // ⭐⭐⭐ 수정: 총자산 스냅샷 기준으로 일일 한도 계산 ⭐⭐⭐
+        BigDecimal effectiveDailyLimit = calculateEffectiveDailyLimit(userId, setting);
         
         // ⭐⭐⭐ Day 41 추가: 일일 한도 복구 옵션 적용 ⭐⭐⭐
         BigDecimal recoveredAmount = BigDecimal.ZERO;
@@ -431,13 +450,163 @@ public class RiskManagementService {
         return remaining;
     }
 
-    /**
-     * 실제 일일 한도 계산 (dailyTradeLimitPct 적용)
+     /**
+     * ⭐⭐⭐ 신규: 당일 총자산 스냅샷 조회 ⭐⭐⭐
+     * 
+     * 매일 00:00 KST 기준으로 스냅샷이 저장됨
+     * 스냅샷이 없으면 업비트 API를 호출하여 현재 총자산을 조회 후 저장
+     * 
+     * @param userId 사용자 ID
+     * @return 당일 총자산 (KRW + 코인 평가액)
      */
-    public BigDecimal calculateEffectiveDailyLimit(TradingSetting setting) {
+    public BigDecimal getDailyTotalAssetSnapshot(String userId) {
+        // KST 기준 오늘 날짜
+        String today = LocalDate.now(java.time.ZoneId.of("Asia/Seoul")).toString();
+        String key = userId + ":" + today;
+        
+        // 캐시에 있으면 반환
+        BigDecimal cachedSnapshot = dailyTotalAssetSnapshot.get(key);
+        if (cachedSnapshot != null) {
+            log.debug("총자산 스냅샷 캐시 히트: userId={}, date={}, amount={}", userId, today, cachedSnapshot);
+            return cachedSnapshot;
+        }
+        
+        // 캐시에 없으면 업비트 API 호출
+        try {
+            BigDecimal totalAsset = fetchTotalAssetFromUpbit(userId);
+            dailyTotalAssetSnapshot.put(key, totalAsset);
+            log.info("총자산 스냅샷 저장: userId={}, date={}, amount={}원", userId, today, totalAsset);
+            return totalAsset;
+        } catch (Exception e) {
+            log.error("총자산 조회 실패: userId={}, error={}", userId, e.getMessage());
+            // 조회 실패 시 기본값 100만원 반환 (안전장치)
+            BigDecimal defaultAmount = new BigDecimal("1000000");
+            log.warn("기본값 사용: {}원", defaultAmount);
+            return defaultAmount;
+        }
+    }
+
+    /**
+     * ⭐⭐⭐ 신규: 업비트에서 총자산 조회 ⭐⭐⭐
+     * 
+     * KRW 잔고 + 모든 코인의 현재 평가액 합계
+     */
+     private BigDecimal fetchTotalAssetFromUpbit(String userId) {
+        // 사용자 API 키 조회 (String[] 반환: [0]=accessKey, [1]=secretKey)
+        String[] apiKeys = userService.getDecryptedApiKeys(userId);
+        if (apiKeys == null || apiKeys[0] == null) {
+            throw new RuntimeException("API 키가 설정되지 않았습니다");
+        }
+        
+        // 업비트 계좌 조회
+        var accounts = upbitApiService.getAccounts(apiKeys[0], apiKeys[1]);
+        if (accounts == null || accounts.isEmpty()) {
+            throw new RuntimeException("계좌 정보를 조회할 수 없습니다");
+        }
+        
+        BigDecimal totalAsset = BigDecimal.ZERO;
+        
+        for (var account : accounts) {
+            String currency = account.getCurrency();
+            BigDecimal balance = account.getBalance();
+            
+            if (balance == null || balance.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+            
+            if ("KRW".equals(currency)) {
+                // 원화 잔고
+                totalAsset = totalAsset.add(balance);
+            } else {
+                // 코인 평가액 = 보유수량 × 현재가
+                try {
+                    String market = "KRW-" + currency;
+                    var ticker = upbitApiService.getTicker(java.util.List.of(market));
+                    if (ticker != null && !ticker.isEmpty()) {
+                        BigDecimal currentPrice = ticker.get(0).getTradePrice();
+                        BigDecimal coinValue = balance.multiply(currentPrice);
+                        totalAsset = totalAsset.add(coinValue);
+                    }
+                } catch (Exception e) {
+                    log.warn("코인 시세 조회 실패: {} - {}", currency, e.getMessage());
+                    // 평가액을 0으로 처리 (보수적 계산)
+                }
+            }
+        }
+        
+        log.info("업비트 총자산 조회 완료: userId={}, totalAsset={}원", userId, totalAsset);
+        return totalAsset;
+    }
+
+    /**
+     * ⭐⭐⭐ 신규: 총자산 스냅샷 수동 갱신 ⭐⭐⭐
+     * 
+     * 관리자 또는 스케줄러에서 호출하여 강제 갱신
+     */
+    public void refreshTotalAssetSnapshot(String userId) {
+        String today = LocalDate.now(java.time.ZoneId.of("Asia/Seoul")).toString();
+        String key = userId + ":" + today;
+        
+        try {
+            BigDecimal totalAsset = fetchTotalAssetFromUpbit(userId);
+            dailyTotalAssetSnapshot.put(key, totalAsset);
+            log.info("총자산 스냅샷 강제 갱신: userId={}, amount={}원", userId, totalAsset);
+        } catch (Exception e) {
+            log.error("총자산 스냅샷 갱신 실패: userId={}, error={}", userId, e.getMessage());
+        }
+    }
+
+    /**
+     * ⭐⭐⭐ 신규: 어제 총자산 스냅샷 캐시 정리 (자정에 호출) ⭐⭐⭐
+     */
+    public void clearYesterdayTotalAssetSnapshot() {
+        String yesterday = LocalDate.now(java.time.ZoneId.of("Asia/Seoul")).minusDays(1).toString();
+        dailyTotalAssetSnapshot.entrySet().removeIf(entry -> entry.getKey().contains(yesterday));
+        log.info("어제 총자산 스냅샷 캐시 정리 완료: {}", yesterday);
+    }
+
+/**
+     * ⭐⭐⭐ 수정: 실제 일일 한도 계산 (총자산 스냅샷 × dailyTradeLimitPct) ⭐⭐⭐
+     * 
+     * 변경 전: dailyLimitAmount × dailyTradeLimitPct%
+     * 변경 후: 총자산 스냅샷 × dailyTradeLimitPct%
+     * 
+     * @param userId 사용자 ID (총자산 스냅샷 조회용)
+     * @param setting 거래 설정
+     * @return 실제 일일 거래 한도
+     */
+    public BigDecimal calculateEffectiveDailyLimit(String userId, TradingSetting setting) {
+        // 당일 총자산 스냅샷 조회
+        BigDecimal totalAsset = getDailyTotalAssetSnapshot(userId);
+        
         Integer dailyTradeLimitPct = setting.getDailyTradeLimitPct();
         
-        // 100%이면 dailyLimitAmount 전체 사용
+        // 100%이면 총자산 전체 사용
+        if (dailyTradeLimitPct == null || dailyTradeLimitPct >= 100) {
+            log.debug("일일 한도 계산: 총자산={}원, 한도비율=100%, 실제한도={}원", totalAsset, totalAsset);
+            return totalAsset;
+        }
+        
+        BigDecimal effectiveLimit = totalAsset
+                .multiply(new BigDecimal(dailyTradeLimitPct))
+                .divide(new BigDecimal("100"), SCALE, RoundingMode.HALF_UP);
+        
+        log.debug("일일 한도 계산: 총자산={}원, 한도비율={}%, 실제한도={}원", 
+                totalAsset, dailyTradeLimitPct, effectiveLimit);
+        
+        return effectiveLimit;
+    }
+    
+    /**
+     * ⚠️ DEPRECATED: 기존 메서드 (하위 호환성 유지)
+     * 새로운 코드에서는 calculateEffectiveDailyLimit(userId, setting) 사용
+     */
+    @Deprecated
+    public BigDecimal calculateEffectiveDailyLimit(TradingSetting setting) {
+        log.warn("DEPRECATED 메서드 호출: calculateEffectiveDailyLimit(setting) - userId 파라미터 필요");
+        Integer dailyTradeLimitPct = setting.getDailyTradeLimitPct();
+        
+        // 기존 로직 유지 (dailyLimitAmount 사용)
         if (dailyTradeLimitPct == null || dailyTradeLimitPct >= 100) {
             return setting.getDailyLimitAmount();
         }
@@ -476,8 +645,9 @@ public class RiskManagementService {
             currentHoldingAmount = BigDecimal.ZERO;
         }
         
-        // 최대 허용 금액
-        BigDecimal maxAllowedAmount = setting.getDailyLimitAmount()
+        // ⭐⭐⭐ 수정: 최대 허용 금액 = 총자산 스냅샷 × maxPositionPct / 100 ⭐⭐⭐
+        BigDecimal totalAsset = getDailyTotalAssetSnapshot(userId);
+        BigDecimal maxAllowedAmount = totalAsset
                 .multiply(new BigDecimal(maxPositionPct))
                 .divide(new BigDecimal("100"), SCALE, RoundingMode.HALF_UP);
         

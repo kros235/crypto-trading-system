@@ -187,7 +187,9 @@ public class BacktestController {
                 .dailyTradeLimitPct(20)
                 .maxPositionPct(25)
                 .dailyStopLossPct(-5)
-                .buyAmountPct(10)
+                // ⭐⭐⭐ 수정: buyAmountPct → fixedBuyAmount, useRoundRobin 추가 ⭐⭐⭐
+                .fixedBuyAmount(new BigDecimal("10000"))  // 기본 1회 매수 금액: 10,000원
+                .useRoundRobin(true)                      // 기본 매수 방식: 라운드로빈
                 .build();
         
         return ResponseEntity.ok(defaults);

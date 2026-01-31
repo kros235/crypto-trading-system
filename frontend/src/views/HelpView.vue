@@ -890,33 +890,30 @@ RSI가 28이고, 거래량이 평소의 150%라면<br/>
   
   { 
     category: 'trading', 
-    term: '1회 매수 비율', 
-    description: '매수 신호 발생 시 기준 금액 대비 한 번에 투자할 비율.',
-    simpleDesc: '매수 신호가 발생했을 때, 기준 금액의 몇 %를 투자할 것인가?',
+    term: '1회 매수 금액', 
+    description: '고정 금액 매수 방식에서 각 코인에 매수할 금액 (원).',
+    simpleDesc: '매수 신호가 발생했을 때, 각 코인에 얼마를 투자할 것인가?',
     exampleIcon: 'mdi-cash-multiple',
-    exampleTitle: '💵 계산 예시',
-    example: `기준 금액이 <strong>100만원</strong>일 때:<br/><br/>
-- 5% 설정 → 1회 매수 시 <strong>5만원</strong> (더 분산 투자)<br/>
-- 10% 설정 → 1회 매수 시 <strong>10만원</strong> (기본값)<br/>
-- 20% 설정 → 1회 매수 시 <strong>20만원</strong> (집중 투자)<br/><br/>
-<strong>💡 왜 중요한가?</strong><br/>
-낮은 비율(5%) = 더 많은 매수 기회에 분산<br/>
-높은 비율(20%) = 적은 기회에 집중 투자<br/><br/>
-📊 <strong>실제 예시:</strong><br/>
-기준 금액 100만원, 비트코인 매수 신호 발생!<br/><br/>
-<strong>[10% 설정]</strong><br/>
-→ 10만원어치 비트코인 매수<br/>
-→ 남은 90만원으로 추가 기회 대기<br/><br/>
-<strong>[5% 설정]</strong><br/>
-→ 5만원어치만 매수<br/>
-→ 더 떨어지면 또 5만원 매수 가능<br/>
-→ 평균 단가 낮추기 유리`,
+    exampleTitle: '💵 설정 예시',
+    example: `<strong>고정 금액 매수 방식 (라운드로빈 OFF)</strong>에서<br/>
+각 코인에 매수할 금액을 직접 설정합니다.<br/><br/>
+📊 <strong>예시: 10,000원 설정 시</strong><br/>
+BTC 매수 신호 → <strong>10,000원</strong> 매수<br/>
+ETH 매수 신호 → <strong>10,000원</strong> 매수<br/>
+XRP 매수 신호 → <strong>10,000원</strong> 매수<br/>
+→ 총 30,000원 사용 (일일 한도 내에서)<br/><br/>
+<strong>💡 라운드로빈 ON일 때는?</strong><br/>
+이 설정값은 무시되고, 남은 일일 한도를<br/>
+매수 신호 수로 자동 균등 분배합니다.<br/><br/>
+⚠️ <strong>제한사항:</strong><br/>
+- 최소: <strong>5,000원</strong> (업비트 최소 주문금액)<br/>
+- 최대: <strong>1,000만원</strong>`,
     table: {
       headers: ['설정값', '특징', '적합한 상황'],
       rows: [
-        ['5%', '소액 분산', '여러 코인에 분산 투자'],
-        ['<strong>10%</strong>', '균형', '기본값 ✅'],
-        ['20%', '집중 투자', '확신 있는 신호에 집중']
+        ['5,000원', '최소 금액', '소규모 테스트'],
+        ['<strong>10,000원</strong>', '기본값', '초보자 추천 ✅'],
+        ['50,000원+', '적극 투자', '확신 있는 전략']
       ]
     }
   }, 
@@ -976,59 +973,62 @@ RSI가 28이고, 거래량이 평소의 150%라면<br/>
 ⚠️ <strong>주의:</strong> 일일 한도를 초과하는 금액은 복구되지 않습니다.<br/>
 예: 남은 한도 20만원에서 50만원 매도 → 20만원만 복구`
   },
-    { 
+  { 
     category: 'risk', 
-    term: '1회 매수 한도 적용', 
-    description: '라운드로빈 매수 시 1회 매수 한도를 적용할지 여부를 결정합니다.',
-    simpleDesc: '균등 분배 금액과 1회 매수 한도 중 어느 것을 우선할지 결정',
+    term: '매수 방식 선택', 
+    description: '라운드로빈(균등 분배) 또는 고정 금액 매수 방식을 선택합니다.',
+    simpleDesc: '여러 코인에 어떻게 나눠서 살 것인가?',
     exampleIcon: 'mdi-scale-balance',
     exampleTitle: '⚖️ 비교 예시',
-    example: `<strong>라운드로빈 매수란?</strong><br/>
-여러 코인에 매수 신호가 발생했을 때, 남은 일일 한도를 균등하게 분배하여 매수하는 방식입니다.<br/><br/>
-<strong>⚙️ 옵션 설명:</strong><br/>
-<strong style="color: #4CAF50;">ON (적용):</strong> 균등 분배 금액이 1회 한도보다 크면 1회 한도로 제한<br/>
-<strong style="color: #2196F3;">OFF (미적용):</strong> 균등 분배 금액 그대로 매수 (한도 내에서)<br/><br/>
-📊 <strong>예시: 일일 한도 100만원, 1회 비율 10%, ETH/XRP 매수 신호</strong><br/><br/>
+    example: `<strong>두 가지 매수 방식:</strong><br/><br/>
+<strong style="color: #4CAF50;">🔄 라운드로빈 (ON):</strong><br/>
+남은 일일 한도를 매수 신호 수로 <strong>균등 분배</strong>하여 매수<br/>
+→ 여러 코인에 동시 매수 신호 시 자동 분산 투자<br/><br/>
+<strong style="color: #2196F3;">💵 고정 금액 (OFF):</strong><br/>
+'1회 매수 금액'에 설정한 금액만큼 <strong>정확히 매수</strong><br/>
+→ 일일 한도 내에서 순차적으로 매수<br/><br/>
+📊 <strong>예시: 일일 한도 200,000원, 고정 금액 10,000원</strong><br/>
+<strong>BTC/ETH/XRP 3개 코인 매수 신호 발생!</strong><br/><br/>
 <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
 <tr style="background-color: #1565C0;">
 <th style="padding: 8px; border: 1px solid #1976D2; color: white;">항목</th>
-<th style="padding: 8px; border: 1px solid #1976D2; color: white;">ON (적용)</th>
-<th style="padding: 8px; border: 1px solid #1976D2; color: white;">OFF (미적용)</th>
+<th style="padding: 8px; border: 1px solid #1976D2; color: white;">🔄 라운드로빈</th>
+<th style="padding: 8px; border: 1px solid #1976D2; color: white;">💵 고정 금액</th>
 </tr>
 <tr>
-<td style="padding: 8px; border: 1px solid #E0E0E0;">균등 분배</td>
-<td style="padding: 8px; border: 1px solid #E0E0E0;">50만원씩</td>
-<td style="padding: 8px; border: 1px solid #E0E0E0;">50만원씩</td>
+<td style="padding: 8px; border: 1px solid #E0E0E0;">매수 금액 계산</td>
+<td style="padding: 8px; border: 1px solid #E0E0E0;">200,000 ÷ 3 = 66,666원</td>
+<td style="padding: 8px; border: 1px solid #E0E0E0;">고정 10,000원</td>
 </tr>
 <tr>
-<td style="padding: 8px; border: 1px solid #E0E0E0;">1회 한도</td>
-<td style="padding: 8px; border: 1px solid #E0E0E0;">10만원</td>
-<td style="padding: 8px; border: 1px solid #E0E0E0;">-</td>
+<td style="padding: 8px; border: 1px solid #E0E0E0;">BTC 매수</td>
+<td style="padding: 8px; border: 1px solid #E0E0E0; color: #4CAF50;"><strong>66,666원</strong></td>
+<td style="padding: 8px; border: 1px solid #E0E0E0; color: #2196F3;"><strong>10,000원</strong></td>
 </tr>
 <tr>
 <td style="padding: 8px; border: 1px solid #E0E0E0;">ETH 매수</td>
-<td style="padding: 8px; border: 1px solid #E0E0E0; color: #F44336;"><strong>10만원</strong></td>
-<td style="padding: 8px; border: 1px solid #E0E0E0; color: #4CAF50;"><strong>50만원</strong></td>
+<td style="padding: 8px; border: 1px solid #E0E0E0; color: #4CAF50;"><strong>66,666원</strong></td>
+<td style="padding: 8px; border: 1px solid #E0E0E0; color: #2196F3;"><strong>10,000원</strong></td>
 </tr>
 <tr>
 <td style="padding: 8px; border: 1px solid #E0E0E0;">XRP 매수</td>
-<td style="padding: 8px; border: 1px solid #E0E0E0; color: #F44336;"><strong>10만원</strong></td>
-<td style="padding: 8px; border: 1px solid #E0E0E0; color: #4CAF50;"><strong>50만원</strong></td>
+<td style="padding: 8px; border: 1px solid #E0E0E0; color: #4CAF50;"><strong>66,666원</strong></td>
+<td style="padding: 8px; border: 1px solid #E0E0E0; color: #2196F3;"><strong>10,000원</strong></td>
 </tr>
 <tr style="background-color: #FFF8E1;">
 <td style="padding: 8px; border: 1px solid #E0E0E0; color: #E65100;"><strong>총 사용</strong></td>
-<td style="padding: 8px; border: 1px solid #E0E0E0; color: #D32F2F;"><strong>20만원 (20%)</strong></td>
-<td style="padding: 8px; border: 1px solid #E0E0E0; color: #2E7D32;"><strong>100만원 (100%)</strong></td>
+<td style="padding: 8px; border: 1px solid #E0E0E0; color: #2E7D32;"><strong>199,998원 (≈100%)</strong></td>
+<td style="padding: 8px; border: 1px solid #E0E0E0; color: #1565C0;"><strong>30,000원 (15%)</strong></td>
 </tr>
 </table><br/>
 💡 <strong>언제 사용하나요?</strong><br/>
-- <strong style="color: #4CAF50;">ON:</strong> 한 번에 큰 금액 투자를 피하고 싶을 때 (보수적)<br/>
-- <strong style="color: #2196F3;">OFF:</strong> 일일 한도를 최대한 활용하고 싶을 때 (적극적)`,
+- <strong style="color: #4CAF50;">🔄 라운드로빈:</strong> 일일 한도를 최대한 활용하고 분산 투자할 때 (추천 ✅)<br/>
+- <strong style="color: #2196F3;">💵 고정 금액:</strong> 정해진 금액만 투자하고 나머지를 보존할 때`,
     table: {
-      headers: ['설정', '특징', '일일 한도 활용'],
+      headers: ['방식', '특징', '일일 한도 활용'],
       rows: [
-        ['<strong>ON (적용)</strong>', '안정적, 보수적', '낮을 수 있음'],
-        ['<strong>OFF (미적용)</strong>', '균등 분배 우선', '최대한 활용 ✅']
+        ['<strong>🔄 라운드로빈</strong>', '균등 분배, 분산 투자', '최대한 활용 ✅'],
+        ['<strong>💵 고정 금액</strong>', '정확한 금액 제어', '보수적 활용']
       ]
     }
   },

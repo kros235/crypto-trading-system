@@ -45,6 +45,10 @@ public class TradingSetting extends BaseEntity {
     @Column(name = "max_holdings_per_coin")
     private Integer maxHoldingsPerCoin = 2;
 
+    // ⚠️ DEPRECATED: 이 필드는 더 이상 사용되지 않습니다.
+    // 일일 한도는 이제 매일 00:00 KST에 업비트 총자산을 조회하여 자동 계산됩니다.
+    // 기존 데이터 호환성을 위해 컬럼은 유지하지만, 새로운 로직에서는 사용하지 않습니다.
+    @Deprecated
     @Column(name = "daily_limit_amount", precision = 15, scale = 2)
     private BigDecimal dailyLimitAmount = new BigDecimal("1000000.00");
 
@@ -103,17 +107,21 @@ public class TradingSetting extends BaseEntity {
     @Column(name = "consecutive_stop_loss_limit")
     private Integer consecutiveStopLossLimit = 3;
 
-    // 1회 매수 비율 (%)
-    @Column(name = "buy_amount_pct")
-    private Integer buyAmountPct = 10;
+    // ⭐⭐⭐ 변경: 1회 매수 비율(%) → 1회 고정 매수 금액(원) ⭐⭐⭐
+    // 라운드로빈 OFF 시 각 코인에 이 금액만큼 매수
+    // 최소 5,000원 이상 (업비트 최소 주문금액)
+    @Column(name = "fixed_buy_amount", precision = 15, scale = 2)
+    private BigDecimal fixedBuyAmount = new BigDecimal("10000.00");
 
     // 일일 한도 복구 옵션 
     @Column(name = "use_daily_limit_recovery")
     private Boolean useDailyLimitRecovery = false;
 
-    // ⭐⭐⭐ 신규 추가: 1회 매수 한도 적용 옵션 ⭐⭐⭐
-    @Column(name = "use_per_trade_limit")
-    private Boolean usePerTradeLimit = true;  // 기본값: true (기존 동작 유지)
+    // ⭐⭐⭐ 변경: 매수 방식 선택 (라운드로빈 vs 고정금액) ⭐⭐⭐
+    // true: 라운드로빈 (일일 한도를 매수 신호 수로 균등 분배)
+    // false: 고정 금액 (fixedBuyAmount만큼 각 코인에 매수)
+    @Column(name = "use_round_robin")
+    private Boolean useRoundRobin = true;  // 기본값: true (라운드로빈 방식)
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "user_id", 

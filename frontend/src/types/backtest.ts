@@ -21,13 +21,14 @@ export interface BacktestRequest {
   dailyTradeLimitPct?: number;   // 일일 거래 한도 (%)
   maxPositionPct?: number;       // 단일 종목 비중 제한 (%)
   dailyStopLossPct?: number;     // 긴급 정지 조건 (%)
-  // 급락장 보호 기능
+   // 급락장 보호 기능
   useMarketTrendFilter?: boolean
   cumulativeLossLimitPct?: number
   consecutiveStopLossLimit?: number
-  buyAmountPct?: number
-  useDailyLimitRecovery?: boolean // 일일 한도 복구 옵션
-  usePerTradeLimit?: boolean      // 1회 매수 한도 적용 옵션
+  // ⭐⭐⭐ 수정: buyAmountPct → fixedBuyAmount, usePerTradeLimit → useRoundRobin ⭐⭐⭐
+  fixedBuyAmount?: number          // 1회 고정 매수 금액 (원)
+  useDailyLimitRecovery?: boolean  // 일일 한도 복구 옵션
+  useRoundRobin?: boolean          // 매수 방식: true=라운드로빈, false=고정금액
 }
 
 // 백테스트 결과

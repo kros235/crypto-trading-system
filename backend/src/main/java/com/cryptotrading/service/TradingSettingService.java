@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.math.BigDecimal;
 import java.util.Optional;
 
 @Service
@@ -44,7 +45,8 @@ public class TradingSettingService {
                 .sellTargetPct(dto.getSellTargetPct())
                 .stopLossPct(dto.getStopLossPct())
                 .maxHoldingsPerCoin(dto.getMaxHoldingsPerCoin())
-                .dailyLimitAmount(dto.getDailyLimitAmount())
+                // ⚠️ dailyLimitAmount는 deprecated - 기존 호환성을 위해 값은 저장하되 사용하지 않음
+                .dailyLimitAmount(dto.getDailyLimitAmount() != null ? dto.getDailyLimitAmount() : new BigDecimal("1000000.00"))
                 .useAiAnalysis(dto.getUseAiAnalysis())
                 .useTrailingStop(dto.getUseTrailingStop())
                 .trailingStopPct(dto.getTrailingStopPct())
@@ -60,9 +62,11 @@ public class TradingSettingService {
                 .useMarketTrendFilter(dto.getUseMarketTrendFilter() != null ? dto.getUseMarketTrendFilter() : false)
                 .cumulativeLossLimitPct(dto.getCumulativeLossLimitPct() != null ? dto.getCumulativeLossLimitPct() : -10)
                 .consecutiveStopLossLimit(dto.getConsecutiveStopLossLimit() != null ? dto.getConsecutiveStopLossLimit() : 3)
-                .buyAmountPct(dto.getBuyAmountPct() != null ? dto.getBuyAmountPct() : 10)
-                .useDailyLimitRecovery(dto.getUseDailyLimitRecovery() != null ? dto.getUseDailyLimitRecovery() : false)  
-                .usePerTradeLimit(dto.getUsePerTradeLimit() != null ? dto.getUsePerTradeLimit() : true)
+                // ⭐⭐⭐ 변경: buyAmountPct → fixedBuyAmount ⭐⭐⭐
+                .fixedBuyAmount(dto.getFixedBuyAmount() != null ? dto.getFixedBuyAmount() : new BigDecimal("10000.00"))
+                .useDailyLimitRecovery(dto.getUseDailyLimitRecovery() != null ? dto.getUseDailyLimitRecovery() : false) 
+                // ⭐⭐⭐ 변경: usePerTradeLimit → useRoundRobin ⭐⭐⭐
+                .useRoundRobin(dto.getUseRoundRobin() != null ? dto.getUseRoundRobin() : true)
                 .build();
 
         TradingSetting saved = tradingSettingRepository.save(setting);
@@ -82,6 +86,7 @@ public class TradingSettingService {
         setting.setSellTargetPct(dto.getSellTargetPct());
         setting.setStopLossPct(dto.getStopLossPct());
         setting.setMaxHoldingsPerCoin(dto.getMaxHoldingsPerCoin());
+        // ⚠️ dailyLimitAmount는 deprecated - 기존 호환성을 위해 값은 저장
         setting.setDailyLimitAmount(dto.getDailyLimitAmount());
         setting.setUseAiAnalysis(dto.getUseAiAnalysis());
         setting.setUseTrailingStop(dto.getUseTrailingStop());
@@ -98,9 +103,11 @@ public class TradingSettingService {
         setting.setUseMarketTrendFilter(dto.getUseMarketTrendFilter() != null ? dto.getUseMarketTrendFilter() : false);
         setting.setCumulativeLossLimitPct(dto.getCumulativeLossLimitPct() != null ? dto.getCumulativeLossLimitPct() : -10);
         setting.setConsecutiveStopLossLimit(dto.getConsecutiveStopLossLimit() != null ? dto.getConsecutiveStopLossLimit() : 3);
-        setting.setBuyAmountPct(dto.getBuyAmountPct() != null ? dto.getBuyAmountPct() : 10);
-        setting.setUseDailyLimitRecovery(dto.getUseDailyLimitRecovery() != null ? dto.getUseDailyLimitRecovery() : false);  
-        setting.setUsePerTradeLimit(dto.getUsePerTradeLimit() != null ? dto.getUsePerTradeLimit() : true);
+        // ⭐⭐⭐ 변경: buyAmountPct → fixedBuyAmount ⭐⭐⭐
+        setting.setFixedBuyAmount(dto.getFixedBuyAmount() != null ? dto.getFixedBuyAmount() : new BigDecimal("10000.00"));
+        setting.setUseDailyLimitRecovery(dto.getUseDailyLimitRecovery() != null ? dto.getUseDailyLimitRecovery() : false);    
+        // ⭐⭐⭐ 변경: usePerTradeLimit → useRoundRobin ⭐⭐⭐
+        setting.setUseRoundRobin(dto.getUseRoundRobin() != null ? dto.getUseRoundRobin() : true);
 
         TradingSetting updated = tradingSettingRepository.save(setting);
         log.info("거래 설정 수정 완료: userId={}", userId);
@@ -126,6 +133,7 @@ public class TradingSettingService {
                 .sellTargetPct(setting.getSellTargetPct())
                 .stopLossPct(setting.getStopLossPct())
                 .maxHoldingsPerCoin(setting.getMaxHoldingsPerCoin())
+                // ⚠️ dailyLimitAmount는 deprecated
                 .dailyLimitAmount(setting.getDailyLimitAmount())
                 .useAiAnalysis(setting.getUseAiAnalysis())
                 .useTrailingStop(setting.getUseTrailingStop())
@@ -142,9 +150,11 @@ public class TradingSettingService {
                 .useMarketTrendFilter(setting.getUseMarketTrendFilter())
                 .cumulativeLossLimitPct(setting.getCumulativeLossLimitPct())
                 .consecutiveStopLossLimit(setting.getConsecutiveStopLossLimit())
-                .buyAmountPct(setting.getBuyAmountPct())
+                // ⭐⭐⭐ 변경: buyAmountPct → fixedBuyAmount ⭐⭐⭐
+                .fixedBuyAmount(setting.getFixedBuyAmount())
                 .useDailyLimitRecovery(setting.getUseDailyLimitRecovery())
-                .usePerTradeLimit(setting.getUsePerTradeLimit()) 
+                // ⭐⭐⭐ 변경: usePerTradeLimit → useRoundRobin ⭐⭐⭐
+                .useRoundRobin(setting.getUseRoundRobin())  
                 .build();
     }
 }

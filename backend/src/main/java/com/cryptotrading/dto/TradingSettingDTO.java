@@ -42,7 +42,9 @@ public class TradingSettingDTO {
     @Min(value = 1, message = "종목당 최대 보유 건수는 최소 1건 이상이어야 합니다")
     private Integer maxHoldingsPerCoin;
     
-    @DecimalMin(value = "10000.00", message = "일일 거래 한도는 최소 10,000원 이상이어야 합니다")
+    // ⚠️ DEPRECATED: 일일 한도는 이제 총자산 기준으로 자동 계산됩니다.
+    // 프론트엔드 호환성을 위해 필드는 유지하지만, 실제 로직에서는 사용하지 않습니다.
+    @Deprecated
     private BigDecimal dailyLimitAmount;
     
     private Boolean useAiAnalysis;
@@ -106,14 +108,17 @@ public class TradingSettingDTO {
     @Max(value = 10, message = "연속 손절 제한은 10회 이하여야 합니다")
     private Integer consecutiveStopLossLimit;
 
-    // 1회 매수 비율 (%)
-    @Min(value = 1, message = "1회 매수 비율은 최소 1% 이상이어야 합니다")
-    @Max(value = 50, message = "1회 매수 비율은 최대 50% 이하여야 합니다")
-    private Integer buyAmountPct;
+    // ⭐⭐⭐ 변경: 1회 고정 매수 금액 (원) ⭐⭐⭐
+    // 라운드로빈 OFF 시 각 코인에 매수할 금액
+    @DecimalMin(value = "5000.00", message = "1회 매수 금액은 최소 5,000원 이상이어야 합니다 (업비트 최소 주문금액)")
+    @DecimalMax(value = "10000000.00", message = "1회 매수 금액은 최대 1,000만원 이하여야 합니다")
+    private BigDecimal fixedBuyAmount;
 
     // 일일 한도 복구 옵션
     private Boolean useDailyLimitRecovery;
 
-    // ⭐⭐⭐ 신규 추가: 1회 매수 한도 적용 옵션 ⭐⭐⭐
-    private Boolean usePerTradeLimit;
+    // ⭐⭐⭐ 변경: 매수 방식 선택 (라운드로빈 vs 고정금액) ⭐⭐⭐
+    // true: 라운드로빈 방식 (일일 한도 균등 분배)
+    // false: 고정 금액 방식 (fixedBuyAmount 사용)
+    private Boolean useRoundRobin;
 }

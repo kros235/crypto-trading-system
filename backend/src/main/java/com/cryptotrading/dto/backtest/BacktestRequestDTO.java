@@ -120,16 +120,21 @@ public class BacktestRequestDTO {
     private Integer cumulativeLossLimitPct = -10;     // 누적 손실 한도 (%)
     private Integer consecutiveStopLossLimit = 3;     // 연속 손절 제한 횟수
 
-    // 1회 매수 비율 (%)
-    @Min(value = 1, message = "1회 매수 비율은 1% 이상")
-    @Max(value = 50, message = "1회 매수 비율은 50% 이하")
+    // ⭐⭐⭐ 수정: 1회 매수 비율(%) → 1회 고정 매수 금액(원) ⭐⭐⭐
+    // 라운드로빈 OFF 시 각 코인에 이 금액만큼 매수
+    // 최소 5,000원 이상 (업비트 최소 주문금액)
+    @DecimalMin(value = "5000", message = "1회 매수 금액은 최소 5,000원 이상")
+    @DecimalMax(value = "10000000", message = "1회 매수 금액은 최대 1,000만원 이하")
     @Builder.Default
-    private Integer buyAmountPct = 10;
+    private BigDecimal fixedBuyAmount = new BigDecimal("10000");
 
     // 일일 한도 복구 옵션
     @Builder.Default
     private Boolean useDailyLimitRecovery = false;
 
-    // ⭐⭐⭐ 신규 추가: 1회 매수 한도 적용 옵션 ⭐⭐⭐
-    private Boolean usePerTradeLimit;
+    // ⭐⭐⭐ 수정: 매수 방식 선택 (라운드로빈 vs 고정금액) ⭐⭐⭐
+    // true: 라운드로빈 (일일 한도를 매수 신호 수로 균등 분배)
+    // false: 고정 금액 (fixedBuyAmount만큼 각 코인에 매수)
+    @Builder.Default
+    private Boolean useRoundRobin = true;
 }

@@ -1945,7 +1945,40 @@ const toggleBot = async () => {
   }
 }
 
-const fetchTradingSettings = async () => { try { const r = await tradingApi.getSettings(); tradingSettings.value = r.data; if (tradingSettings.value) { const tl = tradingSettings.value.dailyLimitAmount || 0; const ua = dashboardStats.value.todayBuyAmount || 0; dailyLimit.value = { totalLimit: tl, usedAmount: ua, remainingAmount: Math.max(0, tl - ua), usedPercent: tl > 0 ? (ua / tl) * 100 : 0 } } } catch (e) { console.error(e); tradingSettings.value = null } }
+const fetchTradingSettings = async () => {
+  try {
+    const r = await tradingApi.getSettings()
+    tradingSettings.value = r.data
+
+    if (tradingSettings.value) {
+      // ⭐⭐⭐ [수정] 일일 한도를 백엔드 API에서 조회 (총자산 × dailyTradeLimitPct% 기준) ⭐⭐⭐
+      try {
+        const limitRes = await api.get('/risk/daily-limit')
+        const limitData = limitRes.data
+        dailyLimit.value = {
+          totalLimit: limitData.totalLimit || 0,
+          usedAmount: limitData.usedAmount || 0,
+          remainingAmount: limitData.remainingAmount || 0,
+          usedPercent: limitData.usedPercent || 0
+        }
+      } catch (limitErr) {
+        console.error('일일 한도 API 조회 실패, 기존 방식 사용:', limitErr)
+        // API 실패 시 기존 방식 폴백
+        const tl = tradingSettings.value.dailyLimitAmount || 0
+        const ua = dashboardStats.value.todayBuyAmount || 0
+        dailyLimit.value = {
+          totalLimit: tl,
+          usedAmount: ua,
+          remainingAmount: Math.max(0, tl - ua),
+          usedPercent: tl > 0 ? (ua / tl) * 100 : 0
+        }
+      }
+    }
+  } catch (e) {
+    console.error(e)
+    tradingSettings.value = null
+  }
+}
 
 const fetchIndicators = async () => {
   if (!tradingSettings.value?.coinSymbols?.length) return

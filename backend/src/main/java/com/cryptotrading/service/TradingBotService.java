@@ -27,6 +27,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 
 @Service
@@ -101,7 +103,17 @@ public class TradingBotService {
             List<Transaction> holdings = transactionRepository
                     .findByUserIdAndStatus(userId, TransactionStatus.HOLDING);
             
-            for (Transaction holding : holdings) {
+            // ⭐⭐⭐ 추가: 최소 주문 금액 미달 시 동일 코인 합산 매도 처리 ⭐⭐⭐
+            // 추가 이유: 개별 거래 평가금액이 업비트 최소 주문금액(5,000원) 미만이면
+            //           매도 주문이 영원히 거부되는 교착 상태 발생.
+            //           동일 코인의 손절매 대상을 합산하여 한 번에 매도함.
+            processMinAmountMergedSell(holdings, setting, apiKeys, result);
+            
+            // 합산 매도 처리된 거래 제외 후 개별 매도 처리
+            List<Transaction> remainingHoldings = transactionRepository
+                    .findByUserIdAndStatus(userId, TransactionStatus.HOLDING);
+            
+            for (Transaction holding : remainingHoldings) {
                 try {
                     processSellSignal(holding, setting, apiKeys, result);
                 } catch (Exception e) {
@@ -594,6 +606,155 @@ public class TradingBotService {
 
         result.addBuy(market, buyAmount);
         log.info("매수 완료: {} - {}원 (주문ID: {})", market, buyAmount, order.getUuid());
+    }
+
+    // ⭐⭐⭐ 신규 메서드: 최소 주문 금액 미달 시 동일 코인 합산 매도 ⭐⭐⭐
+    // 추가 이유: 업비트 최소 주문금액(5,000원) 미만인 개별 거래가
+    //           매 5분마다 매도 실패를 무한 반복하는 교착 상태를 해결
+    private static final BigDecimal UPBIT_MIN_ORDER_AMOUNT = new BigDecimal("5000");
+    
+    private void processMinAmountMergedSell(List<Transaction> holdings, TradingSetting setting,
+                                             String[] apiKeys, BotExecutionResult result) {
+        // 코인별로 손절매/트레일링스톱 대상 그룹핑
+        Map<String, List<Transaction>> sellTargetsBySymbol = new HashMap<>();
+        
+        for (Transaction holding : holdings) {
+            TradingSignalDTO signal = signalDetectorService.detectSellSignal(holding, setting);
+            if (signal.getSignalType() == SignalType.HOLD) {
+                continue;
+            }
+            
+            // 현재 평가금액 계산
+            BigDecimal currentValue = holding.getQuantity().multiply(signal.getCurrentPrice());
+            
+            // 개별 매도 가능한 금액이면 합산 대상에서 제외 (일반 매도로 처리)
+            if (currentValue.compareTo(UPBIT_MIN_ORDER_AMOUNT) >= 0) {
+                continue;
+            }
+            
+            // 최소 금액 미달인 매도 대상 → 코인별 그룹핑
+            sellTargetsBySymbol.computeIfAbsent(holding.getCoinSymbol(), k -> new ArrayList<>()).add(holding);
+        }
+        
+        // 동일 코인 합산 매도 실행
+        for (Map.Entry<String, List<Transaction>> entry : sellTargetsBySymbol.entrySet()) {
+            String symbol = entry.getKey();
+            List<Transaction> targets = entry.getValue();
+            
+            if (targets.size() < 2) {
+                // 1건만 있으면 합산 불가 → 개별 매도에서 처리 (실패하더라도 로깅)
+                log.warn("합산 매도 불가: {} - 1건만 보유, 개별 평가금액 최소주문금액 미달", symbol);
+                continue;
+            }
+            
+            // 합산 수량 계산
+            BigDecimal totalVolume = targets.stream()
+                    .map(Transaction::getQuantity)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            // 현재가 조회
+            List<UpbitTickerDTO> tickers = upbitApiService.getTicker(List.of(symbol));
+            if (tickers.isEmpty()) {
+                log.error("합산 매도 실패: {} - 현재가 조회 불가", symbol);
+                continue;
+            }
+            BigDecimal currentPrice = tickers.get(0).getTradePrice();
+            BigDecimal totalValue = totalVolume.multiply(currentPrice);
+            
+            // 합산해도 최소 금액 미달이면 스킵
+            if (totalValue.compareTo(UPBIT_MIN_ORDER_AMOUNT) < 0) {
+                log.warn("합산 매도 불가: {} - 합산 평가금액 {}원도 최소주문금액(5,000원) 미달", 
+                        symbol, totalValue.setScale(0, RoundingMode.HALF_UP));
+                continue;
+            }
+            
+            log.info("합산 매도 실행: {} - {}건 합산, 총수량={}, 예상금액={}원", 
+                    symbol, targets.size(), totalVolume, totalValue.setScale(0, RoundingMode.HALF_UP));
+            
+            try {
+                // 합산 수량으로 1회 매도 주문
+                UpbitOrderDTO order = upbitApiService.orderSell(
+                        apiKeys[0], apiKeys[1], symbol, totalVolume);
+                
+                BigDecimal sellAmount = totalVolume.multiply(currentPrice);
+                BigDecimal fee = sellAmount.multiply(FEE_RATE);
+                
+                // 각 거래별로 손익 계산 및 상태 업데이트
+                for (Transaction target : targets) {
+                    BigDecimal targetSellAmount = target.getQuantity().multiply(currentPrice);
+                    BigDecimal targetFee = targetSellAmount.multiply(FEE_RATE);
+                    BigDecimal profitLoss = targetSellAmount.subtract(targetFee)
+                            .subtract(target.getTotalAmount());
+                    BigDecimal profitRate = target.getTotalAmount().compareTo(BigDecimal.ZERO) > 0
+                            ? profitLoss.divide(target.getTotalAmount(), 4, RoundingMode.HALF_UP)
+                                    .multiply(new BigDecimal("100"))
+                            : BigDecimal.ZERO;
+                    
+                    target.setStatus(TransactionStatus.SOLD);
+                    target.setSoldAt(LocalDateTime.now());
+                    target.setSoldPrice(currentPrice);
+                    target.setProfitLoss(profitLoss);
+                    target.setProfitLossPct(profitRate);
+                    String existingNote = target.getNote() != null ? target.getNote() : "";
+                    target.setNote(existingNote + " → [합산매도-손절] 최소주문금액 미달로 " 
+                            + targets.size() + "건 합산 매도");
+                    transactionRepository.save(target);
+                    
+                    // 일일 한도 복구
+                    riskManagementService.recordSellForDailyLimitRecovery(
+                            target.getUserId(), targetSellAmount, setting);
+                    
+                    // 연속 손절 카운터 업데이트
+                    riskManagementService.recordStopLoss(target.getUserId(), symbol, setting);
+                    
+                    result.addSell(symbol, targetSellAmount, profitLoss);
+                }
+                
+                // 알림 발송 (합산 매도는 1회만 발송)
+                BigDecimal totalProfitLoss = targets.stream()
+                        .map(Transaction::getProfitLoss)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                BigDecimal totalOriginalAmount = targets.stream()
+                        .map(Transaction::getTotalAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                BigDecimal totalProfitRate = totalOriginalAmount.compareTo(BigDecimal.ZERO) > 0
+                        ? totalProfitLoss.divide(totalOriginalAmount, 4, RoundingMode.HALF_UP)
+                                .multiply(new BigDecimal("100"))
+                        : BigDecimal.ZERO;
+                
+                notificationService.notifyStopLoss(
+                        targets.get(0).getUserId(), symbol,
+                        currentPrice, totalProfitLoss, totalProfitRate);
+                
+                // Discord DM 발송
+                User userEntity = userRepository.findById(targets.get(0).getUserId()).orElse(null);
+                if (userEntity != null && userEntity.getDiscordUserId() != null) {
+                    String profitSign = totalProfitLoss.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
+                    discordBotService.sendSellNotification(
+                            userEntity.getDiscordUserId(), symbol,
+                            totalVolume.toPlainString(),
+                            String.format("%,.0f", currentPrice),
+                            profitSign + String.format("%,.0f", totalProfitLoss),
+                            profitSign + totalProfitRate.setScale(2, RoundingMode.HALF_UP).toPlainString(),
+                            "합산 손절매 (" + targets.size() + "건 합산, 최소주문금액 미달)");
+                }
+                
+                // 이메일 발송
+                if (userEntity != null && userEntity.getEmail() != null && !userEntity.getEmail().isEmpty()) {
+                    emailService.sendTradeNotification(
+                            userEntity.getEmail(), "SELL", symbol,
+                            totalVolume, currentPrice, sellAmount,
+                            "합산 손절매 (" + targets.size() + "건 합산, 최소주문금액 미달)");
+                }
+                
+                log.info("합산 매도 완료: {} - {}건 매도, 총손익: {}원 (주문ID: {})", 
+                        symbol, targets.size(), totalProfitLoss.setScale(0, RoundingMode.HALF_UP), order.getUuid());
+                
+            } catch (Exception e) {
+                log.error("합산 매도 실패: {} - {}", symbol, e.getMessage());
+                result.addError(symbol + " 합산 매도 실패: " + e.getMessage());
+            }
+        }
     }
 
     /**

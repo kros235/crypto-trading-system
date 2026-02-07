@@ -266,7 +266,13 @@
                 </div>
                 <div class="mb-2">
                   <span class="text-caption text-grey-darken-1">일일 투자 한도</span>
-                  <div class="text-body-2 text-grey-darken-4 font-weight-medium">{{ formatCurrency(tradingSettings.dailyLimitAmount) }}</div>
+                  <!-- ⭐⭐⭐ 수정: deprecated된 dailyLimitAmount 대신 실제 일일 한도 API 값 표시 ⭐⭐⭐ -->
+                  <!-- 수정 이유: dailyLimitAmount는 더 이상 사용하지 않는 deprecated 필드로 -->
+                  <!--           DB에 저장된 옛날 값을 보여줌. 실제 한도는 총자산 × dailyTradeLimitPct%임 -->
+                  <div class="text-body-2 text-grey-darken-4 font-weight-medium">
+                    {{ formatCurrency(dailyLimit.totalLimit) }}
+                    <span class="text-caption text-grey-darken-1 ml-1">(총자산의 {{ tradingSettings.dailyTradeLimitPct || 20 }}%)</span>
+                  </div>
                 </div>
                 <div class="mb-2">
                   <span class="text-caption text-grey-darken-1">AI 뉴스 분석</span>

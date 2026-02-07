@@ -225,6 +225,20 @@
                           </template>
                         </v-slider>
 
+                        <!-- ⭐⭐⭐ 추가: 1건 + 소액 매수 시 손절매 교착 상태 안내 ⭐⭐⭐ -->
+                        <!-- 추가 이유: 백테스팅에서도 동일 조건 시 실제 운영에서 -->
+                        <!--           손절매 교착 상태가 발생할 수 있음을 사전 안내 -->
+                        <!-- ⭐⭐⭐ 수정: type="warning" variant="tonal" → outlined + 직접 스타일 지정 ⭐⭐⭐ -->
+                        <!-- 수정 이유: tonal variant의 연한 노란색 배경+글자색이 가독성 떨어짐 -->
+                        <div
+                          v-if="request.maxHoldingsPerCoin === 1 && request.fixedBuyAmount < 10000"
+                          class="mt-2 mb-2 pa-3 rounded"
+                          style="font-size: 12px; background-color: #FFF3E0; color: #4E342E; border-left: 4px solid #FB8C00;"
+                        >
+                          ⚠️ 종목당 1건 + 소액 매수 시, 실제 운영에서 하락으로 평가금액이 5,000원 미만이 되면 
+                          합산 매도가 불가능하여 손절매가 실행되지 않을 수 있습니다.
+                        </div>
+
                         <!-- ⭐⭐⭐ 수정: 1회 매수 비율(%) → 1회 고정 매수 금액(원) ⭐⭐⭐ -->
                         <div class="d-flex align-center mb-1 mt-4">
                           <span class="text-caption text-grey">1회 매수 금액 (원)</span>
@@ -251,7 +265,19 @@
                         />
                         <div class="text-caption text-grey-darken-1">
                           라운드로빈 OFF 시 각 코인에 {{ formatCurrency(request.fixedBuyAmount) }} 매수
-                        </div>                
+                        </div>
+                        <!-- ⭐⭐⭐ 추가: 10,000원 미만 합산 매도 안내 ⭐⭐⭐ -->
+                        <v-alert
+                          v-if="request.fixedBuyAmount >= 5000 && request.fixedBuyAmount < 10000"
+                          type="info"
+                          variant="tonal"
+                          density="compact"
+                          class="mt-2"
+                          style="font-size: 12px;"
+                        >
+                          💡 1회 매수 금액이 10,000원 미만일 경우, 하락 시 개별 손절매가 불가능할 수 있습니다. 
+                          실제 운영 시 동일 코인 보유 건을 합산하여 매도 처리됩니다.
+                        </v-alert>                
 
                         <div class="d-flex align-center">
                           <v-switch
@@ -1084,6 +1110,19 @@ const helpContents = {
             </table>
           </div>
         </div>
+
+        <!-- ⭐⭐⭐ 추가: 1건 보유 + 소액 매수 시 손절매 제한 안내 ⭐⭐⭐ -->
+        <div class="glossary-section mb-4" style="margin-top: 12px; padding: 12px; background: #FFEBEE; border-radius: 8px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-2 font-weight-bold" style="color: #C62828;">⚠️ 1건 설정 + 소액 매수 시 주의</span>
+          </div>
+          <div style="padding-left: 8px; font-size: 13px; line-height: 1.6;">
+            <p class="mb-1">1회 매수 금액이 10,000원 미만이고 종목당 1건만 보유 시,</p>
+            <p class="mb-1">하락으로 평가금액이 <strong>업비트 최소 주문금액(5,000원) 미만</strong>이 되면</p>
+            <p class="mb-1">합산할 대상이 없어 <strong>손절매가 실행되지 않는 교착 상태</strong>가 발생합니다.</p>
+            <p class="mb-0" style="color: #1565C0;"><strong>💡 권장:</strong> 종목당 최대 보유 2건 이상 또는 1회 매수 금액 10,000원 이상</p>
+          </div>
+        </div>
       </div>
     `
   },
@@ -1335,6 +1374,13 @@ const helpContents = {
           <li>최소: 5,000원 (업비트 최소 주문금액)</li>
           <li>최대: 1,000만원</li>
         </ul>
+
+        <!-- ⭐⭐⭐ 추가: 소액 매수 시 합산 매도 안내 ⭐⭐⭐ -->
+        <p style="margin-top: 12px; padding: 8px; background: #FFF3E0; border-radius: 4px;">
+          <strong>💡 10,000원 미만 설정 시:</strong><br/>
+          하락으로 평가금액이 5,000원 미만이 되면 개별 매도가 불가합니다.<br/>
+          실제 운영 시 동일 코인 보유 건을 자동 합산하여 매도 처리됩니다.
+        </p>
         
         <p style="margin-top: 8px;"><strong>💡 백테스팅 예시:</strong></p>
         <span style="background: #f5f5f5; padding: 2px 6px; border-radius: 4px;">

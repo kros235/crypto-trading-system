@@ -27,6 +27,7 @@ import java.util.Collections;
 
 import java.time.Duration;  
 import reactor.util.retry.Retry;
+import reactor.core.publisher.Mono;
 
 @Service
 @RequiredArgsConstructor
@@ -222,16 +223,29 @@ public class UpbitApiService {
         
         String token = generateToken(accessKey, secretKey, params);
         
+        // ⭐⭐⭐ 수정: retrieve() → exchangeToMono()로 변경하여 에러 응답 본문 로깅 ⭐⭐⭐
+        // 수정 이유: retrieve()는 4xx 에러 시 응답 본문을 버려서 "400 Bad Request"만 보임.
+        //           업비트가 반환하는 구체적 에러 코드(under_min_total 등)를 확인하기 위함.
         return webClient.post()
                 .uri("/orders")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(params)
-                .retrieve()
-                .bodyToMono(UpbitOrderDTO.class)
+                .exchangeToMono(response -> {
+                    if (response.statusCode().isError()) {
+                        return response.bodyToMono(String.class)
+                                .defaultIfEmpty("응답 본문 없음")
+                                .flatMap(body -> {
+                                    log.error("매도 주문 실패: market={}, volume={}, status={}, body={}", 
+                                            market, volume, response.statusCode(), body);
+                                    return Mono.error(new RuntimeException(
+                                            response.statusCode() + " - " + body));
+                                });
+                    }
+                    return response.bodyToMono(UpbitOrderDTO.class);
+                })
                 .retryWhen(getRetrySpec()) 
                 .doOnSuccess(order -> log.info("매도 주문 완료: uuid={}", order.getUuid()))
-                .doOnError(error -> log.error("매도 주문 실패: {}", error.getMessage()))
                 .block();
     }
 

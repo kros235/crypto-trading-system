@@ -167,6 +167,22 @@
                       suffix="건"
                       hint="한 종목당 최대 보유 가능한 매수 건수"
                     />
+                    <!-- ⭐⭐⭐ 추가: 1건 + 소액 매수 시 손절매 교착 상태 안내 ⭐⭐⭐ -->
+                    <!-- 추가 이유: 종목당 1건만 보유 + 1회 매수 금액이 소액이면, -->
+                    <!--           하락 시 평가금액이 5,000원 미만으로 떨어져도 합산 매도가 불가능하여 -->
+                    <!--           손절매가 영구히 실행되지 않는 교착 상태가 발생할 수 있음 -->
+                    <!-- ⭐⭐⭐ 수정: type="warning" variant="tonal" → outlined + 직접 스타일 지정 ⭐⭐⭐ -->
+                    <!-- 수정 이유: tonal variant의 연한 노란색 배경+글자색이 가독성 떨어짐 -->
+                    <!-- ⭐⭐⭐ 수정: v-alert → div로 변경하여 Vuetify 스타일 간섭 제거 ⭐⭐⭐ -->
+                    <div
+                      v-if="settings.maxHoldingsPerCoin === 1 && settings.fixedBuyAmount < 10000"
+                      class="mt-2 pa-3 rounded"
+                      style="font-size: 12px; background-color: #FFF3E0; color: #4E342E; border-left: 4px solid #FB8C00;"
+                    >
+                      ⚠️ 종목당 1건만 보유 + 1회 매수 금액 10,000원 미만 시, 하락으로 평가금액이 5,000원 미만이 되면 
+                      합산 매도가 불가능하여 <strong>손절매가 실행되지 않을 수 있습니다.</strong>
+                      종목당 최대 보유를 2건 이상으로 설정하거나, 1회 매수 금액을 10,000원 이상으로 설정하는 것을 권장합니다.
+                    </div>
                   </v-col>
 
                   <!-- ⭐ 위치 변경: 일일 거래 한도 -->
@@ -217,6 +233,20 @@
                     <p class="text-caption text-warning mt-1" v-if="settings.fixedBuyAmount < 5000">
                       ⚠️ 업비트 최소 주문금액은 5,000원입니다
                     </p>
+                    <!-- ⭐⭐⭐ 추가: 10,000원 미만 합산 매도 안내 ⭐⭐⭐ -->
+                    <!-- 추가 이유: 매수 금액이 소액이면 하락 시 평가금액이 5,000원 미만으로 떨어져 -->
+                    <!--           개별 손절매가 불가능해지는 상황을 사전에 안내 -->
+                    <v-alert
+                      v-if="settings.fixedBuyAmount >= 5000 && settings.fixedBuyAmount < 10000"
+                      type="info"
+                      variant="tonal"
+                      density="compact"
+                      class="mt-2"
+                      style="font-size: 12px;"
+                    >
+                      💡 1회 매수 금액이 10,000원 미만일 경우, 하락 시 평가금액이 업비트 최소 주문금액(5,000원) 미만으로 떨어져 
+                      개별 손절매가 불가능할 수 있습니다. 이 경우 동일 코인의 보유 건을 합산하여 매도 처리됩니다.
+                    </v-alert>
                   </v-col>
 
                   <!-- ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin (매수 방식 선택) ⭐⭐⭐ -->
@@ -1444,6 +1474,21 @@ const helpContents = {
           <li>최대: 1,000만원</li>
           <li>KRW 잔고가 설정 금액보다 적으면 매수하지 않음</li>
         </ul>
+
+        <!-- ⭐⭐⭐ 추가: 소액 매수 시 합산 매도 안내 ⭐⭐⭐ -->
+        <p style="margin-top: 12px; padding: 8px; background: #FFF3E0; border-radius: 4px;">
+          <strong>💡 10,000원 미만 설정 시 참고:</strong><br/>
+          하락으로 평가금액이 5,000원 미만이 되면 업비트에서 개별 매도가 불가합니다.<br/>
+          이 경우 시스템이 동일 코인의 보유 건을 <strong>자동으로 합산하여 매도</strong> 처리합니다.<br/>
+          예) BTC 5,000원 × 2건 보유 → 하락 시 4,000원 × 2건 = 8,000원으로 합산 매도
+        </p>
+
+        <!-- ⭐⭐⭐ 추가: 종목당 1건 보유 시 합산 불가 경고 ⭐⭐⭐ -->
+        <p style="margin-top: 8px; padding: 8px; background: #FFEBEE; border-radius: 4px;">
+          <strong>⚠️ 종목당 최대 보유 1건 + 소액 매수 시 주의:</strong><br/>
+          종목당 1건만 보유하면 합산할 대상이 없어 <strong>손절매가 실행되지 않는 교착 상태</strong>가 발생할 수 있습니다.<br/>
+          이 경우 종목당 최대 보유를 2건 이상으로 설정하거나, 1회 매수 금액을 10,000원 이상으로 설정하세요.
+        </p>
         
         <p style="margin-top: 8px;"><strong>💡 예시:</strong></p>
         <span style="background: #f5f5f5; padding: 2px 6px; border-radius: 4px;">

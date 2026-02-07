@@ -331,12 +331,16 @@ public class RiskManagementService {
         // 현재 남은 한도 계산 (복구 전)
         LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
         LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
-        BigDecimal todayBuyTotal = transactionRepository.sumTodayBuyAmount(userId, startOfDay, endOfDay);
+       BigDecimal todayBuyTotal = transactionRepository.sumTodayBuyAmount(userId, startOfDay, endOfDay);
         if (todayBuyTotal == null) {
             todayBuyTotal = BigDecimal.ZERO;
         }
         
-        BigDecimal effectiveDailyLimit = calculateEffectiveDailyLimit(setting);
+        // ⭐⭐⭐ 수정: deprecated 메서드 → userId 포함 정상 메서드 호출 ⭐⭐⭐
+        // 수정 이유: deprecated 메서드는 DB의 dailyLimitAmount(기본 100만원)를 사용하여
+        //           실제 총자산 기준 일일 한도(약 2만원)와 크게 차이가 발생,
+        //           복구 금액 계산이 비정상적으로 0원 처리됨
+        BigDecimal effectiveDailyLimit = calculateEffectiveDailyLimit(userId, setting);
         BigDecimal currentRemaining = effectiveDailyLimit.subtract(todayBuyTotal).add(currentRecovered);
         
         // 복구 가능한 최대 금액 = 일일 한도 - 현재 남은 한도

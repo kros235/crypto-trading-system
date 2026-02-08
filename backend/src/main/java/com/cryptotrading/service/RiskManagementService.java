@@ -432,24 +432,23 @@ public class RiskManagementService {
             todayBuyTotal = BigDecimal.ZERO;
         }
         
-        // ⭐⭐⭐ 수정: 총자산 스냅샷 기준으로 일일 한도 계산 ⭐⭐⭐
-        BigDecimal effectiveDailyLimit = calculateEffectiveDailyLimit(userId, setting);
-        
-        // ⭐⭐⭐ [수정] 일일 한도 복구: 메모리 맵 → DB 직접 조회 ⭐⭐⭐
-        // 수정 이유: 기존에는 dailySellAmountMap(메모리)에서 복구액을 읽었는데,
-        //           Docker 재기동 시 메모리가 초기화되어 복구액이 0원이 됨.
-        //           당일 매수액은 DB에 남아있으므로 남은 한도가 마이너스가 되는 문제 발생.
-        //           DB의 sumTodaySoldAmount로 당일 매도 금액을 직접 조회하면
-        //           Docker 재기동과 무관하게 정확한 복구액을 계산할 수 있음.
+        // ⭐⭐⭐ [수정] 일일 한도 복구: 당일 매수+매도 완료된 거래의 투입금만 복구 ⭐⭐⭐
+        // 수정 이유: sumTodaySoldAmount(soldAt 기준)를 사용하면
+        //           이전 날짜에 매수한 거래가 오늘 매도될 때 복구액에 포함됨.
+        //           그러나 이전 매수는 오늘의 일일 한도를 사용하지 않았으므로
+        //           복구 대상이 아님.
+        //           → sumTodayBoughtAndSoldAmount(createdAt+soldAt 모두 오늘)를 사용하여
+        //           오늘 매수하고 오늘 매도된 거래의 투입금(totalAmount)만 복구.
+        //           이렇게 하면 매수액(sumTodayBuyAmount)과 1:1 대응됨.
         BigDecimal recoveredAmount = BigDecimal.ZERO;
         if (Boolean.TRUE.equals(setting.getUseDailyLimitRecovery())) {
-            BigDecimal todaySoldTotal = transactionRepository
-                    .sumTodaySoldAmount(userId, startOfDay, endOfDay);
-            if (todaySoldTotal == null) {
-                todaySoldTotal = BigDecimal.ZERO;
+            BigDecimal todayBoughtAndSold = transactionRepository
+                    .sumTodayBoughtAndSoldAmount(userId, startOfDay, endOfDay);
+            if (todayBoughtAndSold == null) {
+                todayBoughtAndSold = BigDecimal.ZERO;
             }
-            recoveredAmount = todaySoldTotal;
-            log.debug("일일 한도 복구 적용 (DB 기반): userId={}, 복구금액={}", userId, recoveredAmount);
+            recoveredAmount = todayBoughtAndSold;
+            log.debug("일일 한도 복구 적용 (DB 기반): userId={}, 당일매수매도복구={}", userId, recoveredAmount);
         }
         
         // 남은 한도 = 일일 한도 - 오늘 매수액 + 복구액

@@ -181,4 +181,20 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("userId") String userId,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
+
+    // ⭐⭐⭐ [추가] 당일 매수+매도 완료된 거래의 투입금 합계 (일일 한도 복구용) ⭐⭐⭐
+    // 추가 이유: 일일 한도 복구는 "오늘 사용한 한도를 되돌리는" 개념임.
+    //           따라서 오늘 매수(createdAt)하고 오늘 매도(soldAt)된 거래만 복구 대상.
+    //           이전 날짜에 매수한 거래가 오늘 매도되는 경우는 오늘 한도를 사용하지 않았으므로
+    //           복구 대상에서 제외해야 함.
+    //           합산 값도 soldPrice*quantity(시장가)가 아닌 totalAmount(투입금)을 사용하여
+    //           매수액과 1:1 대응되도록 함.
+    @Query("SELECT COALESCE(SUM(t.totalAmount), 0) FROM Transaction t " +
+           "WHERE t.userId = :userId AND t.status = 'SOLD' " +
+           "AND t.createdAt BETWEEN :start AND :end " +
+           "AND t.soldAt BETWEEN :start AND :end")
+    BigDecimal sumTodayBoughtAndSoldAmount(
+            @Param("userId") String userId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
 }

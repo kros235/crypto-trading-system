@@ -133,7 +133,16 @@ public class TradingBotService {
             }
             
             // 5. 보유 중인 거래의 최고가 업데이트
-            updateHighestPrices(holdings);
+            // ⭐⭐⭐ [수정] 매도 처리 후 현재 HOLDING 상태인 거래만 조회하여 최고가 업데이트 ⭐⭐⭐
+            // 수정 이유: 기존에는 스텝 3에서 조회한 원본 holdings 리스트를 전달했는데,
+            //           이 리스트에는 이미 매도된 거래(SOLD)가 포함되어 있음.
+            //           updateHighestPrices에서 이 매도된 거래의 highestPrice를 업데이트하면
+            //           transactionRepository.save()가 호출되면서 해당 거래의 status가
+            //           HOLDING(원본 객체의 상태)으로 다시 덮어씌워짐.
+            //           → 결과: 매도 완료된 거래가 다시 HOLDING으로 복원되는 치명적 버그!
+            List<Transaction> currentHoldings = transactionRepository
+                    .findByUserIdAndStatus(userId, TransactionStatus.HOLDING);
+            updateHighestPrices(currentHoldings);
             
             result.setStatus("SUCCESS");
             log.info("========== 자동매매 실행 완료: {} - 매수 {}건, 매도 {}건 ==========", 
@@ -308,13 +317,19 @@ public class TradingBotService {
      * - 매수 신호 발생 코인들에게 남은 한도를 균등 분배
      * - 균등 분배 금액이 최소 금액 미만 시 신호 강도 순 우선 매수
      */
-    private void processRoundRobinBuy(String userId, TradingSetting setting, 
+     private void processRoundRobinBuy(String userId, TradingSetting setting, 
                                        String[] apiKeys, BotExecutionResult result) {
         log.info("🔄 라운드로빈 매수 처리 시작: {}", userId);
         
         // ===== 1단계: 매수 후보 수집 =====
         List<BuyCandidate> candidates = new ArrayList<>();
         List<String> targetCoins = setting.getCoinSymbols();
+        
+        // ⭐⭐⭐ [추가] 매수 방식 사전 확인 ⭐⭐⭐
+        // 추가 이유: 고정금액 모드에서 동일 코인을 남은 보유 가능 건수만큼
+        //           여러 번 매수해야 하므로, 후보 수집 시 반복 추가 필요.
+        //           기존에는 코인당 1번만 후보에 추가되어 한 사이클에 1건만 매수됨.
+        boolean useRoundRobin = setting.getUseRoundRobin() != null ? setting.getUseRoundRobin() : true;
         
         for (String market : targetCoins) {
             try {
@@ -326,24 +341,53 @@ public class TradingBotService {
                     continue;
                 }
                 
-                // 리스크 사전 체크 (보유 건수만 체크, 금액은 나중에)
-                if (!riskManagementService.checkMaxHoldings(userId, market, setting)) {
-                    log.info("보유 건수 초과: {} - 최대 {}건", market, setting.getMaxHoldingsPerCoin());
-                    result.addSkipped(market + ": 보유 건수 초과");
-                    continue;
+                // ⭐⭐⭐ [수정] 고정금액 모드: 남은 보유 가능 건수만큼 후보 반복 추가 ⭐⭐⭐
+                // 수정 이유: 기존에는 코인당 1번만 후보에 추가되어,
+                //           maxHoldingsPerCoin=2여도 한 사이클에 1건만 매수됨.
+                //           고정금액 모드에서는 5,000원 × N건 매수가 목적이므로
+                //           남은 보유 가능 건수만큼 후보를 추가해야 함.
+                int slotsToAdd;
+                if (!useRoundRobin) {
+                    // 고정금액 모드: 남은 보유 가능 건수만큼 반복
+                    int remainingSlots = riskManagementService.getRemainingHoldings(userId, market, setting);
+                    slotsToAdd = Math.max(0, remainingSlots);
+                    if (slotsToAdd == 0) {
+                        log.info("보유 건수 초과: {} - 최대 {}건", market, setting.getMaxHoldingsPerCoin());
+                        result.addSkipped(market + ": 보유 건수 초과");
+                        continue;
+                    }
+                    log.info("📊 [고정금액] {} 남은 보유 가능: {}건", market, slotsToAdd);
+                } else {
+                    // 라운드로빈 모드: 기존처럼 1건만
+                    if (!riskManagementService.checkMaxHoldings(userId, market, setting)) {
+                        log.info("보유 건수 초과: {} - 최대 {}건", market, setting.getMaxHoldingsPerCoin());
+                        result.addSkipped(market + ": 보유 건수 초과");
+                        continue;
+                    }
+                    slotsToAdd = 1;
                 }
                 
-                // 비중 제한 고려한 최대 매수 가능 금액
-                BigDecimal maxBuyable = riskManagementService.getRemainingPositionAmount(userId, market, setting);
-                if (maxBuyable.compareTo(new BigDecimal("5000")) < 0) {
-                    log.info("비중 제한 초과: {} - 남은 가능액 {}원", market, maxBuyable);
-                    result.addSkipped(market + ": 비중 제한 초과");
-                    continue;
+                for (int slot = 0; slot < slotsToAdd; slot++) {
+                    // 비중 제한 고려한 최대 매수 가능 금액
+                    BigDecimal maxBuyable = riskManagementService.getRemainingPositionAmount(userId, market, setting);
+                    // ⭐⭐⭐ [추가] 이미 후보에 추가된 금액을 차감 ⭐⭐⭐
+                    // 추가 이유: 동일 코인 후보가 여러 건일 때, 
+                    //           이전 후보의 예정 금액을 차감하지 않으면 비중 제한 초과 가능
+                    BigDecimal fixedAmount = setting.getFixedBuyAmount() != null 
+                            ? setting.getFixedBuyAmount() 
+                            : new BigDecimal("10000");
+                    BigDecimal alreadyAllocated = fixedAmount.multiply(new BigDecimal(slot));
+                    BigDecimal adjustedMaxBuyable = maxBuyable.subtract(alreadyAllocated);
+                    
+                    if (adjustedMaxBuyable.compareTo(new BigDecimal("5000")) < 0) {
+                        log.info("비중 제한 초과: {} [{}건째] - 남은 가능액 {}원", market, slot + 1, adjustedMaxBuyable);
+                        break;
+                    }
+                    
+                    log.info("✅ 매수 후보 추가: {} [{}건째] (강도: {}, 이격도: {}%, 최대매수가능: {}원)", 
+                            market, slot + 1, signal.getStrength(), signal.getDropRate(), adjustedMaxBuyable);
+                    candidates.add(new BuyCandidate(market, signal, adjustedMaxBuyable));
                 }
-                
-                log.info("✅ 매수 후보 추가: {} (강도: {}, 이격도: {}%, 최대매수가능: {}원)", 
-                        market, signal.getStrength(), signal.getDropRate(), maxBuyable);
-                candidates.add(new BuyCandidate(market, signal, maxBuyable));
                 
             } catch (Exception e) {
                 log.error("매수 후보 수집 실패: market={}, error={}", market, e.getMessage());

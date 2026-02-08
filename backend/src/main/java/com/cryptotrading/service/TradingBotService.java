@@ -413,7 +413,10 @@ public class TradingBotService {
         // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin (의미 변경) ⭐⭐⭐
         // true: 라운드로빈 (균등 분배)
         // false: 고정 금액 (fixedBuyAmount)
-        boolean useRoundRobin = setting.getUseRoundRobin() != null ? setting.getUseRoundRobin() : true;
+        // ⭐⭐⭐ [수정] boolean 제거 - 1단계에서 이미 선언됨 ⭐⭐⭐
+        // 수정 이유: 1단계 후보 수집에서 useRoundRobin을 미리 선언했으므로
+        //           여기서 재선언하면 컴파일 에러 발생 (variable already defined)
+        // useRoundRobin 변수는 1단계에서 이미 선언 및 할당되어 그대로 사용
         
         BigDecimal perCoinAmount;
         BigDecimal fixedBuyAmount = setting.getFixedBuyAmount() != null 

@@ -435,12 +435,21 @@ public class RiskManagementService {
         // ⭐⭐⭐ 수정: 총자산 스냅샷 기준으로 일일 한도 계산 ⭐⭐⭐
         BigDecimal effectiveDailyLimit = calculateEffectiveDailyLimit(userId, setting);
         
-        // ⭐⭐⭐ Day 41 추가: 일일 한도 복구 옵션 적용 ⭐⭐⭐
+        // ⭐⭐⭐ [수정] 일일 한도 복구: 메모리 맵 → DB 직접 조회 ⭐⭐⭐
+        // 수정 이유: 기존에는 dailySellAmountMap(메모리)에서 복구액을 읽었는데,
+        //           Docker 재기동 시 메모리가 초기화되어 복구액이 0원이 됨.
+        //           당일 매수액은 DB에 남아있으므로 남은 한도가 마이너스가 되는 문제 발생.
+        //           DB의 sumTodaySoldAmount로 당일 매도 금액을 직접 조회하면
+        //           Docker 재기동과 무관하게 정확한 복구액을 계산할 수 있음.
         BigDecimal recoveredAmount = BigDecimal.ZERO;
         if (Boolean.TRUE.equals(setting.getUseDailyLimitRecovery())) {
-            String key = userId + ":" + LocalDate.now().toString();
-            recoveredAmount = dailySellAmountMap.getOrDefault(key, BigDecimal.ZERO);
-            log.debug("일일 한도 복구 적용: userId={}, 복구금액={}", userId, recoveredAmount);
+            BigDecimal todaySoldTotal = transactionRepository
+                    .sumTodaySoldAmount(userId, startOfDay, endOfDay);
+            if (todaySoldTotal == null) {
+                todaySoldTotal = BigDecimal.ZERO;
+            }
+            recoveredAmount = todaySoldTotal;
+            log.debug("일일 한도 복구 적용 (DB 기반): userId={}, 복구금액={}", userId, recoveredAmount);
         }
         
         // 남은 한도 = 일일 한도 - 오늘 매수액 + 복구액

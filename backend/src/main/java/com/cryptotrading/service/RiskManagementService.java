@@ -432,6 +432,9 @@ public class RiskManagementService {
             todayBuyTotal = BigDecimal.ZERO;
         }
         
+        // ⭐⭐⭐ 수정: 총자산 스냅샷 기준으로 일일 한도 계산 ⭐⭐⭐
+        BigDecimal effectiveDailyLimit = calculateEffectiveDailyLimit(userId, setting);
+        
         // ⭐⭐⭐ [수정] 일일 한도 복구: 당일 매수+매도 완료된 거래의 투입금만 복구 ⭐⭐⭐
         // 수정 이유: sumTodaySoldAmount(soldAt 기준)를 사용하면
         //           이전 날짜에 매수한 거래가 오늘 매도될 때 복구액에 포함됨.

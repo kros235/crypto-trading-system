@@ -608,21 +608,23 @@
                       <!-- 거래 데이터가 있을 때 -->
                       <!-- ⭐⭐⭐ [변경] 자산 변동 추이 차트 재구성 ⭐⭐⭐ -->
                       <template v-if="assetHistory.length > 0">
-                        <!-- 불입금액 막대그래프 (주황색) -->
+                        
+
+                        <!-- 영역 채우기 (평가금액 - 연한 파란색) -->
+                        <path :d="areaPathBacktest" fill="url(#dashboardAreaGradient)" />
+
+	          <!-- 불입금액 막대그래프 (주황색) -->
                         <rect
                           v-for="(point, index) in chartPointsBacktest"
                           :key="'bar-' + index"
                           :x="point.x - barWidth / 2"
-                          :y="getYPositionBacktest(point.depositAmount) - Math.max(8, (svgHeightBacktest - svgPadding * 2) * 0.08)"
+                          :y="getYPositionBacktest(point.depositAmount)"
                           :width="barWidth"
-                          :height="Math.max(8, (svgHeightBacktest - svgPadding * 2) * 0.08)"
+                          :height="Math.max(0, (svgHeightBacktest - svgPadding) - getYPositionBacktest(point.depositAmount))"
                           fill="#FF9800"
                           :opacity="hoveredIndex === index ? 0.6 : 0.35"
                           rx="1"
                         />
-
-                        <!-- 영역 채우기 (평가금액 - 연한 파란색) -->
-                        <path :d="areaPathBacktest" fill="url(#dashboardAreaGradient)" />
 
                         <!-- 최고 평가금액 파선 (초록) -->
                         <line
@@ -657,7 +659,7 @@
                         <circle
                           v-for="(point, index) in chartPointsBacktest"
                           :key="'dep-' + index"
-                          :cx="point.x" :cy="getYPositionBacktest(point.depositAmount) - Math.max(8, (svgHeightBacktest - svgPadding * 2) * 0.08)"
+                          :cx="point.x" :cy="getYPositionBacktest(point.depositAmount)"
                           :r="hoveredIndex === index ? 6 : 3"
                           fill="#FF9800" stroke="white" stroke-width="1.5" class="chart-point"
                         />
@@ -1610,9 +1612,8 @@ const linePathBacktest = computed(() => {
 // ⭐⭐⭐ [변경] 불입금액 추세선도 막대 상단 위치와 일치 ⭐⭐⭐
 const depositLinePathBacktest = computed(() => {
   if (!chartPointsBacktest.value.length) return ''
-  const barH = Math.max(8, (svgHeightBacktest - svgPadding * 2) * 0.08)
   return chartPointsBacktest.value
-    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${getYPositionBacktest(p.depositAmount) - barH}`)
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${getYPositionBacktest(p.depositAmount)}`)
     .join(' ')
 })
 
@@ -1644,7 +1645,7 @@ const getAdjustedLabelPosition = (type: string) => {
   const positions = [
     { type: 'max', value: maxEvaluation.value, raw: getLabelPositionBacktest(maxEvaluation.value) },
     { type: 'evaluation', value: latestEvaluationAmount.value, raw: getLabelPositionBacktest(latestEvaluationAmount.value) },
-    { type: 'deposit', value: latestDepositAmount.value, raw: getLabelPositionBacktest(latestDepositAmount.value) - (Math.max(8, (svgHeightBacktest - svgPadding * 2) * 0.08) / svgHeightBacktest) * 100 },
+    { type: 'deposit', value: latestDepositAmount.value, raw: getLabelPositionBacktest(latestDepositAmount.value) },
     { type: 'min', value: minEvaluation.value, raw: getLabelPositionBacktest(minEvaluation.value) }
   ]
 

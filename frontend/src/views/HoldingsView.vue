@@ -209,23 +209,23 @@
                                 </linearGradient>
                               </defs>
 
-                              <!-- ⭐⭐⭐ [변경] 자산 변동 추이 차트 재구성 ⭐⭐⭐ -->
+                              <!-- 영역 채우기 (평가금액 - 연한 파란색) -->
+                              <path :d="areaPath" fill="url(#profitAreaGradient)" />
+
+		  <!-- ⭐⭐⭐ [변경] 자산 변동 추이 차트 재구성 ⭐⭐⭐ -->
                               <!-- 불입금액 막대그래프 (주황색) -->
                               <!-- ⭐⭐⭐ [변경] 막대: 불입금액 위치 위로 고정 높이 표시 ⭐⭐⭐ -->
                               <rect
                                 v-for="(point, index) in chartPoints"
                                 :key="'bar-' + index"
                                 :x="point.x - barWidth / 2"
-                                :y="getYPosition(point.depositAmount) - Math.max(8, (svgHeight - svgPadding * 2) * 0.08)"
+                                :y="getYPosition(point.depositAmount)"
                                 :width="barWidth"
-                                :height="Math.max(8, (svgHeight - svgPadding * 2) * 0.08)"
+                                :height="Math.max(0, (svgHeight - svgPadding) - getYPosition(point.depositAmount))"
                                 fill="#FF9800"
                                 :opacity="hoveredIndex === index ? 0.6 : 0.35"
                                 rx="1"
                               />
-
-                              <!-- 영역 채우기 (평가금액 - 연한 파란색) -->
-                              <path :d="areaPath" fill="url(#profitAreaGradient)" />
 
                               <!-- 최고 평가금액 파선 (초록) -->
                               <line
@@ -260,7 +260,7 @@
                               <circle
                                 v-for="(point, index) in chartPoints"
                                 :key="'dep-' + index"
-                                :cx="point.x" :cy="getYPosition(point.depositAmount) - Math.max(8, (svgHeight - svgPadding * 2) * 0.08)"
+                                :cx="point.x" :cy="getYPosition(point.depositAmount)"
                                 :r="hoveredIndex === index ? 6 : 3"
                                 fill="#FF9800" stroke="white" stroke-width="1.5" class="chart-point"
                               />
@@ -981,9 +981,8 @@ const linePath = computed(() => {
 // ⭐⭐⭐ [변경] 불입금액 추세선도 막대 상단 위치와 일치 ⭐⭐⭐
 const depositLinePath = computed(() => {
   if (!chartPoints.value.length) return ''
-  const barH = Math.max(8, (svgHeight - svgPadding * 2) * 0.08)
   return chartPoints.value
-    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${getYPosition(p.depositAmount) - barH}`)
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${getYPosition(p.depositAmount)}`)
     .join(' ')
 })
 
@@ -1040,7 +1039,7 @@ const getAdjustedLabelPosition = (type: string) => {
   const positions = [
     { type: 'max', value: maxEvaluation.value, raw: getLabelPosition(maxEvaluation.value) },
     { type: 'evaluation', value: latestEvaluationAmount.value, raw: getLabelPosition(latestEvaluationAmount.value) },
-    { type: 'deposit', value: latestDepositAmount.value, raw: getLabelPosition(latestDepositAmount.value) - (Math.max(8, (svgHeight - svgPadding * 2) * 0.08) / svgHeight) * 100 },
+    { type: 'deposit', value: latestDepositAmount.value, raw: getLabelPosition(latestDepositAmount.value) },
     { type: 'min', value: minEvaluation.value, raw: getLabelPosition(minEvaluation.value) }
   ]
 

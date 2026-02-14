@@ -187,42 +187,89 @@
               </v-card-title>
               <v-card-text class="pa-3">
                 <v-row dense>
-                  <v-col cols="12" md="4">
-                    <v-card variant="outlined" class="pa-3 text-center fill-height">
+                  <!-- 좌측: 보유자산 포트폴리오 파이차트 -->
+                  <v-col cols="12" md="6">
+                    <div class="text-body-2 font-weight-bold text-grey-darken-3 mb-2">보유자산 포트폴리오</div>
+                    <div v-if="upbitAccount.totalAsset > 0" class="d-flex align-center">
+                      <div class="portfolio-chart-wrapper">
+                        <svg viewBox="0 0 200 200" class="portfolio-chart">
+                          <defs>
+                            <filter id="shadow3d" x="-10%" y="-10%" width="120%" height="130%">
+                              <feDropShadow dx="2" dy="4" stdDeviation="3" flood-opacity="0.3"/>
+                            </filter>
+                          </defs>
+                          <!-- 3D 효과: 아래쪽 그림자 원 -->
+                          <ellipse cx="100" cy="108" rx="75" ry="75" fill="rgba(0,0,0,0.08)" />
+                          <!-- 파이 차트 조각 -->
+                          <path
+                            v-for="(slice, index) in portfolioSlices"
+                            :key="'slice-' + index"
+                            :d="slice.path"
+                            :fill="slice.color"
+                            stroke="white"
+                            stroke-width="2"
+                            filter="url(#shadow3d)"
+                            class="pie-slice"
+                          />
+                          <!-- 중앙 도넛 홀 -->
+                          <circle cx="100" cy="100" r="40" fill="white" />
+                          <text x="100" y="95" text-anchor="middle" class="pie-center-text" font-size="11" fill="#616161">보유비중</text>
+                          <text x="100" y="110" text-anchor="middle" class="pie-center-text" font-size="11" fill="#616161">(%)</text>
+                        </svg>
+                      </div>
+                      <!-- 범례 -->
+                      <div class="ml-3">
+                        <div 
+                          v-for="(item, index) in portfolioLegend" 
+                          :key="'legend-' + index"
+                          class="d-flex align-center mb-1"
+                        >
+                          <div class="legend-dot mr-2" :style="{ backgroundColor: item.color }"></div>
+                          <span class="text-body-2 font-weight-medium" style="min-width: 40px;">{{ item.label }}</span>
+                          <span class="text-body-2 text-grey-darken-1 ml-2">{{ item.percent.toFixed(1) }}%</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div v-else class="d-flex flex-column align-center justify-center text-grey-darken-2" style="min-height: 180px;">
+                      <v-icon size="32" class="mb-1">mdi-chart-donut</v-icon>
+                      <div class="text-caption">자산 정보 없음</div>
+                    </div>
+                    <!-- 보유 코인 칩 (항상 표시) -->
+                    <div class="mt-2">
+                      <div class="text-caption text-grey-darken-1 mb-1">보유 코인 ({{ upbitAccount.holdings.length }}종)</div>
+                      <v-chip-group v-if="upbitAccount.holdings.length > 0">
+                        <v-chip
+                          v-for="holding in upbitAccount.holdings" :key="holding.currency"
+                          :color="holding.profitRate >= 0 ? 'teal' : 'red'" size="small" variant="outlined"
+                        >
+                          <strong class="mr-1">{{ holding.currency }}</strong>
+                          {{ formatCurrency(holding.evaluation) }}
+                          <span class="ml-1">({{ holding.profitRate >= 0 ? '+' : '' }}{{ holding.profitRate.toFixed(1) }}%)</span>
+                        </v-chip>
+                      </v-chip-group>
+                      <div v-else class="text-caption text-grey-darken-2">없음</div>
+                    </div>
+                  </v-col>
+
+                  <!-- 우측: 잔고 정보 세로 배치 -->
+                  <v-col cols="12" md="6">
+                    <v-card variant="outlined" class="pa-3 text-center mb-2">
                       <div class="text-caption text-grey-darken-1 mb-1">KRW 잔고 (매수 대기 자금)</div>
                       <div class="text-h5 font-weight-bold text-amber-darken-3">{{ formatCurrency(upbitAccount.krwBalance) }}</div>
                     </v-card>
-                  </v-col>
-                  <v-col cols="12" md="4">
-                    <v-card variant="outlined" class="pa-3 text-center fill-height">
+                    <v-card variant="outlined" class="pa-3 text-center mb-2">
                       <div class="text-caption text-grey-darken-1 mb-1">코인 평가액</div>
                       <div class="text-h5 font-weight-bold text-indigo-darken-1">{{ formatCurrency(upbitAccount.coinEvaluation) }}</div>
                     </v-card>
-                  </v-col>
-                  <!-- ★★★ 수정: 총 자산 검정 테두리 추가 ★★★ -->
-                  <v-col cols="12" md="4">
-                    <v-card variant="outlined" class="pa-3 text-center fill-height total-asset-card">
+                    <v-card variant="outlined" class="pa-3 text-center total-asset-card">
                       <div class="text-caption text-grey-darken-1 mb-1">총 자산</div>
                       <div class="text-h5 font-weight-bold text-teal-darken-2">{{ formatCurrency(upbitAccount.totalAsset) }}</div>
                     </v-card>
+                    <div v-if="!authStore.user?.hasApiKey" class="text-center py-3">
+                      <v-btn size="small" color="amber-darken-2" variant="tonal" @click="$router.push('/profile')">API 키 등록하기</v-btn>
+                    </div>
                   </v-col>
                 </v-row>
-                <div v-if="upbitAccount.holdings.length > 0" class="mt-3">
-                  <div class="text-caption text-grey-darken-1 mb-2">보유 코인 ({{ upbitAccount.holdings.length }}종)</div>
-                  <v-chip-group>
-                    <v-chip
-                      v-for="holding in upbitAccount.holdings" :key="holding.currency"
-                      :color="holding.profitRate >= 0 ? 'teal' : 'red'" size="small" variant="outlined"
-                    >
-                      <strong class="mr-1">{{ holding.currency }}</strong>
-                      {{ formatCurrency(holding.evaluation) }}
-                      <span class="ml-1">({{ holding.profitRate >= 0 ? '+' : '' }}{{ holding.profitRate.toFixed(1) }}%)</span>
-                    </v-chip>
-                  </v-chip-group>
-                </div>
-                <div v-else-if="!authStore.user?.hasApiKey" class="text-center py-3">
-                  <v-btn size="small" color="amber-darken-2" variant="tonal" @click="$router.push('/profile')">API 키 등록하기</v-btn>
-                </div>
               </v-card-text>
             </v-card>
           </v-col>
@@ -1278,6 +1325,44 @@ const investmentPeriod = ref('0일')
 
 const dashboardStats = ref({ totalProfitLoss: 0, totalProfitLossPct: 0, totalEvaluation: 0, totalInvestment: 0, todayBuyCount: 0, todayBuyAmount: 0, todaySellCount: 0, todaySellAmount: 0 })
 const upbitAccount = ref({ krwBalance: 0, coinEvaluation: 0, totalAsset: 0, holdings: [] as any[] })
+
+// ⭐⭐⭐ [신규] 포트폴리오 파이차트 데이터 ⭐⭐⭐
+const portfolioColors = ['#8BC34A', '#5C6BC0', '#AB47BC', '#FF7043', '#26A69A', '#FFA726', '#42A5F5', '#EC407A']
+
+const portfolioLegend = computed(() => {
+  const total = upbitAccount.value.totalAsset
+  if (total <= 0) return []
+  const items: Array<{ label: string, percent: number, color: string, value: number }> = []
+  // KRW
+  items.push({ label: 'KRW', percent: (upbitAccount.value.krwBalance / total) * 100, color: portfolioColors[0], value: upbitAccount.value.krwBalance })
+  // 보유 코인
+  upbitAccount.value.holdings.forEach((h: any, i: number) => {
+    items.push({ label: h.currency, percent: (h.evaluation / total) * 100, color: portfolioColors[(i + 1) % portfolioColors.length], value: h.evaluation })
+  })
+  return items
+})
+
+const portfolioSlices = computed(() => {
+  const items = portfolioLegend.value
+  if (!items.length) return []
+  const cx = 100, cy = 100, r = 75
+  let startAngle = -90
+  return items.map((item) => {
+    const angle = (item.percent / 100) * 360
+    const endAngle = startAngle + angle
+    const startRad = (startAngle * Math.PI) / 180
+    const endRad = (endAngle * Math.PI) / 180
+    const x1 = cx + r * Math.cos(startRad)
+    const y1 = cy + r * Math.sin(startRad)
+    const x2 = cx + r * Math.cos(endRad)
+    const y2 = cy + r * Math.sin(endRad)
+    const largeArc = angle > 180 ? 1 : 0
+    const path = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`
+    startAngle = endAngle
+    return { path, color: item.color, label: item.label, percent: item.percent }
+  })
+})
+
 // botStatus ref 초기값에 새 필드 추가
 const botStatus = ref({
   isRunning: false,
@@ -2411,12 +2496,16 @@ const cardHelps = {
     content: `
       <p class="help-intro">업비트 계좌의 실제 자산 현황을 실시간으로 조회합니다.</p>
       <div style="height: 16px;"></div>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>보유자산 포트폴리오</strong><br/>
+        <span class="help-desc">KRW와 보유 코인의 비중을 파이차트로 시각화합니다.<br/>각 자산의 비율(%)을 한눈에 확인할 수 있습니다.</span></p>
       <p class="help-item"><span class="help-bullet">•</span> <strong>KRW 잔고</strong><br/>
         <span class="help-desc">업비트 계좌의 원화 보유량입니다. 매수 대기 자금으로 사용됩니다.</span></p>
       <p class="help-item"><span class="help-bullet">•</span> <strong>코인 평가액</strong><br/>
         <span class="help-desc">보유 중인 모든 코인의 현재 시세 기준 평가 금액 합계입니다.</span></p>
       <p class="help-item"><span class="help-bullet">•</span> <strong>총 자산</strong><br/>
         <span class="help-desc">KRW 잔고 + 코인 평가액의 합계입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>보유 코인</strong><br/>
+        <span class="help-desc">현재 보유 중인 코인 종류와 평가액, 수익률을 표시합니다.</span></p>
       <p class="help-note">※ 업비트 API 키가 등록되어 있어야 조회됩니다.</p>
     `
   },
@@ -2873,5 +2962,38 @@ onUnmounted(() => {
 .chart-period-toggle .v-btn {
   height: 28px !important;
   min-height: 28px !important;
+}
+
+/* ⭐⭐⭐ [신규] 포트폴리오 파이차트 스타일 ⭐⭐⭐ */
+.portfolio-chart-wrapper {
+  width: 140px;
+  height: 140px;
+  flex-shrink: 0;
+}
+
+.portfolio-chart {
+  width: 100%;
+  height: 100%;
+}
+
+.pie-slice {
+  transition: opacity 0.2s;
+  cursor: pointer;
+}
+
+.pie-slice:hover {
+  opacity: 0.8;
+}
+
+.pie-center-text {
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
 }
 </style>

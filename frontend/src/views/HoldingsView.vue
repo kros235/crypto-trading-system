@@ -280,6 +280,9 @@
                               <span class="chart-label label-min" :style="{ top: getAdjustedLabelPosition('min') + '%' }">
                                 최저 평가 금액 : {{ formatCurrency(minEvaluation) }}
                               </span>
+                              <span class="chart-label label-floor" :style="{ top: getAdjustedLabelPosition('floor') + '%' }">
+                                차트 바닥 : {{ formatCurrency(minBalance) }}
+                              </span>
                             </div>
 
                             <!-- 툴팁 -->
@@ -291,7 +294,7 @@
                               class="chart-tooltip-backtest"
                               :style="{ 
                                 left: (tooltipX > chartWrapperWidth * 0.5 ? tooltipX - 10 : tooltipX + 10) + 'px',
-                                top: tooltipY + 'px',
+                                top: Math.max(60, Math.min(svgHeight - 80, tooltipY)) + 'px',
                                 transform: tooltipX > chartWrapperWidth * 0.5 ? 'translateX(-100%) translateY(-50%)' : 'translateY(-50%)'
                               }"
                             >
@@ -919,10 +922,12 @@ const maxBalance = computed(() => {
 })
 
 const minBalance = computed(() => {
-  if (!assetHistory.value.length) return initialAsset.value
+  if (!assetHistory.value.length) return 0
   const minEval = Math.min(...assetHistory.value.map(d => d.evaluationAmount || d.balance))
   const minDeposit = Math.min(...assetHistory.value.map(d => d.depositAmount || initialAsset.value))
-  return Math.min(minEval, minDeposit)
+  const minValue = Math.min(minEval, minDeposit)
+  if (minValue <= 0) return 0
+  return Math.floor(minValue * 0.8)
 })
 
 // ⭐⭐⭐ [신규 추가] 스냅샷 기반 차트 computed ⭐⭐⭐
@@ -1040,7 +1045,8 @@ const getAdjustedLabelPosition = (type: string) => {
     { type: 'max', value: maxEvaluation.value, raw: getLabelPosition(maxEvaluation.value) },
     { type: 'evaluation', value: latestEvaluationAmount.value, raw: getLabelPosition(latestEvaluationAmount.value) },
     { type: 'deposit', value: latestDepositAmount.value, raw: getLabelPosition(latestDepositAmount.value) },
-    { type: 'min', value: minEvaluation.value, raw: getLabelPosition(minEvaluation.value) }
+    { type: 'min', value: minEvaluation.value, raw: getLabelPosition(minEvaluation.value) },
+    { type: 'floor', value: minBalance.value, raw: getLabelPosition(minBalance.value) }
   ]
 
   positions.sort((a, b) => a.raw - b.raw)
@@ -1681,6 +1687,8 @@ onMounted(() => {
 .label-min { color: #F44336; }
 .label-deposit { color: #FF9800; }
 .label-evaluation { color: #1976D2; }
+
+.label-floor { color: #9E9E9E; }
 
 .chart-tooltip-backtest {
   position: absolute;

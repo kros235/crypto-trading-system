@@ -629,13 +629,13 @@
                         <!-- 최고 평가금액 파선 (초록) -->
                         <line
                           :x1="svgPadding" :y1="getYPositionBacktest(maxEvaluation)"
-                          :x2="effectiveWidth - svgPaddingRight" :y2="getYPositionBacktest(maxEvaluation)"
+                          :x2="effectiveWidth - (dashboardChartViewMode === 'scroll' ? scrollPaddingRight : svgPaddingRight)" :y2="getYPositionBacktest(maxEvaluation)"
                           stroke="#4CAF50" stroke-width="2" stroke-dasharray="6,4"
                         />
                         <!-- 최저 평가금액 파선 (빨강) -->
                         <line
                           :x1="svgPadding" :y1="getYPositionBacktest(minEvaluation)"
-                          :x2="effectiveWidth - svgPaddingRight" :y2="getYPositionBacktest(minEvaluation)"
+                          :x2="effectiveWidth - (dashboardChartViewMode === 'scroll' ? scrollPaddingRight : svgPaddingRight)" :y2="getYPositionBacktest(minEvaluation)"
                           stroke="#F44336" stroke-width="2" stroke-dasharray="6,4"
                         />
 
@@ -730,6 +730,9 @@
                         <span class="chart-label label-min" :style="{ top: getAdjustedLabelPosition('min') + '%' }">
                           최저 평가 금액 : {{ formatCurrency(minEvaluation) }}
                         </span>
+                        <span class="chart-label label-floor" :style="{ top: getAdjustedLabelPosition('floor') + '%' }">
+                          차트 바닥 : {{ formatCurrency(minBalanceBacktest) }}
+                        </span>
                       </template>
                     </div>
                     
@@ -739,7 +742,7 @@
                       class="chart-tooltip-backtest"
                       :style="{ 
                         left: (tooltipX > chartWrapperWidth * 0.5 ? tooltipX - 10 : tooltipX + 10) + 'px',
-                        top: tooltipY + 'px',
+                        top: Math.max(60, Math.min(svgHeightBacktest - 80, tooltipY)) + 'px',
                         transform: tooltipX > chartWrapperWidth * 0.5 ? 'translateX(-100%) translateY(-50%)' : 'translateY(-50%)'
                       }"
                     >
@@ -1311,14 +1314,15 @@ const recentTransactions = ref<any[]>([])
 const snackbar = ref({ show: false, message: '', color: 'success' })
 
 const svgWidth = 800, svgHeight = 200, svgPadding = 30
-const svgPaddingRight = 120 // ★★★ [수정] 우측 라벨 영역 여백 확대 (65 → 120) ★★★
+const svgPaddingRight = 120
+const scrollPaddingRight = 220
 
 // HoldingsView 스타일 동적 차트 너비 계산
 const effectiveWidth = computed(() => dashboardChartViewMode.value === 'scroll' ? dynamicChartWidth.value : svgWidth)
 
 const dynamicChartWidth = computed(() => {
   const pointCount = assetHistory.value.length || emptyPeriodDates.value.length
-  return Math.max(svgWidth, pointCount * 25 + svgPadding + svgPaddingRight)
+  return Math.max(svgWidth, pointCount * 25 + svgPadding + scrollPaddingRight)
 })
 
 const maxBalance = computed(() => assetHistory.value.length ? Math.max(...assetHistory.value.map(d => d.balance)) : 0)
@@ -1492,7 +1496,8 @@ const emptyPeriodDates = computed(() => {
 const emptyChartPoints = computed(() => {
   if (!emptyPeriodDates.value.length) return []
   const total = emptyPeriodDates.value.length
-  const chartWidth = effectiveWidth.value - svgPadding - svgPaddingRight
+  const rightPad = dashboardChartViewMode.value === 'scroll' ? scrollPaddingRight : svgPaddingRight
+  const chartWidth = effectiveWidth.value - svgPadding - rightPad
   return emptyPeriodDates.value.map((d, index) => ({
     x: svgPadding + (index / (total - 1 || 1)) * chartWidth,
     y: svgHeightBacktest / 2,
@@ -1541,10 +1546,12 @@ const maxBalanceBacktest = computed(() => {
 })
 
 const minBalanceBacktest = computed(() => {
-  if (!assetHistory.value.length) return initialAsset.value
+  if (!assetHistory.value.length) return 0
   const minEval = Math.min(...assetHistory.value.map(d => d.evaluationAmount || d.balance))
   const minDeposit = Math.min(...assetHistory.value.map(d => d.depositAmount || initialAsset.value))
-  return Math.min(minEval, minDeposit)
+  const minValue = Math.min(minEval, minDeposit)
+  if (minValue <= 0) return 0
+  return Math.floor(minValue * 0.8)
 })
 
 // ⭐⭐⭐ [신규 추가] 스냅샷 기반 차트 computed ⭐⭐⭐
@@ -1590,7 +1597,8 @@ const getYPositionBacktest = (balance: number) => {
 const chartPointsBacktest = computed(() => {
   if (!assetHistory.value.length) return []
   const total = assetHistory.value.length
-  const chartWidth = effectiveWidth.value - svgPadding - svgPaddingRight
+  const rightPad = dashboardChartViewMode.value === 'scroll' ? scrollPaddingRight : svgPaddingRight
+  const chartWidth = effectiveWidth.value - svgPadding - rightPad
   return assetHistory.value.map((d, index) => ({
     x: svgPadding + (index / (total - 1 || 1)) * chartWidth,
     y: getYPositionBacktest(d.evaluationAmount || d.balance),
@@ -1646,7 +1654,8 @@ const getAdjustedLabelPosition = (type: string) => {
     { type: 'max', value: maxEvaluation.value, raw: getLabelPositionBacktest(maxEvaluation.value) },
     { type: 'evaluation', value: latestEvaluationAmount.value, raw: getLabelPositionBacktest(latestEvaluationAmount.value) },
     { type: 'deposit', value: latestDepositAmount.value, raw: getLabelPositionBacktest(latestDepositAmount.value) },
-    { type: 'min', value: minEvaluation.value, raw: getLabelPositionBacktest(minEvaluation.value) }
+    { type: 'min', value: minEvaluation.value, raw: getLabelPositionBacktest(minEvaluation.value) },
+    { type: 'floor', value: minBalanceBacktest.value, raw: getLabelPositionBacktest(minBalanceBacktest.value) }
   ]
 
   // raw 위치 기준 오름차순 정렬 (위→아래)
@@ -1870,7 +1879,8 @@ const handleChartHover = (event: MouseEvent) => {
     }
   } else {
     // 전체 보기 모드: 기존 방식
-    const chartWidth = effectiveWidth.value - svgPadding - svgPaddingRight
+    const rightPad = dashboardChartViewMode.value === 'scroll' ? scrollPaddingRight : svgPaddingRight
+    const chartWidth = effectiveWidth.value - svgPadding - rightPad
     const ratio = Math.max(0, Math.min(1, (mouseX - svgPadding * (rect.width / effectiveWidth.value)) / (chartWidth * (rect.width / effectiveWidth.value))))
     targetIndex = Math.round(ratio * (total - 1))
   }
@@ -2696,6 +2706,10 @@ onUnmounted(() => {
 
 .label-evaluation {
   color: #1976D2;
+}
+
+.label-floor {
+  color: #9E9E9E;
 }
 
 .chart-tooltip-backtest {

@@ -189,126 +189,98 @@
                 <v-row dense>
                   <!-- 좌측: 보유자산 포트폴리오 파이차트 -->
                   <v-col cols="12" md="6">
-                    <div class="text-body-2 font-weight-bold text-grey-darken-3 mb-2">보유자산 포트폴리오</div>
-                    <div v-if="upbitAccount.totalAsset > 0" class="d-flex align-center">
-                      <!-- 파이차트 (3D 타원형) -->
-                      <div class="portfolio-chart-wrapper" style="position: relative;">
-                        <svg viewBox="0 0 260 200" class="portfolio-chart">
-                          <defs>
-                            <filter id="shadow3d" x="-10%" y="-10%" width="120%" height="130%">
-                              <feDropShadow dx="1" dy="3" stdDeviation="3" flood-opacity="0.25"/>
-                            </filter>
-                          </defs>
-                          <!-- 3D 측면 두께 (아래쪽으로 15px) -->
-                          <path
-                            v-for="(slice, index) in portfolio3dSides"
-                            :key="'side-' + index"
-                            :d="slice.sidePath"
-                            :fill="slice.darkColor"
-                            stroke="none"
-                          />
-                          <!-- 파이 차트 상면 (타원) -->
-                          <path
-                            v-for="(slice, index) in portfolio3dSlices"
-                            :key="'slice-' + index"
-                            :d="slice.path"
-                            :fill="slice.color"
-                            stroke="#333333"
-                            stroke-width="1.5"
-                            filter="url(#shadow3d)"
-                            class="pie-slice"
-                            @mouseenter="hoveredSlice = index"
-                            @mouseleave="hoveredSlice = -1"
-                          />
-                          <!-- 조각 내 % 텍스트 (10% 이상만) -->
-                          <text
-                            v-for="(slice, index) in portfolio3dSlices"
-                            :key="'pct-' + index"
-                            v-show="slice.percent >= 10"
-                            :x="slice.labelX"
-                            :y="slice.labelY"
-                            text-anchor="middle"
-                            font-size="12"
-                            font-weight="bold"
-                            fill="#333333"
-                            stroke="none"
-                            stroke-width="0"
-                            pointer-events="none"
-                          >{{ slice.percent.toFixed(1) }}%</text>
-                          <!-- 중앙 도넛 홀 -->
-                          <ellipse cx="130" cy="90" rx="45" ry="36" fill="white" />
-                          <ellipse cx="130" cy="90" rx="45" ry="36" fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="1" />
-                          <text x="130" y="86" text-anchor="middle" font-size="11" fill="#616161" font-weight="500">보유비중</text>
-                          <text x="130" y="99" text-anchor="middle" font-size="11" fill="#616161" font-weight="500">(%)</text>
-                        </svg>
-                        <!-- 호버 툴팁 (10% 미만 조각) -->
-                        <div 
-                          v-if="hoveredSlice >= 0 && portfolio3dSlices[hoveredSlice]?.percent < 10"
-                          class="pie-tooltip"
-                          :style="{ 
-                            left: portfolio3dSlices[hoveredSlice].labelX + 'px',
-                            top: (portfolio3dSlices[hoveredSlice].labelY - 15) + 'px'
-                          }"
-                        >
-                          {{ portfolio3dSlices[hoveredSlice].label }} {{ portfolio3dSlices[hoveredSlice].percent.toFixed(1) }}%
+                    <div v-if="upbitAccount.totalAsset > 0">
+                      <!-- 제목 + 차트를 같은 줄에 배치 -->
+                      <div class="d-flex">
+                        <!-- 제목 (좌측 상단) -->
+                        <div class="text-body-2 font-weight-bold text-grey-darken-3 pt-1" style="min-width: 130px; flex-shrink: 0;">보유자산 포트폴리오</div>
+                        <!-- 파이차트 (제목 우측, 공간 최대 활용) -->
+                        <div class="portfolio-chart-wrapper" style="position: relative; flex: 1;">
+                          <svg viewBox="0 0 300 220" class="portfolio-chart">
+                            <defs>
+                              <filter id="shadow3d" x="-10%" y="-10%" width="120%" height="130%">
+                                <feDropShadow dx="1" dy="3" stdDeviation="3" flood-opacity="0.25"/>
+                              </filter>
+                            </defs>
+                            <!-- 3D 측면 두께 -->
+                            <path
+                              v-for="(slice, index) in portfolio3dSides"
+                              :key="'side-' + index"
+                              :d="slice.sidePath"
+                              :fill="slice.darkColor"
+                              stroke="none"
+                            />
+                            <!-- 파이 차트 상면 (타원) -->
+                            <path
+                              v-for="(slice, index) in portfolio3dSlices"
+                              :key="'slice-' + index"
+                              :d="slice.path"
+                              :fill="slice.color"
+                              stroke="#333333"
+                              stroke-width="1.5"
+                              filter="url(#shadow3d)"
+                              class="pie-slice"
+                              @mouseenter="hoveredSlice = index"
+                              @mouseleave="hoveredSlice = -1"
+                            />
+                            <!-- 조각 내 % 텍스트 (15% 이상만) -->
+                            <text
+                              v-for="(slice, index) in portfolio3dSlices"
+                              :key="'pct-' + index"
+                              v-show="slice.percent >= 15"
+                              :x="slice.labelX"
+                              :y="slice.labelY"
+                              text-anchor="middle"
+                              font-size="13"
+                              font-weight="bold"
+                              fill="#333333"
+                              stroke="none"
+                              pointer-events="none"
+                            >{{ slice.percent.toFixed(1) }}%</text>
+                            <!-- 중앙 도넛 홀 -->
+                            <ellipse cx="150" cy="100" rx="50" ry="40" fill="white" />
+                            <ellipse cx="150" cy="100" rx="50" ry="40" fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="1" />
+                            <text x="150" y="96" text-anchor="middle" font-size="12" fill="#616161" font-weight="500">보유비중</text>
+                            <text x="150" y="110" text-anchor="middle" font-size="12" fill="#616161" font-weight="500">(%)</text>
+                          </svg>
+                          <!-- 호버 툴팁 (모든 조각) -->
+                          <div 
+                            v-if="hoveredSlice >= 0 && portfolio3dSlices[hoveredSlice]"
+                            class="pie-tooltip"
+                            :style="{ 
+                              left: portfolio3dSlices[hoveredSlice].labelX * (chartWrapperActualWidth / 300) + 'px',
+                              top: (portfolio3dSlices[hoveredSlice].labelY * (chartWrapperActualHeight / 220) - 10) + 'px'
+                            }"
+                          >
+                            <strong>{{ portfolio3dSlices[hoveredSlice].label }}</strong> {{ portfolio3dSlices[hoveredSlice].percent.toFixed(1) }}%
+                            <template v-if="getHoldingInfo(portfolio3dSlices[hoveredSlice].label)">
+                              <br/>{{ formatCurrency(getHoldingInfo(portfolio3dSlices[hoveredSlice].label).evaluation) }}
+                              <span :style="{ color: getHoldingInfo(portfolio3dSlices[hoveredSlice].label).profitRate >= 0 ? '#4CAF50' : '#F44336' }">
+                                ({{ getHoldingInfo(portfolio3dSlices[hoveredSlice].label).profitRate >= 0 ? '+' : '' }}{{ getHoldingInfo(portfolio3dSlices[hoveredSlice].label).profitRate.toFixed(1) }}%)
+                              </span>
+                            </template>
+                            <template v-else>
+                              <br/>{{ formatCurrency(portfolioLegend[hoveredSlice]?.value || 0) }}
+                            </template>
+                          </div>
                         </div>
                       </div>
-                      <!-- 우측: 범례 + 보유코인 목록 세로 배치 -->
-                      <div class="ml-3 d-flex align-start" style="gap: 24px;">
-                        <!-- 범례 -->
-                        <div>
-                          <div 
-                            v-for="(item, index) in portfolioLegend"
-                            :key="'legend-' + index"
-                            class="d-flex align-center mb-2"
-                          >
-                            <div class="legend-dot mr-2" :style="{ backgroundColor: item.color }"></div>
-                            <span class="text-body-2 font-weight-bold" style="min-width: 40px;">{{ item.label }}</span>
-                            <span class="text-body-2 text-grey-darken-1 ml-2">{{ item.percent.toFixed(1) }}%</span>
-                          </div>
-                        </div>
-                         <!-- 보유 코인 상세 -->
-                        <div>
-                          <div class="text-caption text-grey-darken-1 mb-1">보유 코인 ({{ upbitAccount.holdings.length }}종)</div>
-                        <div v-if="upbitAccount.holdings.length > 0">
-                          <div 
-                            v-for="holding in upbitAccount.holdings" 
-                            :key="'detail-' + holding.currency"
-                            class="d-flex align-center justify-space-between mb-1"
-                          >
-                            <span class="text-body-2 font-weight-medium">{{ holding.currency }}</span>
-                            <span class="text-body-2" :class="holding.profitRate >= 0 ? 'text-teal-darken-2' : 'text-red-darken-2'">
-                              {{ formatCurrency(holding.evaluation) }}
-                              <span class="text-caption ml-1">({{ holding.profitRate >= 0 ? '+' : '' }}{{ holding.profitRate.toFixed(1) }}%)</span>
-                            </span>
-                          </div>
-                        </div>
-                         <div v-else class="text-caption text-grey-darken-2">없음</div>
+                      <!-- 하단 범례 (가로 배치) -->
+                      <div class="d-flex flex-wrap justify-center mt-1" style="gap: 12px;">
+                        <div 
+                          v-for="(item, index) in portfolioLegend" 
+                          :key="'legend-' + index"
+                          class="d-flex align-center"
+                        >
+                          <div class="legend-dot mr-1" :style="{ backgroundColor: item.color }"></div>
+                          <span class="text-caption font-weight-bold">{{ item.label }}</span>
+                          <span class="text-caption text-grey-darken-1 ml-1">{{ item.percent.toFixed(1) }}%</span>
                         </div>
                       </div>
                     </div>
-                    <div v-else class="d-flex" style="min-height: 200px;">
-                      <!-- 좌측: 자산 정보 없음 (정중앙) -->
-                      <div class="d-flex flex-column align-center justify-center text-grey-darken-2" style="flex: 1; border-right: 1px solid #e0e0e0;">
-                        <v-icon size="32" class="mb-1">mdi-chart-donut</v-icon>
-                        <div class="text-caption">자산 정보 없음</div>
-                      </div>
-                      <!-- 우측: 보유 코인 목록 (상단 정렬) -->
-                      <div class="pl-3" style="min-width: 140px;">
-                        <div class="text-caption text-grey-darken-1 mb-1">보유 코인 ({{ upbitAccount.holdings.length }}종)</div>
-                        <div v-if="upbitAccount.holdings.length > 0">
-                          <v-chip
-                            v-for="holding in upbitAccount.holdings" :key="'empty-' + holding.currency"
-                            :color="holding.profitRate >= 0 ? 'teal' : 'red'" size="small" variant="outlined"
-                            class="mb-1 mr-1"
-                          >
-                            <strong class="mr-1">{{ holding.currency }}</strong>
-                            {{ formatCurrency(holding.evaluation) }}
-                            <span class="ml-1">({{ holding.profitRate >= 0 ? '+' : '' }}{{ holding.profitRate.toFixed(1) }}%)</span>
-                          </v-chip>
-                        </div>
-                        <div v-else class="text-caption text-grey-darken-2">없음</div>
-                      </div>
+                    <div v-else class="d-flex flex-column align-center justify-center text-grey-darken-2 fill-height" style="min-height: 280px;">
+                      <v-icon size="32" class="mb-1">mdi-chart-donut</v-icon>
+                      <div class="text-caption">자산 정보 없음</div>
                     </div>
                   </v-col>
 
@@ -1389,6 +1361,14 @@ const upbitAccount = ref({ krwBalance: 0, coinEvaluation: 0, totalAsset: 0, hold
 
 // ⭐⭐⭐ [신규] 포트폴리오 파이차트 데이터 ⭐⭐⭐
 const hoveredSlice = ref(-1)
+const chartWrapperActualWidth = ref(300)
+const chartWrapperActualHeight = ref(220)
+
+// 보유 코인 정보 조회 (툴팁용)
+const getHoldingInfo = (label: string) => {
+  if (label === 'KRW') return null
+  return upbitAccount.value.holdings.find((h: any) => h.currency === label) || null
+}
 const portfolioColors = ['#8BC34A', '#5C6BC0', '#AB47BC', '#FF7043', '#26A69A', '#FFA726', '#42A5F5', '#EC407A']
 
 const portfolioLegend = computed(() => {
@@ -1408,7 +1388,7 @@ const portfolioLegend = computed(() => {
 const portfolio3dSlices = computed(() => {
   const items = portfolioLegend.value
   if (!items.length) return []
-  const cx = 130, cy = 90, rx = 85, ry = 68
+  const cx = 150, cy = 100, rx = 95, ry = 76
   let startAngle = -90
   return items.map((item) => {
     const angle = (item.percent / 100) * 360
@@ -1435,7 +1415,7 @@ const portfolio3dSlices = computed(() => {
 const portfolio3dSides = computed(() => {
   const items = portfolioLegend.value
   if (!items.length) return []
-  const cx = 130, cy = 90, rx = 85, ry = 68, depth = 15
+  const cx = 150, cy = 100, rx = 95, ry = 76, depth = 15
   let startAngle = -90
   return items.map((item) => {
     const angle = (item.percent / 100) * 360
@@ -3072,9 +3052,9 @@ onUnmounted(() => {
 
 /* ⭐⭐⭐ [신규] 포트폴리오 파이차트 스타일 ⭐⭐⭐ */
 .portfolio-chart-wrapper {
-  width: 260px;
-  height: 200px;
-  flex-shrink: 0;
+  width: 100%;
+  height: 220px;
+  flex-shrink: 1;
 }
 
 .portfolio-chart {

@@ -613,9 +613,9 @@
                           v-for="(point, index) in chartPointsBacktest"
                           :key="'bar-' + index"
                           :x="point.x - barWidth / 2"
-                          :y="getYPositionBacktest(point.depositAmount) - (svgHeightBacktest - svgPadding * 2) * 0.3"
+                          :y="getYPositionBacktest(point.depositAmount) - Math.max(8, (svgHeightBacktest - svgPadding * 2) * 0.08)"
                           :width="barWidth"
-                          :height="(svgHeightBacktest - svgPadding * 2) * 0.3"
+                          :height="Math.max(8, (svgHeightBacktest - svgPadding * 2) * 0.08)"
                           fill="#FF9800"
                           :opacity="hoveredIndex === index ? 0.6 : 0.35"
                           rx="1"
@@ -657,7 +657,7 @@
                         <circle
                           v-for="(point, index) in chartPointsBacktest"
                           :key="'dep-' + index"
-                          :cx="point.x" :cy="getYPositionBacktest(point.depositAmount) - (svgHeightBacktest - svgPadding * 2) * 0.3"
+                          :cx="point.x" :cy="getYPositionBacktest(point.depositAmount) - Math.max(8, (svgHeightBacktest - svgPadding * 2) * 0.08)"
                           :r="hoveredIndex === index ? 6 : 3"
                           fill="#FF9800" stroke="white" stroke-width="1.5" class="chart-point"
                         />
@@ -1610,9 +1610,9 @@ const linePathBacktest = computed(() => {
 // ⭐⭐⭐ [변경] 불입금액 추세선도 막대 상단 위치와 일치 ⭐⭐⭐
 const depositLinePathBacktest = computed(() => {
   if (!chartPointsBacktest.value.length) return ''
-  const barTopOffset = (svgHeightBacktest - svgPadding * 2) * 0.3
+  const barH = Math.max(8, (svgHeightBacktest - svgPadding * 2) * 0.08)
   return chartPointsBacktest.value
-    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${getYPositionBacktest(p.depositAmount) - barTopOffset}`)
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${getYPositionBacktest(p.depositAmount) - barH}`)
     .join(' ')
 })
 
@@ -1641,15 +1641,10 @@ const getLabelPositionBacktest = (balance: number) => {
 // ⭐⭐⭐ [신규 추가] 라벨 겹침 방지 위치 계산 ⭐⭐⭐
 // 왜: 금액이 같거나 근접하면 라벨이 겹쳐서 안 보임. 최소 간격(4%) 보장
 const getAdjustedLabelPosition = (type: string) => {
-  // ⭐⭐⭐ [변경] 불입금액 라벨: 막대 상단 위치 기준으로 계산 ⭐⭐⭐
-  // 왜: 불입금액 점이 막대 상단(barTopOffset만큼 위)에 있으므로 라벨도 동일 위치 필요
-  const barTopOffsetPct = ((svgHeightBacktest - svgPadding * 2) * 0.3 / svgHeightBacktest) * 100
-  const depositLabelPos = getLabelPositionBacktest(latestDepositAmount.value) - barTopOffsetPct
-
   const positions = [
     { type: 'max', value: maxEvaluation.value, raw: getLabelPositionBacktest(maxEvaluation.value) },
     { type: 'evaluation', value: latestEvaluationAmount.value, raw: getLabelPositionBacktest(latestEvaluationAmount.value) },
-    { type: 'deposit', value: latestDepositAmount.value, raw: depositLabelPos },
+    { type: 'deposit', value: latestDepositAmount.value, raw: getLabelPositionBacktest(latestDepositAmount.value) - (Math.max(8, (svgHeightBacktest - svgPadding * 2) * 0.08) / svgHeightBacktest) * 100 },
     { type: 'min', value: minEvaluation.value, raw: getLabelPositionBacktest(minEvaluation.value) }
   ]
 

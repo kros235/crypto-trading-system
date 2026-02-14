@@ -927,7 +927,7 @@ const minBalance = computed(() => {
   const minDeposit = Math.min(...assetHistory.value.map(d => d.depositAmount || initialAsset.value))
   const minValue = Math.min(minEval, minDeposit)
   if (minValue <= 0) return 0
-  return Math.floor(minValue * 0.95)
+  return Math.floor(minValue * 0.98)
 })
 
 // ⭐⭐⭐ [신규 추가] 스냅샷 기반 차트 computed ⭐⭐⭐

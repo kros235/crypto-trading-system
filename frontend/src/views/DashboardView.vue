@@ -191,41 +191,67 @@
                   <v-col cols="12" md="6">
                     <div class="text-body-2 font-weight-bold text-grey-darken-3 mb-2">보유자산 포트폴리오</div>
                     <div v-if="upbitAccount.totalAsset > 0" class="d-flex">
-                      <!-- 파이차트 (확대) -->
-                      <div class="portfolio-chart-wrapper">
-                        <svg viewBox="0 0 220 240" class="portfolio-chart">
+                      <!-- 파이차트 (3D 타원형) -->
+                      <div class="portfolio-chart-wrapper" style="position: relative;">
+                        <svg viewBox="0 0 260 200" class="portfolio-chart">
                           <defs>
                             <filter id="shadow3d" x="-10%" y="-10%" width="120%" height="130%">
-                              <feDropShadow dx="2" dy="6" stdDeviation="4" flood-opacity="0.3"/>
+                              <feDropShadow dx="1" dy="3" stdDeviation="3" flood-opacity="0.25"/>
                             </filter>
-                            <!-- 3D 입체감 그라데이션 -->
-                            <radialGradient id="pie3dShading" cx="40%" cy="35%" r="60%">
-                              <stop offset="0%" style="stop-color:rgba(255,255,255,0.3)" />
-                              <stop offset="100%" style="stop-color:rgba(0,0,0,0.1)" />
-                            </radialGradient>
                           </defs>
-                          <!-- 3D 효과: 아래쪽 두께 표현 -->
-                          <ellipse cx="110" cy="130" rx="90" ry="90" fill="rgba(0,0,0,0.06)" />
-                          <ellipse cx="110" cy="126" rx="90" ry="90" fill="rgba(0,0,0,0.04)" />
-                          <!-- 파이 차트 조각 -->
+                          <!-- 3D 측면 두께 (아래쪽으로 15px) -->
                           <path
-                            v-for="(slice, index) in portfolioSlices"
+                            v-for="(slice, index) in portfolio3dSides"
+                            :key="'side-' + index"
+                            :d="slice.sidePath"
+                            :fill="slice.darkColor"
+                            stroke="none"
+                          />
+                          <!-- 파이 차트 상면 (타원) -->
+                          <path
+                            v-for="(slice, index) in portfolio3dSlices"
                             :key="'slice-' + index"
                             :d="slice.path"
                             :fill="slice.color"
                             stroke="white"
-                            stroke-width="2.5"
+                            stroke-width="2"
                             filter="url(#shadow3d)"
                             class="pie-slice"
+                            @mouseenter="hoveredSlice = index"
+                            @mouseleave="hoveredSlice = -1"
                           />
-                          <!-- 3D 하이라이트 오버레이 -->
-                          <circle cx="110" cy="120" r="90" fill="url(#pie3dShading)" pointer-events="none" />
+                          <!-- 조각 내 % 텍스트 (10% 이상만) -->
+                          <text
+                            v-for="(slice, index) in portfolio3dSlices"
+                            :key="'pct-' + index"
+                            v-show="slice.percent >= 10"
+                            :x="slice.labelX"
+                            :y="slice.labelY"
+                            text-anchor="middle"
+                            font-size="12"
+                            font-weight="bold"
+                            fill="white"
+                            stroke="rgba(0,0,0,0.3)"
+                            stroke-width="0.5"
+                            pointer-events="none"
+                          >{{ slice.percent.toFixed(1) }}%</text>
                           <!-- 중앙 도넛 홀 -->
-                          <circle cx="110" cy="120" r="48" fill="white" />
-                          <circle cx="110" cy="120" r="48" fill="none" stroke="rgba(0,0,0,0.05)" stroke-width="1" />
-                          <text x="110" y="115" text-anchor="middle" font-size="12" fill="#616161" font-weight="500">보유비중</text>
-                          <text x="110" y="132" text-anchor="middle" font-size="12" fill="#616161" font-weight="500">(%)</text>
+                          <ellipse cx="130" cy="90" rx="45" ry="36" fill="white" />
+                          <ellipse cx="130" cy="90" rx="45" ry="36" fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="1" />
+                          <text x="130" y="86" text-anchor="middle" font-size="11" fill="#616161" font-weight="500">보유비중</text>
+                          <text x="130" y="99" text-anchor="middle" font-size="11" fill="#616161" font-weight="500">(%)</text>
                         </svg>
+                        <!-- 호버 툴팁 (10% 미만 조각) -->
+                        <div 
+                          v-if="hoveredSlice >= 0 && portfolio3dSlices[hoveredSlice]?.percent < 10"
+                          class="pie-tooltip"
+                          :style="{ 
+                            left: portfolio3dSlices[hoveredSlice].labelX + 'px',
+                            top: (portfolio3dSlices[hoveredSlice].labelY - 15) + 'px'
+                          }"
+                        >
+                          {{ portfolio3dSlices[hoveredSlice].label }} {{ portfolio3dSlices[hoveredSlice].percent.toFixed(1) }}%
+                        </div>
                       </div>
                       <!-- 우측: 범례 + 보유코인 목록 세로 배치 -->
                       <div class="ml-3 d-flex flex-column justify-center" style="min-width: 140px;">
@@ -1360,6 +1386,7 @@ const dashboardStats = ref({ totalProfitLoss: 0, totalProfitLossPct: 0, totalEva
 const upbitAccount = ref({ krwBalance: 0, coinEvaluation: 0, totalAsset: 0, holdings: [] as any[] })
 
 // ⭐⭐⭐ [신규] 포트폴리오 파이차트 데이터 ⭐⭐⭐
+const hoveredSlice = ref(-1)
 const portfolioColors = ['#8BC34A', '#5C6BC0', '#AB47BC', '#FF7043', '#26A69A', '#FFA726', '#42A5F5', '#EC407A']
 
 const portfolioLegend = computed(() => {
@@ -1375,26 +1402,70 @@ const portfolioLegend = computed(() => {
   return items
 })
 
-const portfolioSlices = computed(() => {
+// 3D 타원 파이차트 상면
+const portfolio3dSlices = computed(() => {
   const items = portfolioLegend.value
   if (!items.length) return []
-  const cx = 110, cy = 120, r = 90
+  const cx = 130, cy = 90, rx = 85, ry = 68
   let startAngle = -90
   return items.map((item) => {
     const angle = (item.percent / 100) * 360
     const endAngle = startAngle + angle
     const startRad = (startAngle * Math.PI) / 180
     const endRad = (endAngle * Math.PI) / 180
-    const x1 = cx + r * Math.cos(startRad)
-    const y1 = cy + r * Math.sin(startRad)
-    const x2 = cx + r * Math.cos(endRad)
-    const y2 = cy + r * Math.sin(endRad)
+    const x1 = cx + rx * Math.cos(startRad)
+    const y1 = cy + ry * Math.sin(startRad)
+    const x2 = cx + rx * Math.cos(endRad)
+    const y2 = cy + ry * Math.sin(endRad)
     const largeArc = angle > 180 ? 1 : 0
-    const path = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`
+    const path = `M ${cx} ${cy} L ${x1} ${y1} A ${rx} ${ry} 0 ${largeArc} 1 ${x2} ${y2} Z`
+    // % 라벨 위치 (조각 중앙)
+    const midAngle = ((startAngle + endAngle) / 2) * Math.PI / 180
+    const labelR = (rx + 45) / 2  // 도넛 중간
+    const labelX = cx + labelR * 0.85 * Math.cos(midAngle)
+    const labelY = cy + labelR * 0.7 * Math.sin(midAngle)
     startAngle = endAngle
-    return { path, color: item.color, label: item.label, percent: item.percent }
+    return { path, color: item.color, label: item.label, percent: item.percent, labelX, labelY }
   })
 })
+
+// 3D 측면 (두께) - 아래쪽 반원만 렌더링
+const portfolio3dSides = computed(() => {
+  const items = portfolioLegend.value
+  if (!items.length) return []
+  const cx = 130, cy = 90, rx = 85, ry = 68, depth = 15
+  let startAngle = -90
+  return items.map((item) => {
+    const angle = (item.percent / 100) * 360
+    const endAngle = startAngle + angle
+    // 측면은 0~180도 범위만 보임 (아래쪽)
+    const visStart = Math.max(startAngle, 0)
+    const visEnd = Math.min(endAngle, 180)
+    let sidePath = ''
+    if (visStart < visEnd) {
+      const s1 = (visStart * Math.PI) / 180
+      const s2 = (visEnd * Math.PI) / 180
+      const ax1 = cx + rx * Math.cos(s1)
+      const ay1 = cy + ry * Math.sin(s1)
+      const ax2 = cx + rx * Math.cos(s2)
+      const ay2 = cy + ry * Math.sin(s2)
+      const largeArc = (visEnd - visStart) > 180 ? 1 : 0
+      sidePath = `M ${ax1} ${ay1} A ${rx} ${ry} 0 ${largeArc} 1 ${ax2} ${ay2} L ${ax2} ${ay2 + depth} A ${rx} ${ry} 0 ${largeArc} 0 ${ax1} ${ay1 + depth} Z`
+    }
+    // 어두운 색상 생성
+    const darkColor = darkenColor(item.color, 0.35)
+    startAngle = endAngle
+    return { sidePath, darkColor }
+  }).filter(s => s.sidePath)
+})
+
+// 색상 어둡게 만드는 헬퍼
+function darkenColor(hex: string, factor: number): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `rgb(${Math.floor(r * (1 - factor))}, ${Math.floor(g * (1 - factor))}, ${Math.floor(b * (1 - factor))})`
+}
 
 // botStatus ref 초기값에 새 필드 추가
 const botStatus = ref({
@@ -2999,8 +3070,8 @@ onUnmounted(() => {
 
 /* ⭐⭐⭐ [신규] 포트폴리오 파이차트 스타일 ⭐⭐⭐ */
 .portfolio-chart-wrapper {
-  width: 220px;
-  height: 220px;
+  width: 260px;
+  height: 200px;
   flex-shrink: 0;
 }
 
@@ -3028,5 +3099,19 @@ onUnmounted(() => {
   height: 12px;
   border-radius: 3px;
   flex-shrink: 0;
+}
+
+.pie-tooltip {
+  position: absolute;
+  background: rgba(0,0,0,0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  z-index: 10;
 }
 </style>

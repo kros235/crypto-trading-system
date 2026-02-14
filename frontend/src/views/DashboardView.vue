@@ -254,7 +254,7 @@
                             <strong>{{ portfolio3dSlices[hoveredSlice].label }}</strong> {{ portfolio3dSlices[hoveredSlice].percent.toFixed(1) }}%
                             <template v-if="getHoldingInfo(portfolio3dSlices[hoveredSlice].label)">
                               <br/>{{ formatCurrency(getHoldingInfo(portfolio3dSlices[hoveredSlice].label).evaluation) }}
-                              <span :style="{ color: getHoldingInfo(portfolio3dSlices[hoveredSlice].label).profitRate >= 0 ? '#4CAF50' : '#F44336' }">
+                              <span :style="{ color: getHoldingInfo(portfolio3dSlices[hoveredSlice].label).profitRate >= 0 ? '#F44336' : '#42A5F5' }">
                                 ({{ getHoldingInfo(portfolio3dSlices[hoveredSlice].label).profitRate >= 0 ? '+' : '' }}{{ getHoldingInfo(portfolio3dSlices[hoveredSlice].label).profitRate.toFixed(1) }}%)
                               </span>
                             </template>

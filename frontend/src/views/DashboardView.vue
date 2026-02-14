@@ -223,20 +223,19 @@
                               @mouseenter="hoveredSlice = index"
                               @mouseleave="hoveredSlice = -1"
                             />
-                            <!-- 조각 내 % 텍스트 (15% 이상만) -->
+                            <!-- 조각 내 % 텍스트 (모든 조각) -->
                             <text
                               v-for="(slice, index) in portfolio3dSlices"
                               :key="'pct-' + index"
-                              v-show="slice.percent >= 15"
                               :x="slice.labelX"
                               :y="slice.labelY"
                               text-anchor="middle"
-                              font-size="13"
+                              :font-size="slice.percent >= 20 ? 13 : 10"
                               font-weight="bold"
                               fill="#333333"
                               stroke="none"
                               pointer-events="none"
-                            >{{ slice.percent.toFixed(1) }}%</text>
+                            >{{ slice.percent.toFixed(1) }}</text>
                             <!-- 중앙 도넛 홀 -->
                             <ellipse cx="150" cy="100" rx="50" ry="40" fill="white" />
                             <ellipse cx="150" cy="100" rx="50" ry="40" fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="1" />
@@ -265,8 +264,8 @@
                           </div>
                         </div>
                       </div>
-                      <!-- 하단 범례 (가로 배치) -->
-                      <div class="d-flex flex-wrap justify-center mt-1" style="gap: 12px;">
+                      <!-- 하단 범례 (가로 배치, 차트와 간격 최소화) -->
+                      <div class="d-flex flex-wrap justify-center" style="gap: 10px; margin-top: -4px;">
                         <div 
                           v-for="(item, index) in portfolioLegend" 
                           :key="'legend-' + index"
@@ -275,6 +274,11 @@
                           <div class="legend-dot mr-1" :style="{ backgroundColor: item.color }"></div>
                           <span class="text-caption font-weight-bold">{{ item.label }}</span>
                           <span class="text-caption text-grey-darken-1 ml-1">{{ item.percent.toFixed(1) }}%</span>
+                          <span 
+                            v-if="getHoldingInfo(item.label)" 
+                            class="text-caption font-weight-bold ml-1"
+                            :style="{ color: getHoldingInfo(item.label).profitRate >= 0 ? '#F44336' : '#1976D2' }"
+                          >({{ getHoldingInfo(item.label).profitRate >= 0 ? '+' : '' }}{{ getHoldingInfo(item.label).profitRate.toFixed(1) }}%)</span>
                         </div>
                       </div>
                     </div>
@@ -3053,7 +3057,7 @@ onUnmounted(() => {
 /* ⭐⭐⭐ [신규] 포트폴리오 파이차트 스타일 ⭐⭐⭐ */
 .portfolio-chart-wrapper {
   width: 100%;
-  height: 220px;
+  height: 240px;
   flex-shrink: 1;
 }
 

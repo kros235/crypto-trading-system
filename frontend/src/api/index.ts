@@ -373,6 +373,27 @@ export const profitApi = {
   
   // 코인별 수익 분석 조회
   getByCoin: () => api.get('/profit/by-coin'),
+
+  // ⭐⭐⭐ [신규 추가] 자산 스냅샷 API ⭐⭐⭐
+  // 기간별 자산 스냅샷 조회 (차트 데이터용)
+  getAssetSnapshots: (period: string = 'all') =>
+    api.get(`/profit/asset-snapshots?period=${period}`),
+
+  // 사용자 지정 기간 스냅샷 조회
+  getAssetSnapshotsByRange: (startDate: string, endDate: string) =>
+    api.get(`/profit/asset-snapshots/range?startDate=${startDate}&endDate=${endDate}`),
+
+  // 불입금액 수동 설정
+  updateDepositAmount: (amount: number) =>
+    api.post(`/profit/deposit-amount?amount=${amount}`),
+
+  // 수동 스냅샷 즉시 생성
+  createSnapshot: () => api.post('/profit/asset-snapshots/create'),
+
+  // 과거 데이터 마이그레이션
+  migrateSnapshots: (initialDeposit?: number) =>
+    api.post(`/profit/asset-snapshots/migrate${initialDeposit ? '?initialDeposit=' + initialDeposit : ''}`),
+  // ⭐⭐⭐ [신규 추가 끝] ⭐⭐⭐
 }
 
 export default api

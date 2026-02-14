@@ -199,7 +199,7 @@
                             <svg 
                               class="custom-chart"
                               :viewBox="`0 0 ${chartViewMode === 'scroll' ? dynamicChartWidth : svgWidth} ${svgHeight}`"
-                              :preserveAspectRatio="chartViewMode === 'scroll' ? 'none' : 'xMidYMid meet'"
+                              preserveAspectRatio="none"
                             >
                               <!-- 그라데이션 정의 -->
                               <defs>
@@ -209,81 +209,101 @@
                                 </linearGradient>
                               </defs>
 
-                              <!-- 영역 채우기 -->
+                              <!-- ⭐⭐⭐ [변경] 자산 변동 추이 차트 재구성 ⭐⭐⭐ -->
+                              <!-- 불입금액 막대그래프 (주황색) -->
+                              <!-- ⭐⭐⭐ [변경] 막대: 불입금액 위치 위로 고정 높이 표시 ⭐⭐⭐ -->
+                              <rect
+                                v-for="(point, index) in chartPoints"
+                                :key="'bar-' + index"
+                                :x="point.x - barWidth / 2"
+                                :y="getYPosition(point.depositAmount) - (svgHeight - svgPadding * 2) * 0.3"
+                                :width="barWidth"
+                                :height="(svgHeight - svgPadding * 2) * 0.3"
+                                fill="#FF9800"
+                                :opacity="hoveredIndex === index ? 0.6 : 0.35"
+                                rx="1"
+                              />
+
+                              <!-- 영역 채우기 (평가금액 - 연한 파란색) -->
                               <path :d="areaPath" fill="url(#profitAreaGradient)" />
 
-                              <!-- 기준선들 -->
-                              <line 
-                                :x1="svgPadding" 
-                                :y1="getYPosition(initialAsset)" 
-                                :x2="effectiveWidth - svgPaddingRight" 
-                                :y2="getYPosition(initialAsset)"
-                                stroke="#FF9800" 
-                                stroke-width="2" 
-                                stroke-dasharray="6,4"
+                              <!-- 최고 평가금액 파선 (초록) -->
+                              <line
+                                :x1="svgPadding" :y1="getYPosition(maxEvaluation)"
+                                :x2="effectiveWidth - (chartViewMode === 'scroll' ? scrollPaddingRight : svgPaddingRight)" :y2="getYPosition(maxEvaluation)"
+                                stroke="#4CAF50" stroke-width="2" stroke-dasharray="6,4"
                               />
-                              <line 
-                                :x1="svgPadding" 
-                                :y1="getYPosition(maxBalance)" 
-                                :x2="effectiveWidth - svgPaddingRight" 
-                                :y2="getYPosition(maxBalance)"
-                                stroke="#4CAF50" 
-                                stroke-width="2" 
-                                stroke-dasharray="6,4"
-                              />
-                              <line 
-                                :x1="svgPadding" 
-                                :y1="getYPosition(minBalance)" 
-                                :x2="effectiveWidth - svgPaddingRight" 
-                                :y2="getYPosition(minBalance)"
-                                stroke="#F44336" 
-                                stroke-width="2" 
-                                stroke-dasharray="6,4"
+                              <!-- 최저 평가금액 파선 (빨강) -->
+                              <line
+                                :x1="svgPadding" :y1="getYPosition(minEvaluation)"
+                                :x2="effectiveWidth - (chartViewMode === 'scroll' ? scrollPaddingRight : svgPaddingRight)" :y2="getYPosition(minEvaluation)"
+                                stroke="#F44336" stroke-width="2" stroke-dasharray="6,4"
                               />
 
-                              <!-- 라인 차트 -->
-                              <path :d="linePath" fill="none" stroke="#1976D2" stroke-width="2.5" />
+                              <!-- 불입금액 추세선 (주황 파선) -->
+                              <path :d="depositLinePath" fill="none" stroke="#FF9800" stroke-width="2" stroke-dasharray="6,4" />
 
-                              <!-- 데이터 포인트 -->
+                              <!-- 평가금액 추세선 (파란 파선) -->
+                              <path :d="linePath" fill="none" stroke="#1976D2" stroke-width="2.5" stroke-dasharray="8,4" />
+
+                              <!-- 평가금액 데이터 포인트 -->
                               <circle
                                 v-for="(point, index) in chartPoints"
-                                :key="index"
-                                :cx="point.x"
-                                :cy="point.y"
+                                :key="'eval-' + index"
+                                :cx="point.x" :cy="point.y"
                                 :r="hoveredIndex === index ? 8 : 4"
-                                :fill="getPointColor(point.balance)"
-                                stroke="white"
-                                stroke-width="2"
-                                class="chart-point"
+                                :fill="getPointColor(point.evaluationAmount)"
+                                stroke="white" stroke-width="2" class="chart-point"
+                              />
+
+                              <!-- 불입금액 데이터 포인트 (주황 작은 점) -->
+                              <circle
+                                v-for="(point, index) in chartPoints"
+                                :key="'dep-' + index"
+                                :cx="point.x" :cy="getYPosition(point.depositAmount) - (svgHeight - svgPadding * 2) * 0.3"
+                                :r="hoveredIndex === index ? 6 : 3"
+                                fill="#FF9800" stroke="white" stroke-width="1.5" class="chart-point"
                               />
                             </svg>
 
                             <!-- 기준선 라벨 -->
                             <div class="chart-labels-backtest">
-                              <span class="chart-label label-max" :style="{ top: getLabelPosition(maxBalance) + '%' }">
-                                최고: {{ formatCurrency(maxBalance) }}
+                              <span class="chart-label label-max" :style="{ top: getAdjustedLabelPosition('max') + '%' }">
+                                최고 평가 금액 : {{ formatCurrency(maxEvaluation) }}
                               </span>
-                              <span class="chart-label label-initial" :style="{ top: getLabelPosition(initialAsset) + '%' }">
-                                초기: {{ formatCurrency(initialAsset) }}
+                              <span class="chart-label label-evaluation" :style="{ top: getAdjustedLabelPosition('evaluation') + '%' }">
+                                평가금액 추세 : {{ formatCurrency(latestEvaluationAmount) }}
                               </span>
-                              <span class="chart-label label-min" :style="{ top: getLabelPosition(minBalance) + '%' }">
-                                최저: {{ formatCurrency(minBalance) }}
+                              <span class="chart-label label-deposit" :style="{ top: getAdjustedLabelPosition('deposit') + '%' }">
+                                불입금액 추세 : {{ formatCurrency(latestDepositAmount) }}
+                              </span>
+                              <span class="chart-label label-min" :style="{ top: getAdjustedLabelPosition('min') + '%' }">
+                                최저 평가 금액 : {{ formatCurrency(minEvaluation) }}
                               </span>
                             </div>
 
                             <!-- 툴팁 -->
+                            <!-- ⭐⭐⭐ [변경] 툴팁: 점 옆에 표시 (점을 가리지 않도록) ⭐⭐⭐ -->
+                            <!-- 왜: 기존 translateX(-50%) + top 방식은 점 위를 가림 -->
+                            <!--     대시보드와 동일하게 좌/우 자동 전환 방식으로 변경 -->
                             <div 
                               v-if="hoveredIndex >= 0 && hoveredData"
                               class="chart-tooltip-backtest"
                               :style="{ 
-                                left: tooltipX + 'px',
-                                top: Math.max(10, tooltipY - 80) + 'px'
+                                left: (tooltipX > chartWrapperWidth * 0.5 ? tooltipX - 10 : tooltipX + 10) + 'px',
+                                top: tooltipY + 'px',
+                                transform: tooltipX > chartWrapperWidth * 0.5 ? 'translateX(-100%) translateY(-50%)' : 'translateY(-50%)'
                               }"
                             >
-                              <div class="font-weight-bold">{{ hoveredData.date }}</div>
-                              <div>자산: {{ formatCurrency(hoveredData.balance) }}</div>
-                              <div :class="hoveredData.profitRate >= 0 ? 'text-success' : 'text-error'">
-                                수익률: {{ hoveredData.profitRate >= 0 ? '+' : '' }}{{ hoveredData.profitRate.toFixed(2) }}%
+                             <!-- ⭐⭐⭐ [변경] 툴팁 5개 항목으로 확장 ⭐⭐⭐ -->
+                              <div class="font-weight-bold mb-1">{{ hoveredData.date }}</div>
+                              <div style="color: #64B5F6;">평가금액: {{ formatCurrency(hoveredData.evaluationAmount || hoveredData.balance) }}</div>
+                              <div style="color: #FFB74D;">불입금액: {{ formatCurrency(hoveredData.depositAmount || initialAsset) }}</div>
+                              <div :class="(hoveredData.profitRate || 0) >= 0 ? 'text-success' : 'text-error'">
+                                수익률: {{ (hoveredData.profitRate || 0) >= 0 ? '+' : '' }}{{ Number(hoveredData.profitRate || 0).toFixed(2) }}%
+                              </div>
+                              <div :class="(hoveredData.profitAmount || 0) >= 0 ? 'text-success' : 'text-error'">
+                                수익금액: {{ (hoveredData.profitAmount || 0) >= 0 ? '+' : '' }}{{ formatCurrency(hoveredData.profitAmount || 0) }}
                               </div>
                             </div>
                           </div>
@@ -836,12 +856,15 @@ const initialAsset = ref(1000000)
 const hoveredIndex = ref(-1)
 const tooltipX = ref(0)
 const tooltipY = ref(0)
+const chartWrapperWidth = ref(800) // ⭐⭐⭐ [추가] 차트 wrapper 너비 (툴팁 좌/우 판단용)
 
 // 차트 상수
 const svgWidth = 800
 const svgHeight = 350
 const svgPadding = 30
-const svgPaddingRight = 100
+// ⭐⭐⭐ [변경] 우측 라벨 영역 여백 확대 (100 → 120) ⭐⭐⭐
+// 왜: 대시보드(120)와 동일하게 맞춰 마지막 점이 라벨에 가려지지 않도록 함
+const svgPaddingRight = 120
 
 // 코인별 수익 상태
 const loadingCoin = ref(false)
@@ -881,35 +904,87 @@ const coinHeaders = [
 // 차트 computed
 const effectiveWidth = computed(() => chartViewMode.value === 'scroll' ? dynamicChartWidth.value : svgWidth)
 
+const scrollPaddingRight = 220
 const dynamicChartWidth = computed(() => {
   const pointCount = assetHistory.value.length
-  return Math.max(svgWidth, pointCount * 25 + svgPadding + svgPaddingRight)
+  return Math.max(svgWidth, pointCount * 25 + svgPadding + scrollPaddingRight)
 })
 
+// ⭐⭐⭐ [변경] Y축 범위: 평가금액과 불입금액 모두 포함 ⭐⭐⭐
 const maxBalance = computed(() => {
   if (!assetHistory.value.length) return initialAsset.value
-  return Math.max(...assetHistory.value.map(d => d.balance), initialAsset.value)
+  const maxEval = Math.max(...assetHistory.value.map(d => d.evaluationAmount || d.balance))
+  const maxDeposit = Math.max(...assetHistory.value.map(d => d.depositAmount || initialAsset.value))
+  return Math.max(maxEval, maxDeposit)
 })
 
 const minBalance = computed(() => {
   if (!assetHistory.value.length) return initialAsset.value
-  return Math.min(...assetHistory.value.map(d => d.balance), initialAsset.value)
+  const minEval = Math.min(...assetHistory.value.map(d => d.evaluationAmount || d.balance))
+  const minDeposit = Math.min(...assetHistory.value.map(d => d.depositAmount || initialAsset.value))
+  return Math.min(minEval, minDeposit)
 })
 
+// ⭐⭐⭐ [신규 추가] 스냅샷 기반 차트 computed ⭐⭐⭐
+const maxEvaluation = computed(() => {
+  if (!assetHistory.value.length) return initialAsset.value
+  return Math.max(...assetHistory.value.map(d => d.evaluationAmount || d.balance || 0))
+})
+
+const minEvaluation = computed(() => {
+  if (!assetHistory.value.length) return initialAsset.value
+  return Math.min(...assetHistory.value.map(d => d.evaluationAmount || d.balance || 0))
+})
+
+const latestDepositAmount = computed(() => {
+  if (!assetHistory.value.length) return initialAsset.value
+  const last = assetHistory.value[assetHistory.value.length - 1]
+  return last.depositAmount || initialAsset.value
+})
+
+const latestEvaluationAmount = computed(() => {
+  if (!assetHistory.value.length) return initialAsset.value
+  const last = assetHistory.value[assetHistory.value.length - 1]
+  return last.evaluationAmount || last.balance || initialAsset.value
+})
+
+const barWidth = computed(() => {
+  const total = assetHistory.value.length
+  if (total <= 1) return 20
+  const chartWidth = effectiveWidth.value - svgPadding - svgPaddingRight
+  return Math.max(4, Math.min(20, (chartWidth / total) * 0.6))
+})
+
+// ⭐⭐⭐ [변경] evaluationAmount, depositAmount 포함 ⭐⭐⭐
 const chartPoints = computed(() => {
   if (!assetHistory.value.length) return []
   const total = assetHistory.value.length
-  const width = effectiveWidth.value - svgPadding - svgPaddingRight
+  // ⭐⭐⭐ [변경] 스크롤 모드: 우측 라벨 공간을 더 확보하여 점과 라벨 분리 ⭐⭐⭐
+  // 왜: 스크롤 모드에서 라벨 텍스트(약200px)가 마지막 점들과 겹치지 않도록
+  const rightPad = chartViewMode.value === 'scroll' ? scrollPaddingRight : svgPaddingRight
+  const width = effectiveWidth.value - svgPadding - rightPad
   return assetHistory.value.map((d, index) => ({
     x: svgPadding + (index / (total - 1 || 1)) * width,
-    y: getYPosition(d.balance),
-    balance: d.balance
+    y: getYPosition(d.evaluationAmount || d.balance),
+    balance: d.evaluationAmount || d.balance || 0,
+    evaluationAmount: d.evaluationAmount || d.balance || 0,
+    depositAmount: d.depositAmount || initialAsset.value
   }))
 })
 
 const linePath = computed(() => {
   if (!chartPoints.value.length) return ''
   return chartPoints.value.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
+})
+
+// ⭐⭐⭐ [신규 추가] 불입금액 추세선 path ⭐⭐⭐
+// ⭐⭐⭐ [변경] 불입금액 추세선도 막대 상단 위치와 일치 ⭐⭐⭐
+const depositLinePath = computed(() => {
+  if (!chartPoints.value.length) return ''
+  const barTopOffset = (svgHeight - svgPadding * 2) * 0.3
+  return chartPoints.value
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${getYPosition(p.depositAmount) - barTopOffset}`)
+    .join(' ')
 })
 
 const areaPath = computed(() => {
@@ -960,9 +1035,38 @@ const getLabelPosition = (balance: number) => {
   return paddingPercent + ((max - balance) / range) * usableHeight
 }
 
-const getPointColor = (balance: number) => {
-  if (balance > initialAsset.value * 1.01) return '#4CAF50'
-  if (balance < initialAsset.value * 0.99) return '#F44336'
+// ⭐⭐⭐ [신규 추가] 라벨 겹침 방지 위치 계산 ⭐⭐⭐
+const getAdjustedLabelPosition = (type: string) => {
+  // ⭐⭐⭐ [변경] 불입금액 라벨: 막대 상단 위치 기준으로 계산 ⭐⭐⭐
+  // 왜: 불입금액 점이 막대 상단(barTopOffset만큼 위)에 있으므로 라벨도 동일 위치 필요
+  const barTopOffsetPct = ((svgHeight - svgPadding * 2) * 0.3 / svgHeight) * 100
+  const depositLabelPos = getLabelPosition(latestDepositAmount.value) - barTopOffsetPct
+
+  const positions = [
+    { type: 'max', value: maxEvaluation.value, raw: getLabelPosition(maxEvaluation.value) },
+    { type: 'evaluation', value: latestEvaluationAmount.value, raw: getLabelPosition(latestEvaluationAmount.value) },
+    { type: 'deposit', value: latestDepositAmount.value, raw: depositLabelPos },
+    { type: 'min', value: minEvaluation.value, raw: getLabelPosition(minEvaluation.value) }
+  ]
+
+  positions.sort((a, b) => a.raw - b.raw)
+
+  const minGap = 4
+  for (let i = 1; i < positions.length; i++) {
+    if (positions[i].raw - positions[i - 1].raw < minGap) {
+      positions[i].raw = positions[i - 1].raw + minGap
+    }
+  }
+
+  const found = positions.find(p => p.type === type)
+  return found ? found.raw : 0
+}
+
+// ⭐⭐⭐ [변경] 불입금액 기준으로 색상 판단 ⭐⭐⭐
+const getPointColor = (evaluationAmount: number) => {
+  const deposit = latestDepositAmount.value
+  if (evaluationAmount > deposit * 1.01) return '#4CAF50'
+  if (evaluationAmount < deposit * 0.99) return '#F44336'
   return '#1976D2'
 }
 
@@ -972,15 +1076,27 @@ const handleChartHover = (event: MouseEvent) => {
   const y = event.clientY - rect.top
   
   const currentWidth = chartViewMode.value === 'scroll' ? dynamicChartWidth.value : svgWidth
+  // ⭐⭐⭐ [변경] SVG 좌표 변환: 전체보기 모드에서 wrapper 너비 기준으로 정확히 매핑 ⭐⭐⭐
+  // 왜: 기존 Math.floor는 index를 한 칸 앞으로 밀어 호버 위치가 어긋남
+  //     Math.round로 변경하여 가장 가까운 점을 정확히 선택
   const svgX = (x / rect.width) * currentWidth
-  const chartWidth = currentWidth - svgPadding - svgPaddingRight
+  // ⭐⭐⭐ [변경] 스크롤 모드: chartPoints와 동일한 rightPad 사용 ⭐⭐⭐
+  // 왜: chartPoints는 scrollPaddingRight(220)으로 점 위치를 계산하는데
+  //     호버는 svgPaddingRight(120)로 계산하면 좌표 불일치 발생
+  const rightPad = chartViewMode.value === 'scroll' ? scrollPaddingRight : svgPaddingRight
+  const chartWidth = currentWidth - svgPadding - rightPad
   
   const total = assetHistory.value.length
   if (total === 0) return
   
-  const index = Math.floor(((svgX - svgPadding) / chartWidth) * total)
+  // ⭐⭐⭐ [변경] Math.floor → Math.round로 변경 ⭐⭐⭐
+  // 왜: floor는 소수점 버림으로 항상 왼쪽 점을 선택 → 마우스 위치와 불일치
+  //     round는 가장 가까운 점을 선택 → 마우스 위치와 일치
+  const ratio = Math.max(0, Math.min(1, (svgX - svgPadding) / chartWidth))
+  const index = Math.round(ratio * (total - 1))
   hoveredIndex.value = Math.max(0, Math.min(total - 1, index))
   tooltipX.value = x
+  chartWrapperWidth.value = rect.width  // ⭐⭐⭐ [추가] wrapper 너비 저장
   
   if (chartPoints.value[hoveredIndex.value]) {
     tooltipY.value = chartPoints.value[hoveredIndex.value].y * (rect.height / svgHeight)
@@ -1017,8 +1133,29 @@ const applyCustomPeriod = async () => {
 }
 
 // 사용자 지정 기간 자산 이력 로드
+// ⭐⭐⭐ [변경] 백엔드 스냅샷 API 우선 조회 + 기존 로직 폴백 ⭐⭐⭐
 const loadAssetHistoryByCustomPeriod = async (startDateStr: string, endDateStr: string) => {
   try {
+    // ⭐ 1단계: 백엔드 스냅샷 API 우선 조회
+    try {
+      const snapshotResponse = await profitApi.getAssetSnapshotsByRange(startDateStr, endDateStr)
+      const snapshots = snapshotResponse.data?.data || snapshotResponse.data || []
+      if (snapshots.length > 0) {
+        assetHistory.value = snapshots.map((s: any) => ({
+          date: s.date,
+          balance: parseFloat(s.evaluationAmount) || 0,
+          evaluationAmount: parseFloat(s.evaluationAmount) || 0,
+          depositAmount: parseFloat(s.depositAmount) || 0,
+          profitAmount: parseFloat(s.profitAmount) || 0,
+          profitRate: parseFloat(s.profitRate) || 0
+        }))
+        return
+      }
+    } catch (snapshotError) {
+      console.warn('스냅샷 API 조회 실패, 기존 방식으로 폴백:', snapshotError)
+    }
+
+    // ⭐ 2단계: 폴백 - 기존 SOLD 거래 기반 계산
     const response = await transactionApi.search({ status: 'SOLD', page: 0, size: 1000 })
     const transactions = response.data?.content || []
     
@@ -1051,11 +1188,33 @@ const loadAssetHistoryByCustomPeriod = async (startDateStr: string, endDateStr: 
       dailyMap.set(dateKey, runningBalance)
     })
     
-    assetHistory.value = Array.from(dailyMap.entries()).map(([date, balance]) => ({
-      date,
-      balance,
-      profitRate: ((balance - initialAsset.value) / initialAsset.value) * 100
-    }))
+    // ⭐⭐⭐ [변경] 사용자 지정 시작일~종료일까지 모든 날짜 채우기 ⭐⭐⭐
+    const allDates3: Array<any> = []
+    let currentBalance3 = initialAsset.value
+    const customStart = new Date(startDateStr)
+    customStart.setHours(12, 0, 0, 0)
+    const customEnd = new Date(endDateStr)
+    customEnd.setHours(12, 0, 0, 0)
+    const customEndStr2 = `${customEnd.getFullYear()}-${String(customEnd.getMonth() + 1).padStart(2, '0')}-${String(customEnd.getDate()).padStart(2, '0')}`
+    const customCurrent = new Date(customStart)
+
+    while (true) {
+      const dateKey = `${customCurrent.getFullYear()}-${String(customCurrent.getMonth() + 1).padStart(2, '0')}-${String(customCurrent.getDate()).padStart(2, '0')}`
+      if (dailyMap.has(dateKey)) {
+        currentBalance3 = dailyMap.get(dateKey)!
+      }
+      allDates3.push({
+        date: dateKey,
+        balance: currentBalance3,
+        evaluationAmount: currentBalance3,
+        depositAmount: initialAsset.value,
+        profitAmount: currentBalance3 - initialAsset.value,
+        profitRate: ((currentBalance3 - initialAsset.value) / initialAsset.value) * 100
+      })
+      if (dateKey >= customEndStr2) break
+      customCurrent.setDate(customCurrent.getDate() + 1)
+    }
+    assetHistory.value = allDates3
   } catch (error) {
     console.error('사용자 지정 기간 자산 이력 조회 실패:', error)
     assetHistory.value = []
@@ -1112,9 +1271,29 @@ const loadPeriodDetail = async (period: string) => {
   }
 }
 
+// ⭐⭐⭐ [변경] 백엔드 스냅샷 API 우선 조회 + 기존 로직 폴백 ⭐⭐⭐
 const loadAssetHistory = async () => {
   try {
-    // 전체 거래 이력으로 자산 변동 추이 생성
+    // ⭐ 1단계: 백엔드 스냅샷 API 우선 조회
+    try {
+      const snapshotResponse = await profitApi.getAssetSnapshots('all')
+      const snapshots = snapshotResponse.data?.data || snapshotResponse.data || []
+      if (snapshots.length > 0) {
+        assetHistory.value = snapshots.map((s: any) => ({
+          date: s.date,
+          balance: parseFloat(s.evaluationAmount) || 0,
+          evaluationAmount: parseFloat(s.evaluationAmount) || 0,
+          depositAmount: parseFloat(s.depositAmount) || 0,
+          profitAmount: parseFloat(s.profitAmount) || 0,
+          profitRate: parseFloat(s.profitRate) || 0
+        }))
+        return
+      }
+    } catch (snapshotError) {
+      console.warn('스냅샷 API 조회 실패, 기존 방식으로 폴백:', snapshotError)
+    }
+
+    // ⭐ 2단계: 폴백 - 기존 SOLD 거래 기반 계산
     const response = await transactionApi.search({ status: 'SOLD', page: 0, size: 1000 })
     const transactions = response.data?.content || []
     
@@ -1123,7 +1302,6 @@ const loadAssetHistory = async () => {
       return
     }
     
-    // 날짜별 그룹화
     const sortedTxs = [...transactions].sort((a: any, b: any) => 
       new Date(a.soldAt || a.createdAt).getTime() - new Date(b.soldAt || b.createdAt).getTime()
     )
@@ -1139,11 +1317,37 @@ const loadAssetHistory = async () => {
       dailyMap.set(dateKey, runningBalance)
     })
     
-    assetHistory.value = Array.from(dailyMap.entries()).map(([date, balance]) => ({
-      date,
-      balance,
-      profitRate: ((balance - initialAsset.value) / initialAsset.value) * 100
-    }))
+    // ⭐⭐⭐ [변경] 첫 거래일~오늘까지 모든 날짜 채우기 ⭐⭐⭐
+    // 왜: SOLD 거래일만 표시하면 막대가 2개만 나옴. 모든 날짜를 채워야 함
+    const sortedDates = Array.from(dailyMap.keys()).sort()
+    const firstDate = new Date(sortedDates[0])
+    firstDate.setHours(0, 0, 0, 0)
+    const today = new Date()
+    today.setHours(12, 0, 0, 0)
+
+    const allDates: Array<any> = []
+    let currentBalance = initialAsset.value
+    const currentDate = new Date(firstDate)
+    currentDate.setHours(12, 0, 0, 0)
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+    while (true) {
+      const dateKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`
+      if (dailyMap.has(dateKey)) {
+        currentBalance = dailyMap.get(dateKey)!
+      }
+      allDates.push({
+        date: dateKey,
+        balance: currentBalance,
+        evaluationAmount: currentBalance,
+        depositAmount: initialAsset.value,
+        profitAmount: currentBalance - initialAsset.value,
+        profitRate: ((currentBalance - initialAsset.value) / initialAsset.value) * 100
+      })
+      if (dateKey >= todayStr) break
+      currentDate.setDate(currentDate.getDate() + 1)
+    }
+    assetHistory.value = allDates
   } catch (error) {
     console.error('자산 이력 조회 실패:', error)
     assetHistory.value = []
@@ -1151,8 +1355,34 @@ const loadAssetHistory = async () => {
 }
 
 // 기간별 자산 이력 로드 함수
+// ⭐⭐⭐ [변경] 백엔드 스냅샷 API 우선 조회 + 기존 로직 폴백 ⭐⭐⭐
 const loadAssetHistoryByPeriod = async (period: string) => {
   try {
+    // ⭐ 1단계: 백엔드 스냅샷 API 우선 조회 (period 매핑)
+    let snapshotPeriod = period
+    if (period === 'today') snapshotPeriod = '7'  // today는 7일로 대체
+    if (period === 'oneYear') snapshotPeriod = 'year'
+    if (period === 'total') snapshotPeriod = 'all'
+    
+    try {
+      const snapshotResponse = await profitApi.getAssetSnapshots(snapshotPeriod)
+      const snapshots = snapshotResponse.data?.data || snapshotResponse.data || []
+      if (snapshots.length > 0) {
+        assetHistory.value = snapshots.map((s: any) => ({
+          date: s.date,
+          balance: parseFloat(s.evaluationAmount) || 0,
+          evaluationAmount: parseFloat(s.evaluationAmount) || 0,
+          depositAmount: parseFloat(s.depositAmount) || 0,
+          profitAmount: parseFloat(s.profitAmount) || 0,
+          profitRate: parseFloat(s.profitRate) || 0
+        }))
+        return
+      }
+    } catch (snapshotError) {
+      console.warn('스냅샷 API 조회 실패, 기존 방식으로 폴백:', snapshotError)
+    }
+
+    // ⭐ 2단계: 폴백 - 기존 SOLD 거래 기반 계산
     const response = await transactionApi.search({ status: 'SOLD', page: 0, size: 1000 })
     const transactions = response.data?.content || []
     
@@ -1161,7 +1391,6 @@ const loadAssetHistoryByPeriod = async (period: string) => {
       return
     }
     
-    // 기간에 따른 필터링
     const now = new Date()
     let startDate: Date
     
@@ -1180,11 +1409,10 @@ const loadAssetHistoryByPeriod = async (period: string) => {
         break
       case 'total':
       default:
-        startDate = new Date(2020, 0, 1) // 전체 기간
+        startDate = new Date(2020, 0, 1)
         break
     }
     
-    // 날짜별 그룹화 및 필터링
     const filteredTxs = transactions.filter((tx: any) => {
       const txDate = new Date(tx.soldAt || tx.createdAt)
       return txDate >= startDate
@@ -1205,11 +1433,39 @@ const loadAssetHistoryByPeriod = async (period: string) => {
       dailyMap.set(dateKey, runningBalance)
     })
     
-    assetHistory.value = Array.from(dailyMap.entries()).map(([date, balance]) => ({
-      date,
-      balance,
-      profitRate: ((balance - initialAsset.value) / initialAsset.value) * 100
-    }))
+    // ⭐⭐⭐ [변경] 기간 시작일~오늘까지 모든 날짜 채우기 ⭐⭐⭐
+    const sortedDates2 = Array.from(dailyMap.keys()).sort()
+    if (sortedDates2.length === 0) {
+      assetHistory.value = []
+      return
+    }
+    const fillStart = new Date(sortedDates2[0])
+    fillStart.setHours(12, 0, 0, 0)
+    const fillEnd = new Date()
+    fillEnd.setHours(12, 0, 0, 0)
+    const fillEndStr = `${fillEnd.getFullYear()}-${String(fillEnd.getMonth() + 1).padStart(2, '0')}-${String(fillEnd.getDate()).padStart(2, '0')}`
+
+    const allDates2: Array<any> = []
+    let currentBalance2 = initialAsset.value
+    const fillCurrent = new Date(fillStart)
+
+    while (true) {
+      const dateKey = `${fillCurrent.getFullYear()}-${String(fillCurrent.getMonth() + 1).padStart(2, '0')}-${String(fillCurrent.getDate()).padStart(2, '0')}`
+      if (dailyMap.has(dateKey)) {
+        currentBalance2 = dailyMap.get(dateKey)!
+      }
+      allDates2.push({
+        date: dateKey,
+        balance: currentBalance2,
+        evaluationAmount: currentBalance2,
+        depositAmount: initialAsset.value,
+        profitAmount: currentBalance2 - initialAsset.value,
+        profitRate: ((currentBalance2 - initialAsset.value) / initialAsset.value) * 100
+      })
+      if (dateKey >= fillEndStr) break
+      fillCurrent.setDate(fillCurrent.getDate() + 1)
+    }
+    assetHistory.value = allDates2
   } catch (error) {
     console.error('기간별 자산 이력 조회 실패:', error)
     assetHistory.value = []
@@ -1412,6 +1668,8 @@ onMounted(() => {
   z-index: 5;
 }
 
+
+
 .chart-label {
   position: absolute;
   right: 5px;
@@ -1427,6 +1685,8 @@ onMounted(() => {
 .label-max { color: #4CAF50; }
 .label-initial { color: #FF9800; }
 .label-min { color: #F44336; }
+.label-deposit { color: #FF9800; }
+.label-evaluation { color: #1976D2; }
 
 .chart-tooltip-backtest {
   position: absolute;
@@ -1439,7 +1699,8 @@ onMounted(() => {
   z-index: 100;
   white-space: nowrap;
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-  transform: translateX(-50%);
+  /* ⭐⭐⭐ [변경] transform 제거 - 인라인 스타일에서 동적으로 설정 ⭐⭐⭐ */
+  /* 왜: 인라인 style에서 좌/우 전환용 transform을 동적 지정하므로 CSS 고정값 제거 */
 }
 
 .text-success { color: #4CAF50 !important; }

@@ -265,3 +265,22 @@ INSERT INTO release_notes (title, content, author_id, author_name) VALUES
 ('v1.0 Day 30 업데이트 - 릴리즈 노트 기능 추가', 
 '■ 릴리즈 노트 게시판 기능 추가\n  - 공지사항 및 업데이트 이력 게시판\n  - 관리자만 작성/수정/삭제 가능\n  - 대시보드 시스템 알림 연동\n\n■ 2FA 인증 (Optional)\n  - Google Authenticator 연동\n\n■ IP 화이트리스트 (Optional)\n  - 접속 IP 제한 기능',
 'admin', '관리자');
+
+-- ⭐⭐⭐ [신규 추가] 일별 자산 스냅샷 테이블 (매일 23:59 KST 기준) ⭐⭐⭐
+-- 용도: 자산 변동 추이 차트에서 사용 (대시보드, 보유자산 페이지)
+-- 기존 daily_summary 테이블과 별도 - 평가금액 + 불입금액 추적 전용
+CREATE TABLE IF NOT EXISTS daily_asset_snapshot (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(50) NOT NULL,
+    snapshot_date DATE NOT NULL COMMENT '스냅샷 날짜',
+    evaluation_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT '평가금액 (KRW잔고 + 코인평가액)',
+    deposit_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT '누적 불입금액 (입금-출금)',
+    krw_balance DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT 'KRW 잔고',
+    coin_evaluation DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT '코인 평가액',
+    profit_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT '수익 금액 (평가금액 - 불입금액)',
+    profit_rate DECIMAL(8,4) NOT NULL DEFAULT 0.0000 COMMENT '수익률 (%)',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user_snapshot_date (user_id, snapshot_date),
+    INDEX idx_snapshot_user_date (user_id, snapshot_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

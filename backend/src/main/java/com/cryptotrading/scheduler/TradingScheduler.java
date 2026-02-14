@@ -15,6 +15,7 @@ import com.cryptotrading.repository.TradingSettingRepository;
 import com.cryptotrading.repository.CoinNewsRepository;
 import com.cryptotrading.dto.notification.DailyReportDTO;
 import com.cryptotrading.service.RiskManagementService;
+import com.cryptotrading.service.DailyAssetSnapshotService;  // ⭐⭐⭐ [신규 추가] 일별 자산 스냅샷 서비스 ⭐⭐⭐
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,8 +45,11 @@ public class TradingScheduler {
     private final CoinNewsRepository coinNewsRepository;
     private final TradingSettingRepository tradingSettingRepository;
     
-    // ⭐⭐⭐ [추가] RiskManagementService (총자산 스냅샷 관리) ⭐⭐⭐
+   // ⭐⭐⭐ [추가] RiskManagementService (총자산 스냅샷 관리) ⭐⭐⭐
     private final RiskManagementService riskManagementService;
+    
+    // ⭐⭐⭐ [신규 추가] 일별 자산 스냅샷 서비스 ⭐⭐⭐
+    private final DailyAssetSnapshotService dailyAssetSnapshotService;
     
     // ⭐⭐⭐ [추가] Redis Template (한 번만 선언) ⭐⭐⭐
     private final StringRedisTemplate redisTemplate;
@@ -242,6 +246,21 @@ public class TradingScheduler {
             log.error("총자산 스냅샷 캐시 정리 실패: {}", e.getMessage());
         }
     }
+
+    // ⭐⭐⭐ [신규 추가] 매일 23:59 KST - 일별 자산 스냅샷 생성 ⭐⭐⭐
+    // 왜: 대시보드/보유자산 차트에 일별 평가금액+불입금액 데이터 제공
+    // 23:50 일일리포트 → 23:59 자산스냅샷 → 00:00 AI가중치초기화 → 00:05 캐시정리 순서
+    @Scheduled(cron = "0 59 23 * * *", zone = "Asia/Seoul")
+    public void createDailyAssetSnapshot() {
+        log.info("====== 일별 자산 스냅샷 생성 시작 (23:59 KST) ======");
+        try {
+            dailyAssetSnapshotService.createAllUsersSnapshot();
+            log.info("✅ 일별 자산 스냅샷 생성 완료");
+        } catch (Exception e) {
+            log.error("❌ 일별 자산 스냅샷 생성 실패: {}", e.getMessage(), e);
+        }
+    }
+    // ⭐⭐⭐ [신규 추가 끝] ⭐⭐⭐
 
     // ======================================================
     // AI 뉴스 분석 스케줄러

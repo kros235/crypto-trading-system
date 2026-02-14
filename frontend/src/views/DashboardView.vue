@@ -1405,11 +1405,13 @@ const portfolio3dSlices = computed(() => {
     const y2 = cy + ry * Math.sin(endRad)
     const largeArc = angle > 180 ? 1 : 0
     const path = `M ${cx} ${cy} L ${x1} ${y1} A ${rx} ${ry} 0 ${largeArc} 1 ${x2} ${y2} Z`
-    // % 라벨 위치 (조각 중앙)
+    // % 라벨 위치 (도넛 중간, 타원 비율 반영)
     const midAngle = ((startAngle + endAngle) / 2) * Math.PI / 180
-    const labelR = (rx + 45) / 2  // 도넛 중간
-    const labelX = cx + labelR * 0.85 * Math.cos(midAngle)
-    const labelY = cy + labelR * 0.7 * Math.sin(midAngle)
+    const innerR = 50  // 도넛 홀 반지름
+    const midRx = (rx + innerR) / 2  // X방향 중간
+    const midRy = (ry + (innerR * ry / rx)) / 2  // Y방향 중간 (타원 비율)
+    const labelX = cx + midRx * Math.cos(midAngle)
+    const labelY = cy + midRy * Math.sin(midAngle)
     startAngle = endAngle
     return { path, color: item.color, label: item.label, percent: item.percent, labelX, labelY }
   })

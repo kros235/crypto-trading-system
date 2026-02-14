@@ -190,7 +190,7 @@
                   <!-- 좌측: 보유자산 포트폴리오 파이차트 -->
                   <v-col cols="12" md="6">
                     <div class="text-body-2 font-weight-bold text-grey-darken-3 mb-2">보유자산 포트폴리오</div>
-                    <div v-if="upbitAccount.totalAsset > 0" class="d-flex">
+                    <div v-if="upbitAccount.totalAsset > 0" class="d-flex align-center">
                       <!-- 파이차트 (3D 타원형) -->
                       <div class="portfolio-chart-wrapper" style="position: relative;">
                         <svg viewBox="0 0 260 200" class="portfolio-chart">
@@ -213,8 +213,8 @@
                             :key="'slice-' + index"
                             :d="slice.path"
                             :fill="slice.color"
-                            stroke="white"
-                            stroke-width="2"
+                            stroke="#333333"
+                            stroke-width="1.5"
                             filter="url(#shadow3d)"
                             class="pie-slice"
                             @mouseenter="hoveredSlice = index"
@@ -230,9 +230,9 @@
                             text-anchor="middle"
                             font-size="12"
                             font-weight="bold"
-                            fill="white"
-                            stroke="rgba(0,0,0,0.3)"
-                            stroke-width="0.5"
+                            fill="#333333"
+                            stroke="none"
+                            stroke-width="0"
                             pointer-events="none"
                           >{{ slice.percent.toFixed(1) }}%</text>
                           <!-- 중앙 도넛 홀 -->
@@ -254,21 +254,22 @@
                         </div>
                       </div>
                       <!-- 우측: 범례 + 보유코인 목록 세로 배치 -->
-                      <div class="ml-3 d-flex flex-column justify-center" style="min-width: 140px;">
+                      <div class="ml-3 d-flex align-start" style="gap: 24px;">
                         <!-- 범례 -->
-                        <div 
-                          v-for="(item, index) in portfolioLegend" 
-                          :key="'legend-' + index"
-                          class="d-flex align-center mb-2"
-                        >
-                          <div class="legend-dot mr-2" :style="{ backgroundColor: item.color }"></div>
-                          <span class="text-body-2 font-weight-bold" style="min-width: 40px;">{{ item.label }}</span>
-                          <span class="text-body-2 text-grey-darken-1 ml-2">{{ item.percent.toFixed(1) }}%</span>
+                        <div>
+                          <div 
+                            v-for="(item, index) in portfolioLegend"
+                            :key="'legend-' + index"
+                            class="d-flex align-center mb-2"
+                          >
+                            <div class="legend-dot mr-2" :style="{ backgroundColor: item.color }"></div>
+                            <span class="text-body-2 font-weight-bold" style="min-width: 40px;">{{ item.label }}</span>
+                            <span class="text-body-2 text-grey-darken-1 ml-2">{{ item.percent.toFixed(1) }}%</span>
+                          </div>
                         </div>
-                        <!-- 구분선 -->
-                        <v-divider class="my-2" />
-                        <!-- 보유 코인 상세 (세로 배열) -->
-                        <div class="text-caption text-grey-darken-1 mb-1">보유 코인 ({{ upbitAccount.holdings.length }}종)</div>
+                         <!-- 보유 코인 상세 -->
+                        <div>
+                          <div class="text-caption text-grey-darken-1 mb-1">보유 코인 ({{ upbitAccount.holdings.length }}종)</div>
                         <div v-if="upbitAccount.holdings.length > 0">
                           <div 
                             v-for="holding in upbitAccount.holdings" 
@@ -282,7 +283,8 @@
                             </span>
                           </div>
                         </div>
-                        <div v-else class="text-caption text-grey-darken-2">없음</div>
+                         <div v-else class="text-caption text-grey-darken-2">없음</div>
+                        </div>
                       </div>
                     </div>
                     <div v-else class="d-flex" style="min-height: 200px;">

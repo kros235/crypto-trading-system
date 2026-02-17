@@ -251,14 +251,15 @@ CREATE TABLE IF NOT EXISTS release_notes (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(200) NOT NULL COMMENT '게시글 제목',
     content TEXT NOT NULL COMMENT '게시글 본문',
-    category VARCHAR(20) DEFAULT 'GENERAL' COMMENT '카테고리 (COIN, STOCK, GENERAL)',
+    category VARCHAR(20) DEFAULT 'GENERAL' COMMENT '카테고리 (COIN: 코인, STOCK: 주식, GENERAL: 공통)',
     author_id VARCHAR(50) NOT NULL COMMENT '작성자 ID',
     author_name VARCHAR(100) NOT NULL COMMENT '작성자 이름',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '작성일시',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일시',
     is_deleted BOOLEAN DEFAULT FALSE COMMENT '삭제 여부 (soft delete)',
     INDEX idx_release_notes_created_at (created_at DESC),
-    INDEX idx_release_notes_is_deleted (is_deleted)
+    INDEX idx_release_notes_is_deleted (is_deleted),
+    INDEX idx_release_notes_category (category)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 초기 릴리즈 노트 데이터 (샘플)
@@ -284,4 +285,143 @@ CREATE TABLE IF NOT EXISTS daily_asset_snapshot (
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
     UNIQUE KEY unique_user_snapshot_date (user_id, snapshot_date),
     INDEX idx_snapshot_user_date (user_id, snapshot_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- ====================================================
+-- ⭐⭐⭐ Phase 2: 주식/ETF 자동매매 테이블 (Day 49 추가) ⭐⭐⭐
+-- ====================================================
+
+-- 1. 주식/ETF 정보 테이블
+-- 데이터는 사용자가 KIS API 종목 검색을 통해 직접 추가
+CREATE TABLE IF NOT EXISTS stock_info (
+    stock_code VARCHAR(20) PRIMARY KEY COMMENT '종목코드 (예: 409820)',
+    stock_name VARCHAR(100) NOT NULL COMMENT '종목명',
+    market VARCHAR(20) NOT NULL COMMENT '시장 (KRX/KOSDAQ)',
+    etf_type ENUM('LEVERAGE', 'INVERSE', 'NORMAL', 'STOCK') NOT NULL COMMENT 'ETF 유형',
+    underlying_index VARCHAR(100) COMMENT '기초지수 (예: NASDAQ100)',
+    expense_ratio DECIMAL(5,3) COMMENT '운용보수율 (%)',
+    is_active BOOLEAN DEFAULT TRUE COMMENT '활성화 여부',
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_stock_info_market (market),
+    INDEX idx_stock_info_etf_type (etf_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 2. 주식 거래 설정 테이블
+CREATE TABLE IF NOT EXISTS stock_trading_settings (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(50) NOT NULL,
+    stock_codes JSON NOT NULL COMMENT '거래 종목 코드 목록',
+    base_period INT DEFAULT 20 COMMENT '이동평균선 기간',
+    buy_threshold_pct DECIMAL(5,2) DEFAULT -3.00 COMMENT '매수 기준 하락률 (%)',
+    sell_target_pct DECIMAL(5,2) DEFAULT 2.50 COMMENT '목표 수익률 (%)',
+    stop_loss_pct DECIMAL(5,2) DEFAULT -5.00 COMMENT '손절매 기준 (%)',
+    max_holdings_per_stock INT DEFAULT 3 COMMENT '종목당 최대 보유 건수',
+    daily_limit_amount DECIMAL(15,2) DEFAULT 1000000.00 COMMENT '일일 거래 한도',
+    use_trailing_stop BOOLEAN DEFAULT TRUE COMMENT '트레일링 스톱 사용',
+    trailing_stop_pct DECIMAL(5,2) DEFAULT -2.50 COMMENT '트레일링 스톱 비율',
+    -- 기술적 지표 설정 (Phase 1과 다른 기본값)
+    rsi_period INT DEFAULT 14,
+    rsi_buy_threshold INT DEFAULT 35 COMMENT 'RSI 매수 신호 (코인: 32)',
+    rsi_sell_threshold INT DEFAULT 65 COMMENT 'RSI 매도 신호 (코인: 68)',
+    bb_period INT DEFAULT 20,
+    bb_multiplier INT DEFAULT 2,
+    volume_threshold INT DEFAULT 120 COMMENT '거래량 급증 기준 (코인: 140)',
+    -- 리스크 관리 설정
+    daily_trade_limit_pct INT DEFAULT 20,
+    max_position_pct INT DEFAULT 25,
+    daily_stop_loss_pct INT DEFAULT -5,
+    use_market_trend_filter BOOLEAN DEFAULT FALSE,
+    cumulative_loss_limit_pct INT DEFAULT -10,
+    consecutive_stop_loss_limit INT DEFAULT 3,
+    fixed_buy_amount DECIMAL(15,2) DEFAULT 100000.00 COMMENT '1회 매수 금액',
+    use_daily_limit_recovery BOOLEAN DEFAULT FALSE,
+    use_round_robin BOOLEAN DEFAULT TRUE,
+    -- Phase 2 전용: 레버리지 ETF 관련
+    max_holding_days INT DEFAULT 20 COMMENT '최대 보유일수 (레버리지 decay 방지)',
+    -- Phase 2 전용: KIS API 키 (사용자별)
+    kis_app_key_encrypted TEXT COMMENT 'KIS APP KEY (AES-256 암호화)',
+    kis_app_secret_encrypted TEXT COMMENT 'KIS APP SECRET (AES-256 암호화)',
+    kis_account_no_encrypted TEXT COMMENT 'KIS 계좌번호 (AES-256 암호화)',
+    kis_mock_mode BOOLEAN DEFAULT TRUE COMMENT '모의투자 모드',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    INDEX idx_stock_settings_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 3. 주식 거래 이력 테이블
+CREATE TABLE IF NOT EXISTS stock_transactions (
+    transaction_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(50) NOT NULL,
+    stock_code VARCHAR(20) NOT NULL COMMENT '종목코드',
+    type ENUM('BUY', 'SELL') NOT NULL,
+    quantity INT NOT NULL COMMENT '거래 수량 (주)',
+    price DECIMAL(15,2) NOT NULL COMMENT '체결 가격',
+    fee DECIMAL(15,2) DEFAULT 0.00 COMMENT '거래 수수료',
+    total_amount DECIMAL(15,2) NOT NULL COMMENT '총 거래 금액',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '매수 시각',
+    sold_at TIMESTAMP NULL COMMENT '매도 시각',
+    sold_price DECIMAL(15,2) NULL COMMENT '매도 가격',
+    profit_loss DECIMAL(15,2) NULL COMMENT '손익',
+    profit_loss_pct DECIMAL(5,2) NULL COMMENT '수익률 (%)',
+    target_sell_price DECIMAL(15,2) NULL COMMENT '목표 매도가',
+    stop_loss_price DECIMAL(15,2) NULL COMMENT '손절가',
+    status ENUM('HOLDING', 'SOLD', 'CANCELLED') DEFAULT 'HOLDING',
+    note TEXT COMMENT '메모',
+    highest_price DECIMAL(15,2) NULL COMMENT '보유 기간 중 최고가 (트레일링 스톱용)',
+    holding_days INT DEFAULT 0 COMMENT '보유 일수 (거래일 기준)',
+    exchange_rate DECIMAL(10,4) NULL COMMENT '환율 (환노출형 ETF용)',
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    INDEX idx_stock_tx_user_code_status (user_id, stock_code, status),
+    INDEX idx_stock_tx_created_at (created_at),
+    INDEX idx_stock_tx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 4. 주식 가격 이력 테이블
+CREATE TABLE IF NOT EXISTS stock_price_history (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    stock_code VARCHAR(20) NOT NULL,
+    price DECIMAL(15,2) NOT NULL COMMENT '종가',
+    volume BIGINT NOT NULL COMMENT '거래량',
+    timestamp DATE NOT NULL COMMENT '거래일',
+    open_price DECIMAL(15,2) NULL COMMENT '시가',
+    high_price DECIMAL(15,2) NULL COMMENT '고가',
+    low_price DECIMAL(15,2) NULL COMMENT '저가',
+    ma7 DECIMAL(15,2) NULL,
+    ma20 DECIMAL(15,2) NULL,
+    ma30 DECIMAL(15,2) NULL,
+    rsi DECIMAL(5,2) NULL,
+    bb_upper DECIMAL(15,2) NULL,
+    bb_lower DECIMAL(15,2) NULL,
+    INDEX idx_stock_price_code_date (stock_code, timestamp),
+    UNIQUE KEY unique_stock_code_date (stock_code, timestamp)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 5. 휴장일 캘린더 테이블
+-- 데이터는 API 자동 수집 + 관리자 수동 등록 방식으로 관리
+CREATE TABLE IF NOT EXISTS market_holidays (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    holiday_date DATE NOT NULL COMMENT '휴장일',
+    holiday_name VARCHAR(100) NOT NULL COMMENT '휴장 사유',
+    market VARCHAR(20) DEFAULT 'KRX' COMMENT '시장',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_market_holiday (market, holiday_date),
+    INDEX idx_holiday_date (holiday_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 6. 주식 일간 집계 테이블
+CREATE TABLE IF NOT EXISTS stock_daily_summary (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(50) NOT NULL,
+    date DATE NOT NULL,
+    total_profit DECIMAL(15,2) DEFAULT 0.00,
+    profit_rate DECIMAL(5,2) DEFAULT 0.00,
+    buy_count INT DEFAULT 0,
+    sell_count INT DEFAULT 0,
+    total_investment DECIMAL(15,2) DEFAULT 0.00,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    UNIQUE KEY unique_stock_user_date (user_id, date),
+    INDEX idx_stock_summary_user_date (user_id, date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

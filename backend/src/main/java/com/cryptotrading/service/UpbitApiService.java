@@ -98,6 +98,32 @@ public class UpbitApiService {
                 .sign(algorithm);
     }
 
+     /**
+     * JWT 토큰 생성 (쿼리스트링 직접 전달) - GET 요청용
+     * 왜: HashMap은 순서 비보장이라 GET 쿼리파라미터 순서와 불일치할 수 있음
+     *      URL에 사용하는 것과 동일한 순서의 queryString을 직접 전달하여 hash 일치 보장
+     */
+    private String generateTokenWithQueryString(String accessKey, String secretKey, String queryString) {
+        if (accessKey == null || accessKey.isEmpty() || secretKey == null || secretKey.isEmpty()) {
+            throw new RuntimeException("업비트 API 키가 등록되지 않았습니다. 먼저 API 키를 등록해주세요.");
+        }
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-512");
+            md.update(queryString.getBytes("UTF-8"));
+            String queryHash = String.format("%0128x", new BigInteger(1, md.digest()));
+
+            Algorithm algorithm = Algorithm.HMAC256(secretKey);
+            return JWT.create()
+                    .withClaim("access_key", accessKey)
+                    .withClaim("nonce", UUID.randomUUID().toString())
+                    .withClaim("query_hash", queryHash)
+                    .withClaim("query_hash_alg", "SHA512")
+                    .sign(algorithm);
+        } catch (Exception e) {
+            throw new RuntimeException("JWT 토큰 생성 실패", e);
+        }
+    }
+
     /**
      * JWT 토큰 생성 (쿼리 파라미터 포함) - 사용자 API 키 사용
      */
@@ -383,13 +409,10 @@ public class UpbitApiService {
                 final int currentPage = page;
                 final int currentLimit = limit;
 
-                Map<String, String> params = new HashMap<>();
-                params.put("currency", "KRW");
-                params.put("state", "ACCEPTED");
-                params.put("limit", String.valueOf(currentLimit));
-                params.put("page", String.valueOf(currentPage));
-
-                String token = generateToken(accessKey, secretKey, params);
+                // ⭐ URL 쿼리파라미터와 동일한 순서로 queryString 직접 생성
+                // 왜: HashMap은 순서 비보장 → query_hash 불일치 → 401 Unauthorized 발생
+                String queryString = "currency=KRW&state=ACCEPTED&limit=" + currentLimit + "&page=" + currentPage;
+                String token = generateTokenWithQueryString(accessKey, secretKey, queryString);
 
                 List<UpbitDepositDTO> deposits = webClient.get()
                         .uri(uriBuilder -> uriBuilder
@@ -446,13 +469,9 @@ public class UpbitApiService {
                 final int currentPage = page;
                 final int currentLimit = limit;
 
-                Map<String, String> params = new HashMap<>();
-                params.put("currency", "KRW");
-                params.put("state", "DONE");
-                params.put("limit", String.valueOf(currentLimit));
-                params.put("page", String.valueOf(currentPage));
-
-                String token = generateToken(accessKey, secretKey, params);
+                // ⭐ URL 쿼리파라미터와 동일한 순서로 queryString 직접 생성
+                String queryString = "currency=KRW&state=DONE&limit=" + currentLimit + "&page=" + currentPage;
+                String token = generateTokenWithQueryString(accessKey, secretKey, queryString);
 
                 List<UpbitWithdrawDTO> withdraws = webClient.get()
                         .uri(uriBuilder -> uriBuilder

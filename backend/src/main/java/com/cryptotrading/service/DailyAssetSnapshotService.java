@@ -295,9 +295,14 @@ public class DailyAssetSnapshotService {
             Optional<Transaction> firstTx = transactionRepository.findTopByUserIdOrderByCreatedAtAsc(userId);
             String cutoffDate = null;
             if (firstTx.isPresent()) {
-                // 첫 거래일의 자정(00:00:00)을 기준점으로 사용
-                cutoffDate = firstTx.get().getCreatedAt().toLocalDate().atStartOfDay()
-                        .atZone(KST).toInstant().toString();
+                // ⭐ 첫 거래일의 자정(00:00:00) KST를 기준점으로 사용
+                // 왜: 업비트 API의 created_at 형식이 "2026-01-30T09:00:00+09:00" (KST offset)이므로
+                //     동일한 형식으로 비교해야 문자열 compareTo가 정확하게 동작함
+                //     기존 UTC Instant 형식("2026-01-29T15:00:00Z")은 "+" < "Z" 문제로 비교 실패
+                LocalDate firstTradeDate = firstTx.get().getCreatedAt().toLocalDate();
+                cutoffDate = firstTradeDate.atStartOfDay()
+                        .atZone(KST)
+                        .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX"));
                 log.info("입출금 필터링 기준일 - userId: {}, 첫 거래일: {}", userId, cutoffDate);
             }
             final String filterDate = cutoffDate;

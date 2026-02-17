@@ -3,6 +3,7 @@ package com.cryptotrading.service;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.cryptotrading.dto.upbit.*;
+import com.cryptotrading.dto.upbit.UpbitDepositDTO;	// ⭐ [추가] 입금 내역 조회 DTO
 import com.cryptotrading.dto.upbit.UpbitCandleDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -360,4 +361,131 @@ public class UpbitApiService {
                 .doOnError(error -> log.error("분봉 조회 실패: {}", error.getMessage()))
                 .block();
     }   
+
+    // ⭐⭐⭐ [신규 추가] KRW 입금 내역 조회 ⭐⭐⭐
+    // 왜: 예치금 이용료를 포함한 KRW 입금 내역을 조회하여 불입금액 자동 계산에 사용
+    // 업비트 API: GET /v1/deposits?currency=KRW&state=ACCEPTED&limit=100
+    // ※ API Key에 [입금조회] 권한 필요
+    /**
+     * 9. KRW 입금 내역 전체 조회 (페이지네이션)
+     * - 완료된(ACCEPTED) KRW 입금 내역을 모두 조회
+     * - 예치금 이용료(interest)와 일반 입금(default) 모두 포함
+     */
+    public List<UpbitDepositDTO> getAllKrwDeposits(String accessKey, String secretKey) {
+        log.info("전체 KRW 입금 내역 조회 시작");
+        List<UpbitDepositDTO> allDeposits = new ArrayList<>();
+        int page = 1;
+        int limit = 100;
+
+        while (true) {
+            try {
+                // ⭐ 람다에서 참조하기 위해 effectively final 변수로 복사
+                final int currentPage = page;
+                final int currentLimit = limit;
+
+                Map<String, String> params = new HashMap<>();
+                params.put("currency", "KRW");
+                params.put("state", "ACCEPTED");
+                params.put("limit", String.valueOf(currentLimit));
+                params.put("page", String.valueOf(currentPage));
+
+                String token = generateToken(accessKey, secretKey, params);
+
+                List<UpbitDepositDTO> deposits = webClient.get()
+                        .uri(uriBuilder -> uriBuilder
+                                .path("/deposits")
+                                .queryParam("currency", "KRW")
+                                .queryParam("state", "ACCEPTED")
+                                .queryParam("limit", currentLimit)
+                                .queryParam("page", currentPage)
+                                .build())
+                        .header("Authorization", "Bearer " + token)
+                        .retrieve()
+                        .bodyToMono(new ParameterizedTypeReference<List<UpbitDepositDTO>>() {})
+                        .retryWhen(getRetrySpec())
+                        .block();
+
+                if (deposits == null || deposits.isEmpty()) break;
+
+                allDeposits.addAll(deposits);
+                log.info("KRW 입금 내역 페이지 {} 조회: {}건", page, deposits.size());
+
+                if (deposits.size() < limit) break; // 마지막 페이지
+                page++;
+                if (page > 10) { // 무한 루프 방지 (최대 1000건)
+                    log.warn("KRW 입금 내역 10페이지 초과, 조회 중단");
+                    break;
+                }
+            } catch (Exception e) {
+                log.error("KRW 입금 내역 페이지 {} 조회 오류: {}", page, e.getMessage());
+                break;
+            }
+        }
+
+        log.info("전체 KRW 입금 내역 조회 완료: 총 {}건", allDeposits.size());
+        return allDeposits;
+    }
+
+    // ⭐⭐⭐ [신규 추가] KRW 출금 내역 조회 ⭐⭐⭐
+    // 왜: 출금 금액을 차감하여 정확한 불입금액(= 입금 - 출금) 계산
+    // 업비트 API: GET /v1/withdraws?currency=KRW&state=DONE&limit=100
+    // ※ API Key에 [출금조회] 권한 필요
+    /**
+     * 10. KRW 출금 내역 전체 조회 (페이지네이션)
+     * - 완료된(DONE) KRW 출금 내역을 모두 조회
+     */
+    public List<UpbitWithdrawDTO> getAllKrwWithdraws(String accessKey, String secretKey) {
+        log.info("전체 KRW 출금 내역 조회 시작");
+        List<UpbitWithdrawDTO> allWithdraws = new ArrayList<>();
+        int page = 1;
+        int limit = 100;
+
+        while (true) {
+            try {
+                // ⭐ 람다에서 참조하기 위해 effectively final 변수로 복사
+                final int currentPage = page;
+                final int currentLimit = limit;
+
+                Map<String, String> params = new HashMap<>();
+                params.put("currency", "KRW");
+                params.put("state", "DONE");
+                params.put("limit", String.valueOf(currentLimit));
+                params.put("page", String.valueOf(currentPage));
+
+                String token = generateToken(accessKey, secretKey, params);
+
+                List<UpbitWithdrawDTO> withdraws = webClient.get()
+                        .uri(uriBuilder -> uriBuilder
+                                .path("/withdraws")
+                                .queryParam("currency", "KRW")
+                                .queryParam("state", "DONE")
+                                .queryParam("limit", currentLimit)
+                                .queryParam("page", currentPage)
+                                .build())
+                        .header("Authorization", "Bearer " + token)
+                        .retrieve()
+                        .bodyToMono(new ParameterizedTypeReference<List<UpbitWithdrawDTO>>() {})
+                        .retryWhen(getRetrySpec())
+                        .block();
+
+                if (withdraws == null || withdraws.isEmpty()) break;
+
+                allWithdraws.addAll(withdraws);
+                log.info("KRW 출금 내역 페이지 {} 조회: {}건", page, withdraws.size());
+
+                if (withdraws.size() < limit) break;
+                page++;
+                if (page > 10) {
+                    log.warn("KRW 출금 내역 10페이지 초과, 조회 중단");
+                    break;
+                }
+            } catch (Exception e) {
+                log.error("KRW 출금 내역 페이지 {} 조회 오류: {}", page, e.getMessage());
+                break;
+            }
+        }
+
+        log.info("전체 KRW 출금 내역 조회 완료: 총 {}건", allWithdraws.size());
+        return allWithdraws;
+    }
 }

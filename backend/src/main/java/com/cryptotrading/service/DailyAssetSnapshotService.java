@@ -20,6 +20,11 @@ import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import com.cryptotrading.dto.upbit.UpbitDepositDTO;    // ⭐ [추가] 입금 내역 DTO
+import com.cryptotrading.dto.upbit.UpbitWithdrawDTO;   // ⭐ [추가] 출금 내역 DTO
+
+
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -29,6 +34,8 @@ public class DailyAssetSnapshotService {
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
     private final RiskManagementService riskManagementService;
+    private final UpbitApiService upbitApiService;       // ⭐ [추가] 입출금 내역 조회
+    private final UserService userService;               // ⭐ [추가] API 키 복호화
 
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
@@ -50,8 +57,15 @@ public class DailyAssetSnapshotService {
                 return;
             }
 
-            // 2. 이전 스냅샷에서 불입금액 가져오기 (없으면 기본값 1,000,000원)
-            BigDecimal depositAmount = getLatestDepositAmount(userId);
+            // ⭐⭐⭐ [변경] 업비트 입출금 내역 기반으로 불입금액 계산 ⭐⭐⭐
+            // 왜: 기존에는 이전 스냅샷 값을 복사만 하여 예치금 이용료 등 실제 입금/출금이 반영되지 않았음
+            // 변경: 업비트 API로 KRW 입금 내역(예치금 이용료 포함) - KRW 출금 내역을 계산하여 정확한 불입금액 산출
+            BigDecimal depositAmount = calculateNetDepositFromUpbit(userId);
+            if (depositAmount.compareTo(BigDecimal.ZERO) <= 0) {
+                // 업비트 API 조회 실패 시 이전 스냅샷 값으로 폴백
+                depositAmount = getLatestDepositAmount(userId);
+                log.warn("업비트 입출금 내역 조회 실패, 이전 스냅샷 불입금액 사용: {}원", depositAmount);
+            }
 
             // 3. 수익 계산
             BigDecimal profitAmount = totalAsset.subtract(depositAmount);
@@ -250,6 +264,62 @@ public class DailyAssetSnapshotService {
     }
 
     // ===== Private Helper =====
+
+    // ⭐⭐⭐ [신규 추가] 업비트 입출금 내역 기반 순 불입금액 계산 ⭐⭐⭐
+    // 왜: 예치금 이용료를 포함한 실제 KRW 입금 총액에서 출금 총액을 차감하여 정확한 불입금액 산출
+    // 공식: 순 불입금액 = 총 KRW 입금액(일반입금 + 예치금이용료) - 총 KRW 출금액
+    /**
+     * 업비트 KRW 입출금 내역에서 순 불입금액 계산
+     * - 입금: 일반 입금 + 예치금 이용료 (GET /v1/deposits, state=ACCEPTED)
+     * - 출금: 완료된 출금 (GET /v1/withdraws, state=DONE)
+     * - API 호출 실패 시 BigDecimal.ZERO 반환 (호출자에서 폴백 처리)
+     *
+     * @param userId 사용자 ID
+     * @return 순 불입금액 (입금 - 출금), 실패 시 BigDecimal.ZERO
+     */
+    private BigDecimal calculateNetDepositFromUpbit(String userId) {
+        try {
+            // 1. 사용자 API 키 조회 및 복호화
+            String[] apiKeys = userService.getDecryptedApiKeys(userId);
+            if (apiKeys == null || apiKeys.length < 2) {
+                log.warn("사용자 API 키 없음 - userId: {}", userId);
+                return BigDecimal.ZERO;
+            }
+
+            // 2. 업비트 KRW 입금 내역 전체 조회
+            List<UpbitDepositDTO> deposits = upbitApiService.getAllKrwDeposits(apiKeys[0], apiKeys[1]);
+
+            // 3. 업비트 KRW 출금 내역 전체 조회
+            List<UpbitWithdrawDTO> withdraws = upbitApiService.getAllKrwWithdraws(apiKeys[0], apiKeys[1]);
+
+            // 4. 완료된 입금 금액 합산 (예치금 이용료 포함)
+            BigDecimal totalDeposit = deposits.stream()
+                    .filter(d -> "ACCEPTED".equals(d.getState()))
+                    .map(UpbitDepositDTO::getAmount)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            // 5. 완료된 출금 금액 합산
+            BigDecimal totalWithdraw = withdraws.stream()
+                    .filter(w -> "DONE".equals(w.getState()))
+                    .map(UpbitWithdrawDTO::getAmount)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            // 6. 순 불입금액 = 입금 - 출금
+            BigDecimal netDeposit = totalDeposit.subtract(totalWithdraw);
+
+            log.info("업비트 KRW 입출금 계산 - userId: {}, 입금: {}원({}건), 출금: {}원({}건), 순 불입금액: {}원",
+                    userId, totalDeposit, deposits.size(), totalWithdraw, withdraws.size(), netDeposit);
+
+            return netDeposit;
+
+        } catch (Exception e) {
+            log.error("업비트 입출금 내역 기반 불입금액 계산 실패 - userId: {}, error: {}",
+                    userId, e.getMessage(), e);
+            return BigDecimal.ZERO;
+        }
+    }
 
     /**
      * 가장 최근 스냅샷의 불입금액 조회 (없으면 기본값 1,000,000원)

@@ -195,6 +195,9 @@
                             :style="chartViewMode === 'scroll' ? { width: dynamicChartWidth + 'px' } : {}"
                             @mousemove="handleChartHover"
                             @mouseleave="hoveredIndex = -1"
+                            @touchstart.prevent="handleChartTouch"
+                            @touchmove.prevent="handleChartTouch"
+                            @touchend="hoveredIndex = -1"
                           >
                             <svg 
                               class="custom-chart"
@@ -1101,6 +1104,23 @@ const handleChartHover = (event: MouseEvent) => {
   if (chartPoints.value[hoveredIndex.value]) {
     tooltipY.value = chartPoints.value[hoveredIndex.value].y * (rect.height / svgHeight)
   }
+}
+
+// ⭐⭐⭐ [신규 추가] 모바일 터치 이벤트 핸들러 ⭐⭐⭐
+// 왜: 모바일 브라우저에서는 mousemove 이벤트가 발생하지 않아 터치 이벤트로 대체
+const handleChartTouch = (event: TouchEvent) => {
+  const touch = event.touches[0]
+  if (!touch) return
+  const target = event.currentTarget as HTMLElement
+  if (!target) return
+  // TouchEvent를 MouseEvent 형태로 변환하여 기존 handleChartHover 재사용
+  const syntheticEvent = {
+    clientX: touch.clientX,
+    clientY: touch.clientY,
+    currentTarget: target,
+    target: target
+  } as unknown as MouseEvent
+  handleChartHover(syntheticEvent)
 }
 
 const getPeriodLabel = (period: string) => {

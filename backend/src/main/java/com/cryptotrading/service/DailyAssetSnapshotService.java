@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.Optional; 
 
 import com.cryptotrading.dto.upbit.UpbitDepositDTO;    // ⭐ [추가] 입금 내역 DTO
 import com.cryptotrading.dto.upbit.UpbitWithdrawDTO;   // ⭐ [추가] 출금 내역 DTO
@@ -286,22 +287,41 @@ public class DailyAssetSnapshotService {
                 return BigDecimal.ZERO;
             }
 
+            // ⭐⭐⭐ [신규 추가] 첫 거래일 조회 - 자동매매 시작일 기준으로 입출금 필터링 ⭐⭐⭐
+            // 왜: 업비트 전체 기간의 입출금 내역을 합산하면 자동매매 시작 전의
+            //     바우처, 쿠폰, 기타 입출금이 포함되어 불입금액이 왜곡됨
+            // 해결: transactions 테이블의 첫 거래일(createdAt)을 기준으로
+            //       해당 날짜 이후의 입출금만 합산
+            Optional<Transaction> firstTx = transactionRepository.findTopByUserIdOrderByCreatedAtAsc(userId);
+            String cutoffDate = null;
+            if (firstTx.isPresent()) {
+                // 첫 거래일의 자정(00:00:00)을 기준점으로 사용
+                cutoffDate = firstTx.get().getCreatedAt().toLocalDate().atStartOfDay()
+                        .atZone(KST).toInstant().toString();
+                log.info("입출금 필터링 기준일 - userId: {}, 첫 거래일: {}", userId, cutoffDate);
+            }
+            final String filterDate = cutoffDate;
+
             // 2. 업비트 KRW 입금 내역 전체 조회
             List<UpbitDepositDTO> deposits = upbitApiService.getAllKrwDeposits(apiKeys[0], apiKeys[1]);
 
             // 3. 업비트 KRW 출금 내역 전체 조회
             List<UpbitWithdrawDTO> withdraws = upbitApiService.getAllKrwWithdraws(apiKeys[0], apiKeys[1]);
 
-            // 4. 완료된 입금 금액 합산 (예치금 이용료 포함)
+            // 4. 완료된 입금 금액 합산 (첫 거래일 이후만)
             BigDecimal totalDeposit = deposits.stream()
                     .filter(d -> "ACCEPTED".equals(d.getState()))
+                    .filter(d -> filterDate == null || d.getCreatedAt() == null 
+                            || d.getCreatedAt().compareTo(filterDate) >= 0)
                     .map(UpbitDepositDTO::getAmount)
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            // 5. 완료된 출금 금액 합산
+            // 5. 완료된 출금 금액 합산 (첫 거래일 이후만)
             BigDecimal totalWithdraw = withdraws.stream()
                     .filter(w -> "DONE".equals(w.getState()))
+                    .filter(w -> filterDate == null || w.getCreatedAt() == null 
+                            || w.getCreatedAt().compareTo(filterDate) >= 0)
                     .map(UpbitWithdrawDTO::getAmount)
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);

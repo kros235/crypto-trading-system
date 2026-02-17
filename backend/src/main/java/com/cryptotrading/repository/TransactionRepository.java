@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
@@ -197,4 +198,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("userId") String userId,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
+
+    // ⭐ [신규 추가] 사용자의 첫 거래 조회 (자동매매 시작일 기준 입출금 필터링용)
+    Optional<Transaction> findTopByUserIdOrderByCreatedAtAsc(String userId);
 }

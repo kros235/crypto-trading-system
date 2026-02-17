@@ -245,6 +245,18 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     INDEX idx_prt_user_id (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ⭐⭐⭐ Day 30 추가: IP 화이트리스트 테이블 ⭐⭐⭐
+CREATE TABLE IF NOT EXISTS ip_whitelist (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    user_id VARCHAR(50) NOT NULL,
+    ip_address VARCHAR(45) NOT NULL,
+    description VARCHAR(100) DEFAULT NULL,
+    is_active BIT(1) NOT NULL DEFAULT b'1',
+    created_at DATETIME(6) NOT NULL,
+    last_used_at DATETIME(6) DEFAULT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY unique_user_ip (user_id, ip_address)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 릴리즈 노트 테이블 (2026-01-08 추가)
 CREATE TABLE IF NOT EXISTS release_notes (
@@ -263,7 +275,7 @@ CREATE TABLE IF NOT EXISTS release_notes (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 초기 릴리즈 노트 데이터 (샘플)
-INSERT INTO release_notes (title, content, author_id, author_name) VALUES
+INSERT INTO release_notes (title, content, category, author_id, author_name) VALUES
 ('v1.0 Day 30 업데이트 - 릴리즈 노트 기능 추가', 
 '■ 릴리즈 노트 게시판 기능 추가\n  - 공지사항 및 업데이트 이력 게시판\n  - 관리자만 작성/수정/삭제 가능\n  - 대시보드 시스템 알림 연동\n\n■ 2FA 인증 (Optional)\n  - Google Authenticator 연동\n\n■ IP 화이트리스트 (Optional)\n  - 접속 IP 제한 기능', 'GENERAL',
 'admin', '관리자');

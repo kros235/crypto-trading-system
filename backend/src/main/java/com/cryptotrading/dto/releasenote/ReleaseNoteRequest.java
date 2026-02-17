@@ -20,4 +20,8 @@ public class ReleaseNoteRequest {
 
     @NotBlank(message = "내용은 필수입니다")
     private String content;
+
+    @Size(max = 20, message = "카테고리는 20자 이내로 입력해주세요")
+    @Builder.Default
+    private String category = "GENERAL";
 }

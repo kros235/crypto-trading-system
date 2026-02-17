@@ -17,6 +17,7 @@ public class ReleaseNoteDTO {
     private Long id;
     private String title;
     private String content;
+    private String category;
     private String authorId;
     private String authorName;
     private LocalDateTime createdAt;
@@ -30,6 +31,7 @@ public class ReleaseNoteDTO {
                 .id(entity.getId())
                 .title(entity.getTitle())
                 .content(entity.getContent())
+	  .category(entity.getCategory())
                 .authorId(entity.getAuthorId())
                 .authorName(entity.getAuthorName())
                 .createdAt(entity.getCreatedAt())

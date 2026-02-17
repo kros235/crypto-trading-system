@@ -28,12 +28,18 @@ public class ReleaseNoteService {
     private final UserRepository userRepository;
 
     /**
-     * 게시글 목록 조회 (페이징 + 검색)
+     * 게시글 목록 조회 (페이징 + 검색 + 카테고리 필터)
      */
     @Transactional(readOnly = true)
-    public Page<ReleaseNoteDTO> getReleaseNotes(Pageable pageable, String keyword) {
+    public Page<ReleaseNoteDTO> getReleaseNotes(Pageable pageable, String keyword, String category) {
         if (keyword != null && !keyword.trim().isEmpty()) {
-            return releaseNoteRepository.searchByKeyword(keyword.trim(), pageable)
+            // ⭐ 키워드 + 카테고리 동시 검색
+            return releaseNoteRepository.searchByKeywordAndCategory(keyword.trim(), category, pageable)
+                    .map(ReleaseNoteDTO::fromEntity);
+        }
+        if (category != null && !category.isEmpty()) {
+            // ⭐ 카테고리만 필터링
+            return releaseNoteRepository.findByCategoryAndIsDeletedFalseOrderByCreatedAtDesc(category, pageable)
                     .map(ReleaseNoteDTO::fromEntity);
         }
         return releaseNoteRepository.findByIsDeletedFalseOrderByCreatedAtDesc(pageable)
@@ -53,12 +59,17 @@ public class ReleaseNoteService {
     /**
      * 최신 게시글 1건 조회 (대시보드용)
      */
-    @Transactional(readOnly = true)
-    public ReleaseNoteDTO getLatestReleaseNote() {
-        return releaseNoteRepository.findFirstByIsDeletedFalseOrderByCreatedAtDesc()
+    public ReleaseNoteDTO getLatestReleaseNote(String category) {
+    if (category != null && !category.isEmpty()) {
+        return releaseNoteRepository.findFirstByCategoryAndIsDeletedFalseOrderByCreatedAtDesc(category)
                 .map(ReleaseNoteDTO::fromEntity)
                 .orElse(null);
     }
+    return releaseNoteRepository.findFirstByIsDeletedFalseOrderByCreatedAtDesc()
+            .map(ReleaseNoteDTO::fromEntity)
+            .orElse(null);
+    }
+
 
     /**
      * 게시글 작성 (관리자 전용)
@@ -71,6 +82,7 @@ public class ReleaseNoteService {
         ReleaseNote releaseNote = ReleaseNote.builder()
                 .title(request.getTitle())
                 .content(request.getContent())
+                .category(request.getCategory() != null ? request.getCategory() : "GENERAL")
                 .authorId(userId)
                 .authorName(user.getUserId())
                 .build();
@@ -91,6 +103,9 @@ public class ReleaseNoteService {
 
         releaseNote.setTitle(request.getTitle());
         releaseNote.setContent(request.getContent());
+        if (request.getCategory() != null) {
+            releaseNote.setCategory(request.getCategory());
+        }
 
         ReleaseNote updated = releaseNoteRepository.save(releaseNote);
         log.info("릴리즈 노트 수정: ID={}, 제목={}, 수정자={}", updated.getId(), updated.getTitle(), userId);

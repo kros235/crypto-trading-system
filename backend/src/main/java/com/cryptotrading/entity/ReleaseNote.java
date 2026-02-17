@@ -32,6 +32,10 @@ public class ReleaseNote {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Column(length = 20)
+    @Builder.Default
+    private String category = "GENERAL";  // COIN, STOCK, GENERAL
+
     @Column(name = "author_id", nullable = false, length = 50)
     private String authorId;
 

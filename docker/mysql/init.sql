@@ -251,6 +251,7 @@ CREATE TABLE IF NOT EXISTS release_notes (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(200) NOT NULL COMMENT '게시글 제목',
     content TEXT NOT NULL COMMENT '게시글 본문',
+    category VARCHAR(20) DEFAULT 'GENERAL' COMMENT '카테고리 (COIN, STOCK, GENERAL)',
     author_id VARCHAR(50) NOT NULL COMMENT '작성자 ID',
     author_name VARCHAR(100) NOT NULL COMMENT '작성자 이름',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '작성일시',
@@ -263,7 +264,7 @@ CREATE TABLE IF NOT EXISTS release_notes (
 -- 초기 릴리즈 노트 데이터 (샘플)
 INSERT INTO release_notes (title, content, author_id, author_name) VALUES
 ('v1.0 Day 30 업데이트 - 릴리즈 노트 기능 추가', 
-'■ 릴리즈 노트 게시판 기능 추가\n  - 공지사항 및 업데이트 이력 게시판\n  - 관리자만 작성/수정/삭제 가능\n  - 대시보드 시스템 알림 연동\n\n■ 2FA 인증 (Optional)\n  - Google Authenticator 연동\n\n■ IP 화이트리스트 (Optional)\n  - 접속 IP 제한 기능',
+'■ 릴리즈 노트 게시판 기능 추가\n  - 공지사항 및 업데이트 이력 게시판\n  - 관리자만 작성/수정/삭제 가능\n  - 대시보드 시스템 알림 연동\n\n■ 2FA 인증 (Optional)\n  - Google Authenticator 연동\n\n■ IP 화이트리스트 (Optional)\n  - 접속 IP 제한 기능', 'GENERAL',
 'admin', '관리자');
 
 -- ⭐⭐⭐ [신규 추가] 일별 자산 스냅샷 테이블 (매일 23:59 KST 기준) ⭐⭐⭐

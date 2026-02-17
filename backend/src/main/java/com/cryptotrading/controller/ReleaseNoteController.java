@@ -34,15 +34,16 @@ public class ReleaseNoteController {
      * 모든 사용자 접근 가능
      */
      @GetMapping
-     @Operation(summary = "목록 조회", description = "릴리즈 노트 목록을 페이징으로 조회합니다")
-     public ResponseEntity<Page<ReleaseNoteDTO>> getReleaseNotes(
-             @RequestParam(defaultValue = "0") int page,
-             @RequestParam(defaultValue = "10") int size,
-             @RequestParam(required = false) String keyword) {  // ⭐ 검색어 파라미터 추가
-         
-         Pageable pageable = PageRequest.of(page, size);
-         return ResponseEntity.ok(releaseNoteService.getReleaseNotes(pageable, keyword));  // ⭐ keyword 전달
-     }
+    @Operation(summary = "목록 조회", description = "릴리즈 노트 목록을 페이징으로 조회합니다")
+    public ResponseEntity<Page<ReleaseNoteDTO>> getReleaseNotes(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String category) {
+    
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(releaseNoteService.getReleaseNotes(pageable, keyword, category));
+    }
 
     /**
      * 게시글 상세 조회
@@ -60,8 +61,9 @@ public class ReleaseNoteController {
      */
     @GetMapping("/latest")
     @Operation(summary = "최신 1건 조회", description = "가장 최근 릴리즈 노트를 조회합니다 (대시보드용)")
-    public ResponseEntity<ReleaseNoteDTO> getLatestReleaseNote() {
-        ReleaseNoteDTO latest = releaseNoteService.getLatestReleaseNote();
+    public ResponseEntity<ReleaseNoteDTO> getLatestReleaseNote(
+            @RequestParam(required = false) String category) {
+        ReleaseNoteDTO latest = releaseNoteService.getLatestReleaseNote(category);
         if (latest == null) {
             return ResponseEntity.noContent().build();
         }

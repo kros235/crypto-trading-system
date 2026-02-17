@@ -23,6 +23,20 @@
 
         <!-- 검색 + 페이지당 건수 + 글 작성 버튼 -->
         <v-row class="mb-4" align="center">
+          <!-- ⭐ Day 48: 카테고리 필터 -->
+          <v-col cols="6" md="2">
+            <v-select
+              v-model="selectedCategory"
+              :items="categoryOptions"
+              item-title="title"
+              item-value="value"
+              label="카테고리"
+              density="compact"
+              hide-details
+              variant="outlined"
+              bg-color="white"
+            />
+          </v-col>
           <v-col cols="12" md="4">
             <v-text-field
               v-model="searchKeyword"
@@ -37,11 +51,11 @@
               @click:clear="clearSearch"
             />
           </v-col>
-          <v-col cols="6" md="2">
+          <v-col cols="6" md="1">
             <v-select
               v-model="pageSize"
               :items="[10, 20, 50]"
-              label="페이지당 건수"
+              label="건수"
               density="compact"
               hide-details
               variant="outlined"
@@ -49,7 +63,7 @@
               @update:model-value="loadReleaseNotes"
             />
           </v-col>
-          <v-col cols="6" md="6" class="d-flex justify-end">
+          <v-col cols="6" md="5" class="d-flex justify-end">
             <v-btn color="secondary" variant="flat" class="mr-2 bg-white" @click="loadReleaseNotes">
               <v-icon start>mdi-magnify</v-icon>
               검색
@@ -76,6 +90,16 @@
                 <!-- ⭐ 글 번호: 순번 방식 (페이지 기반) -->
                 <template v-slot:item.rowNum="{ index }">
                   {{ totalElements - ((currentPage - 1) * pageSize + index) }}
+                </template>
+                <!-- ⭐ Day 48: 카테고리 칩 표시 -->
+                <template v-slot:item.category="{ item }">
+                  <v-chip
+                    :color="item.category === 'COIN' ? 'orange' : item.category === 'STOCK' ? 'blue' : 'grey'"
+                    size="x-small"
+                    variant="flat"
+                  >
+                    {{ item.category === 'COIN' ? '코인' : item.category === 'STOCK' ? '주식' : '공통' }}
+                  </v-chip>
                 </template>
                 <!-- ⭐ 작성일: 한줄 표시 -->
                 <template v-slot:item.createdAt="{ item }">
@@ -146,6 +170,16 @@
                   rows="15"
                   auto-grow
                 />
+                <!-- ⭐ Day 48: 카테고리 선택 -->
+                <v-select
+                  v-model="form.category"
+                  :items="categoryOptions.filter(c => c.value !== '')"
+                  item-title="title"
+                  item-value="value"
+                  label="카테고리"
+                  :rules="[v => !!v || '카테고리를 선택해주세요']"
+                  variant="outlined"
+                />
               </v-form>
             </v-card-text>
             <v-card-actions>
@@ -183,7 +217,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import TheHeader from '@/components/TheHeader.vue'
 import TheSidebar from '@/components/TheSidebar.vue'
@@ -233,18 +267,29 @@ const formValid = ref(false)
 const searchKeyword = ref('')
 const totalElements = ref(0)
 
+// 카테고리 필터 추가
+const selectedCategory = ref<string>('')
+const categoryOptions = [
+  { title: '전체', value: '' },
+  { title: '코인', value: 'COIN' },
+  { title: '주식', value: 'STOCK' },
+  { title: '공통', value: 'GENERAL' }
+]
+
 const form = ref({
   title: '',
-  content: ''
+  content: '',
+  category: 'GENERAL'  // ⭐ Day 48: 카테고리 필드 추가
 })
 
 // 테이블 헤더
 const headers = computed(() => {
   const baseHeaders = [
-    { title: '번호', key: 'rowNum', width: '80px', sortable: false },  // ⭐ id → rowNum 변경
+    { title: '번호', key: 'rowNum', width: '80px', sortable: false },
+    { title: '카테고리', key: 'category', width: '100px', sortable: false },  // ⭐ Day 48: 카테고리 컬럼 추가
     { title: '제목', key: 'title' },
     { title: '작성자', key: 'authorName', width: '100px' },
-    { title: '작성일', key: 'createdAt', width: '160px' }  // ⭐ 너비 축소
+    { title: '작성일', key: 'createdAt', width: '160px' }
   ]
   if (authStore.isAdmin) {
     baseHeaders.push({ title: '관리', key: 'actions', width: '120px', sortable: false })
@@ -260,7 +305,8 @@ const loadReleaseNotes = async () => {
       params: {
         page: currentPage.value - 1,
         size: pageSize.value,
-        keyword: searchKeyword.value || undefined  // ⭐ 검색어 추가
+        keyword: searchKeyword.value || undefined,
+        category: selectedCategory.value || undefined  // ⭐ Day 48: 카테고리 필터 추가
       }
     })
     releaseNotes.value = response.data.content
@@ -304,7 +350,7 @@ const openDetail = (event: any, { item }: any) => {
 
 const openCreateDialog = () => {
   isEditMode.value = false
-  form.value = { title: '', content: '' }
+  form.value = { title: '', content: '', category: 'GENERAL' }  // ⭐ Day 48: category 초기화
   formDialog.value = true
 }
 
@@ -313,7 +359,8 @@ const openEditDialog = (note: any) => {
   selectedNote.value = note
   form.value = {
     title: note.title,
-    content: note.content
+    content: note.content,
+    category: note.category || 'GENERAL'  // ⭐ Day 48: 기존 카테고리 반영
   }
   formDialog.value = true
 }
@@ -358,6 +405,12 @@ const deleteNote = async () => {
     deleting.value = false
   }
 }
+
+// ⭐ Day 48: 카테고리 변경 시 목록 새로고침
+watch(selectedCategory, () => {
+  currentPage.value = 1
+  loadReleaseNotes()
+})
 
 onMounted(() => {
   loadReleaseNotes()

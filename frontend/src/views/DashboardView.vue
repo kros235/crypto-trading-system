@@ -1315,7 +1315,7 @@ const latestReleaseNote = ref<any>(null)
 // 최신 릴리즈 노트 조회 함수 추가
 const fetchLatestReleaseNote = async () => {
   try {
-    const response = await api.get('/release-notes/latest')
+    const response = await api.get('/release-notes/latest?category=COIN')
     latestReleaseNote.value = response.data
   } catch (error) {
     console.error('최신 릴리즈 노트 조회 실패:', error)

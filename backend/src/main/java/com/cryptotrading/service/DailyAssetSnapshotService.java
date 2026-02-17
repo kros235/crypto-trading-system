@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -266,17 +267,22 @@ public class DailyAssetSnapshotService {
 
     // ===== Private Helper =====
 
-    // ⭐⭐⭐ [신규 추가] 업비트 입출금 내역 기반 순 불입금액 계산 ⭐⭐⭐
-    // 왜: 예치금 이용료를 포함한 실제 KRW 입금 총액에서 출금 총액을 차감하여 정확한 불입금액 산출
-    // 공식: 순 불입금액 = 총 KRW 입금액(일반입금 + 예치금이용료) - 총 KRW 출금액
     /**
-     * 업비트 KRW 입출금 내역에서 순 불입금액 계산
-     * - 입금: 일반 입금 + 예치금 이용료 (GET /v1/deposits, state=ACCEPTED)
-     * - 출금: 완료된 출금 (GET /v1/withdraws, state=DONE)
-     * - API 호출 실패 시 BigDecimal.ZERO 반환 (호출자에서 폴백 처리)
+     * 업비트 KRW 입출금 내역에서 불입금액 계산
+     * 
+     * [로직]
+     * 1단계: 전체 입출금 내역을 시간순 정렬
+     * 2단계: 첫 자동매매 거래 시점 직전까지의 입출금 누적합 = 초기 불입금액
+     * 3단계: 첫 거래 시점 이후의 입출금을 초기 불입금액에 가감 = 현재 불입금액
+     *
+     * [예시]
+     * 1/1 입금 +100만원, 1/2 출금 -80만원, 1/3 입금 +5만원, 1/4 출금 -11만원, 1/5 입금 +1만원
+     * 첫 거래: 1/5 01:00 AM
+     * → 1/5 01:00 이전 누적: 100-80+5-11+1 = 15만원 (초기 불입금액)
+     * → 1/5 이후 입출금을 15만원에 가감 = 현재 불입금액
      *
      * @param userId 사용자 ID
-     * @return 순 불입금액 (입금 - 출금), 실패 시 BigDecimal.ZERO
+     * @return 불입금액, 실패 시 BigDecimal.ZERO
      */
     private BigDecimal calculateNetDepositFromUpbit(String userId) {
         try {
@@ -287,57 +293,61 @@ public class DailyAssetSnapshotService {
                 return BigDecimal.ZERO;
             }
 
-            // ⭐⭐⭐ [신규 추가] 첫 거래일 조회 - 자동매매 시작일 기준으로 입출금 필터링 ⭐⭐⭐
-            // 왜: 업비트 전체 기간의 입출금 내역을 합산하면 자동매매 시작 전의
-            //     바우처, 쿠폰, 기타 입출금이 포함되어 불입금액이 왜곡됨
-            // 해결: transactions 테이블의 첫 거래일(createdAt)을 기준으로
-            //       해당 날짜 이후의 입출금만 합산
+            // 2. 첫 자동매매 거래 시점 조회
             Optional<Transaction> firstTx = transactionRepository.findTopByUserIdOrderByCreatedAtAsc(userId);
-            String cutoffDate = null;
-            if (firstTx.isPresent()) {
-                // ⭐ 첫 거래일의 자정(00:00:00) KST를 기준점으로 사용
-                // 왜: 업비트 API의 created_at 형식이 "2026-01-30T09:00:00+09:00" (KST offset)이므로
-                //     동일한 형식으로 비교해야 문자열 compareTo가 정확하게 동작함
-                //     기존 UTC Instant 형식("2026-01-29T15:00:00Z")은 "+" < "Z" 문제로 비교 실패
-                LocalDate firstTradeDate = firstTx.get().getCreatedAt().toLocalDate();
-                cutoffDate = firstTradeDate.atStartOfDay()
-                        .atZone(KST)
-                        .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX"));
-                log.info("입출금 필터링 기준일 - userId: {}, 첫 거래일: {}", userId, cutoffDate);
+            if (firstTx.isEmpty()) {
+                log.warn("거래 내역 없음 - userId: {}", userId);
+                return BigDecimal.ZERO;
             }
-            final String filterDate = cutoffDate;
+            LocalDateTime firstTradeTime = firstTx.get().getCreatedAt();
+            // 업비트 API created_at 형식("2026-01-30T09:00:00+09:00")과 비교하기 위해 KST offset 형식으로 변환
+            String firstTradeTimeStr = firstTradeTime.atZone(KST)
+                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX"));
+            log.info("불입금액 계산 - userId: {}, 첫 거래 시점: {}", userId, firstTradeTimeStr);
 
-            // 2. 업비트 KRW 입금 내역 전체 조회
+            // 3. 업비트 KRW 입출금 내역 전체 조회
             List<UpbitDepositDTO> deposits = upbitApiService.getAllKrwDeposits(apiKeys[0], apiKeys[1]);
-
-            // 3. 업비트 KRW 출금 내역 전체 조회
             List<UpbitWithdrawDTO> withdraws = upbitApiService.getAllKrwWithdraws(apiKeys[0], apiKeys[1]);
 
-            // 4. 완료된 입금 금액 합산 (첫 거래일 이후만)
-            BigDecimal totalDeposit = deposits.stream()
+            // 4. 첫 거래 시점 이전의 입출금 누적합 = 초기 불입금액
+            BigDecimal depositsBefore = deposits.stream()
                     .filter(d -> "ACCEPTED".equals(d.getState()))
-                    .filter(d -> filterDate == null || d.getCreatedAt() == null 
-                            || d.getCreatedAt().compareTo(filterDate) >= 0)
+                    .filter(d -> d.getCreatedAt() != null && d.getCreatedAt().compareTo(firstTradeTimeStr) < 0)
                     .map(UpbitDepositDTO::getAmount)
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            // 5. 완료된 출금 금액 합산 (첫 거래일 이후만)
-            BigDecimal totalWithdraw = withdraws.stream()
+            BigDecimal withdrawsBefore = withdraws.stream()
                     .filter(w -> "DONE".equals(w.getState()))
-                    .filter(w -> filterDate == null || w.getCreatedAt() == null 
-                            || w.getCreatedAt().compareTo(filterDate) >= 0)
+                    .filter(w -> w.getCreatedAt() != null && w.getCreatedAt().compareTo(firstTradeTimeStr) < 0)
                     .map(UpbitWithdrawDTO::getAmount)
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            // 6. 순 불입금액 = 입금 - 출금
-            BigDecimal netDeposit = totalDeposit.subtract(totalWithdraw);
+            BigDecimal initialDeposit = depositsBefore.subtract(withdrawsBefore);
 
-            log.info("업비트 KRW 입출금 계산 - userId: {}, 입금: {}원({}건), 출금: {}원({}건), 순 불입금액: {}원",
-                    userId, totalDeposit, deposits.size(), totalWithdraw, withdraws.size(), netDeposit);
+            // 5. 첫 거래 시점 이후의 입출금 가감
+            BigDecimal depositsAfter = deposits.stream()
+                    .filter(d -> "ACCEPTED".equals(d.getState()))
+                    .filter(d -> d.getCreatedAt() != null && d.getCreatedAt().compareTo(firstTradeTimeStr) >= 0)
+                    .map(UpbitDepositDTO::getAmount)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            return netDeposit;
+            BigDecimal withdrawsAfter = withdraws.stream()
+                    .filter(w -> "DONE".equals(w.getState()))
+                    .filter(w -> w.getCreatedAt() != null && w.getCreatedAt().compareTo(firstTradeTimeStr) >= 0)
+                    .map(UpbitWithdrawDTO::getAmount)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            // 6. 현재 불입금액 = 초기 불입금액 + 이후 입금 - 이후 출금
+            BigDecimal currentDeposit = initialDeposit.add(depositsAfter).subtract(withdrawsAfter);
+
+            log.info("불입금액 계산 결과 - userId: {}, 초기 불입금액: {}원, 이후 입금: {}원, 이후 출금: {}원, 현재 불입금액: {}원",
+                    userId, initialDeposit, depositsAfter, withdrawsAfter, currentDeposit);
+
+            return currentDeposit;
 
         } catch (Exception e) {
             log.error("업비트 입출금 내역 기반 불입금액 계산 실패 - userId: {}, error: {}",

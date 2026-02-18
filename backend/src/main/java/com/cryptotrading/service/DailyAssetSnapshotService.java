@@ -167,25 +167,43 @@ public class DailyAssetSnapshotService {
     public void saveInitialDeposit(String userId, BigDecimal initialKrwBalance) {
         LocalDate today = LocalDate.now(KST);
 
-        // 이미 스냅샷이 있으면 저장하지 않음 (중복 방지)
-        if (snapshotRepository.existsByUserIdAndSnapshotDate(userId, today)) {
-            log.info("초기 불입금액 - 이미 오늘 스냅샷 존재: userId={}", userId);
-            return;
+        // ⭐ 기존 스냅샷이 있으면 초기 불입금액만 덮어쓰기 (23:59 스케줄러가 먼저 만든 경우 대비)
+        // 왜: 거래 0건인 사용자도 23:59 스케줄러에서 스냅샷이 생성될 수 있고,
+        //     이때 폴백 기본값(1,000,000원)이 들어갈 수 있음.
+        //     첫 매수 직전 실제 KRW 잔고가 가장 정확하므로 덮어쓰기해야 함.
+        Optional<DailyAssetSnapshot> existing = snapshotRepository
+                .findByUserIdAndSnapshotDate(userId, today);
+        
+        if (existing.isPresent()) {
+            DailyAssetSnapshot snapshot = existing.get();
+            snapshot.setDepositAmount(initialKrwBalance);
+            snapshot.setKrwBalance(initialKrwBalance);
+            // 평가금액이 있으면 수익 재계산
+            if (snapshot.getEvaluationAmount().compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal profitAmount = snapshot.getEvaluationAmount().subtract(initialKrwBalance);
+                BigDecimal profitRate = initialKrwBalance.compareTo(BigDecimal.ZERO) > 0
+                        ? profitAmount.divide(initialKrwBalance, 4, RoundingMode.HALF_UP)
+                            .multiply(new BigDecimal("100"))
+                        : BigDecimal.ZERO;
+                snapshot.setProfitAmount(profitAmount);
+                snapshot.setProfitRate(profitRate);
+            }
+            snapshotRepository.save(snapshot);
+            log.info("🎯 초기 불입금액 스냅샷 갱신 - userId: {}, KRW 잔고: {}원 (기존 스냅샷 덮어쓰기)", userId, initialKrwBalance);
+        } else {
+            DailyAssetSnapshot snapshot = DailyAssetSnapshot.builder()
+                    .userId(userId)
+                    .snapshotDate(today)
+                    .evaluationAmount(initialKrwBalance)
+                    .depositAmount(initialKrwBalance)
+                    .krwBalance(initialKrwBalance)
+                    .coinEvaluation(BigDecimal.ZERO)
+                    .profitAmount(BigDecimal.ZERO)
+                    .profitRate(BigDecimal.ZERO)
+                    .build();
+            snapshotRepository.save(snapshot);
+            log.info("🎯 초기 불입금액 스냅샷 저장 - userId: {}, KRW 잔고: {}원 (신규 생성)", userId, initialKrwBalance);
         }
-
-        DailyAssetSnapshot snapshot = DailyAssetSnapshot.builder()
-                .userId(userId)
-                .snapshotDate(today)
-                .evaluationAmount(initialKrwBalance)
-                .depositAmount(initialKrwBalance)
-                .krwBalance(initialKrwBalance)
-                .coinEvaluation(BigDecimal.ZERO)
-                .profitAmount(BigDecimal.ZERO)
-                .profitRate(BigDecimal.ZERO)
-                .build();
-
-        snapshotRepository.save(snapshot);
-        log.info("🎯 초기 불입금액 스냅샷 저장 - userId: {}, KRW 잔고: {}원", userId, initialKrwBalance);
     }
 
     /**

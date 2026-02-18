@@ -59,9 +59,20 @@ public class DailyAssetSnapshotService {
                 return;
             }
 
-            // ⭐⭐⭐ [변경] 업비트 입출금 내역 기반으로 불입금액 계산 ⭐⭐⭐
+           // ⭐⭐⭐ [변경] 업비트 입출금 내역 기반으로 불입금액 계산 ⭐⭐⭐
             // 왜: 기존에는 이전 스냅샷 값을 복사만 하여 예치금 이용료 등 실제 입금/출금이 반영되지 않았음
             // 변경: 업비트 API로 KRW 입금 내역(예치금 이용료 포함) - KRW 출금 내역을 계산하여 정확한 불입금액 산출
+            
+            // ⭐ [추가] 거래 내역이 없는 사용자는 스냅샷 생성하지 않음
+            // 왜: 거래 0건 시 calculateNetDepositFromUpbit이 ZERO를 반환하여
+            //     폴백 기본값(1,000,000원)으로 잘못된 스냅샷이 생성될 수 있음.
+            //     첫 매수 시 saveInitialDeposit에서 정확한 KRW 잔고로 스냅샷이 생성됨.
+            int txCount = transactionRepository.countByUserId(userId);
+            if (txCount == 0) {
+                log.info("거래 내역 없음, 스냅샷 생성 건너뜀 - userId: {}", userId);
+                return;
+            }
+            
             BigDecimal depositAmount = calculateNetDepositFromUpbit(userId);
             if (depositAmount.compareTo(BigDecimal.ZERO) <= 0) {
                 // 업비트 API 조회 실패 시 이전 스냅샷 값으로 폴백

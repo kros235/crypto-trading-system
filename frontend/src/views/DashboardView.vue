@@ -2620,7 +2620,7 @@ const cardHelps = {
       <p class="help-item"><span class="help-bullet">•</span> <strong>보유 코인</strong><br/>
         <span class="help-desc">현재 보유 중인 코인 종류와 평가액, 수익률을 표시합니다.</span></p>
       <p class="help-note">※ 업비트 API 키가 등록되어 있어야 조회됩니다.</p>
-      <p class="help-note">※ 자산 변동 추이의 불입금액은 자동매매 시작 시점의 KRW 잔고를 기준으로 산정됩니다. 자동매매 시작 전 보유 중이던 코인은 불입금액에 포함되지 않습니다.</p>
+      <p class="help-note">※ 자산 변동 추이의 불입금액은 자동매매 시작 시점의 KRW 잔고를 기준으로 산정됩니다.<br/>자동매매 시작 전 보유 중이던 코인은 불입금액에 포함되지 않습니다.</p>
     `
   },
   tradingSettings: {
@@ -2694,7 +2694,7 @@ const cardHelps = {
       <p class="help-item"><span class="help-bullet">•</span> <strong>기록 시작일</strong><br/>
         <span class="help-desc">자산 변동 추이는 최초 거래일로부터 기록이 시작됩니다. 거래 이전 기간은 조회되지 않습니다.</span></p>
       <p class="help-item"><span class="help-bullet">•</span> <strong>불입금액 추세</strong><br/>
-        <span class="help-desc">자동매매 첫 거래 직전의 KRW 잔고를 초기 불입금액으로 자동 산정합니다. 이후 업비트 원화 입금/출금이 발생하면 매일 스냅샷에 자동으로 가감 반영됩니다.</span></p>
+        <span class="help-desc">자동매매 첫 거래 직전의 KRW 잔고를 초기 불입금액으로 자동 산정합니다.<br/>이후 업비트 원화 입금/출금이 발생하면 매일 스냅샷에 자동으로 가감 반영됩니다.</span></p>
       <p class="help-note">※ 불입금액 자동 계산을 위해 API 키에 <strong>입금 조회, 출금 조회</strong> 권한이 필요합니다.</p>
     `
   },

@@ -176,3 +176,21 @@ groq:
     model: ${GROQ_MODEL:llama-3.3-70b-versatile}
     base-url: https://api.groq.com/openai/v1/chat/completions
     timeout: 60
+
+# ============================================
+# Phase 2: 한국투자증권 KIS API 설정 (Day 50 추가)
+# ============================================
+kis:
+  api:
+    # 모의투자: https://openapivts.koreainvestment.com:29443
+    # 실전투자: https://openapi.koreainvestment.com:9443
+    base-url: ${KIS_BASE_URL:https://openapivts.koreainvestment.com:29443}
+    app-key: ${KIS_APP_KEY:}
+    app-secret: ${KIS_APP_SECRET:}
+    account-no: ${KIS_ACCOUNT_NO:}
+    mock-mode: ${KIS_MOCK_MODE:true}
+  websocket:
+    url: ${KIS_WS_URL:ws://ops.koreainvestment.com:31000}
+  token:
+    # 토큰 유효시간: 24시간이지만, 안전을 위해 23시간마다 갱신
+    refresh-hours: ${KIS_TOKEN_REFRESH_HOURS:23}

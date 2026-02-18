@@ -95,6 +95,10 @@ public class SecurityConfig {
 	  .requestMatchers(HttpMethod.PUT, "/api/release-notes/**").hasRole("ADMIN")  // 수정은 관리자만
 	  .requestMatchers(HttpMethod.DELETE, "/api/release-notes/**").hasRole("ADMIN") // 삭제는 관리자만
 
+                // ⭐ Phase 2: 주식/ETF API 권한 설정 (Day 50 추가)
+	  .requestMatchers("/api/stock/**").authenticated()           // 주식 API - 인증 필요
+	  .requestMatchers("/api/stock/admin/**").hasRole("ADMIN")    // 주식 관리자 API
+
                 // 나머지는 인증 필요
                 .anyRequest().authenticated()
             )

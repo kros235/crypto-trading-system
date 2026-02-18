@@ -405,7 +405,7 @@
                         </a> 접속
                       </li>
                       <li>"Open API 키 발급" 버튼 클릭</li>
-                      <li>권한 선택: <strong>자산 조회, 주문 조회, 주문</strong> (출금 권한 제외!)</li>
+                      <li>권한 선택: <strong>자산 조회, 주문 조회, 주문, 입금 조회, 출금 조회</strong> (출금 실행 권한 제외!)</li>
                       <li>IP 설정 후 발급받은 키를 위 입력란에 붙여넣기</li>
                     </ol>
                   </div>
@@ -537,11 +537,11 @@ const helpContents = {
       <ol style="padding-left: 40px; margin-top: 8px;">
         <li><a href="https://upbit.com/mypage/open_api_management" target="_blank" style="color: #1976D2;">업비트 Open API 관리</a> 페이지 접속</li>
         <li>"Open API 키 발급" 클릭</li>
-        <li><strong>필수 권한</strong>: 자산 조회, 주문 조회, 주문</li>
+        <li><strong>필수 권한</strong>: 자산 조회, 주문 조회, 주문, 입금 조회, 출금 조회</li>
         <li><strong>IP 설정</strong>: 서버 IP 입력 또는 "모든 IP 허용"</li>
         <li>발급된 Access Key와 Secret Key 복사</li>
       </ol>
-      <p style="margin-top: 16px;">⚠️ <strong>절대 출금 권한은 부여하지 마세요!</strong></p>
+      <p style="margin-top: 16px;">⚠️ <strong>출금 실행 권한은 절대 부여하지 마세요!</strong></p>
       <table style="width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px;">
         <tr style="background-color: #E3F2FD;">
           <th style="padding: 8px 12px; border: 1px solid #ddd; text-align: left;">권한</th>
@@ -558,6 +558,14 @@ const helpContents = {
         <tr>
           <td style="padding: 8px 12px; border: 1px solid #ddd;">주문</td>
           <td style="padding: 8px 12px; border: 1px solid #ddd;">✅ 필수</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 12px; border: 1px solid #ddd;">입금 조회</td>
+          <td style="padding: 8px 12px; border: 1px solid #ddd;">✅ 필수 (불입금액 자동 계산)</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 12px; border: 1px solid #ddd;">출금 조회</td>
+          <td style="padding: 8px 12px; border: 1px solid #ddd;">✅ 필수 (불입금액 자동 계산)</td>
         </tr>
         <tr>
           <td style="padding: 8px 12px; border: 1px solid #ddd;">출금</td>

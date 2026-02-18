@@ -41,6 +41,7 @@ public class TradingBotService {
     private final UpbitApiService upbitApiService;
     private final UserService userService;
     private final TransactionRepository transactionRepository;
+    private final DailyAssetSnapshotService dailyAssetSnapshotService;
     private final TradingSettingRepository tradingSettingRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
@@ -560,6 +561,24 @@ public class TradingBotService {
                                   BotExecutionResult result) {
         log.info("매수 주문 실행: {} - {}원", market, buyAmount);
         
+        // ⭐⭐⭐ [신규 추가] 첫 매수 시 KRW 잔고를 초기 불입금액으로 저장 ⭐⭐⭐
+        // 왜: 기존 업비트 사용자가 자동매매를 시작할 때, 입출금 API만으로는
+        //     코인 거래 손익이 반영되지 않아 정확한 초기 자본을 알 수 없음.
+        //     첫 매수 직전의 실제 KRW 잔고를 초기 불입금액으로 저장하면
+        //     이후 불입금액 추세가 정확하게 계산됨.
+        try {
+            int txCount = transactionRepository.countByUserId(userId);
+            if (txCount == 0) {
+                BigDecimal krwBalance = getKrwBalance(apiKeys);
+                if (krwBalance != null && krwBalance.compareTo(BigDecimal.ZERO) > 0) {
+                    dailyAssetSnapshotService.saveInitialDeposit(userId, krwBalance);
+                    log.info("🎯 첫 매수 전 초기 불입금액 저장 - userId: {}, KRW 잔고: {}원", userId, krwBalance);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("초기 불입금액 저장 실패 (매수는 계속 진행) - userId: {}, error: {}", userId, e.getMessage());
+        }
+
         // 업비트 매수 주문
         UpbitOrderDTO order = upbitApiService.orderBuy(apiKeys[0], apiKeys[1], market, buyAmount);
         
@@ -653,6 +672,25 @@ public class TradingBotService {
 
         result.addBuy(market, buyAmount);
         log.info("매수 완료: {} - {}원 (주문ID: {})", market, buyAmount, order.getUuid());
+    }
+
+    /**
+     * ⭐ [신규 추가] 업비트 KRW 잔고 조회
+     */
+    private BigDecimal getKrwBalance(String[] apiKeys) {
+        try {
+            var accounts = upbitApiService.getAccounts(apiKeys[0], apiKeys[1]);
+            if (accounts != null) {
+                for (var account : accounts) {
+                    if ("KRW".equals(account.getCurrency())) {
+                        return account.getBalance();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("KRW 잔고 조회 실패: {}", e.getMessage());
+        }
+        return null;
     }
 
     // ⭐⭐⭐ 신규 메서드: 최소 주문 금액 미달 시 동일 코인 합산 매도 ⭐⭐⭐

@@ -159,6 +159,36 @@ public class DailyAssetSnapshotService {
     }
 
     /**
+     * ⭐ [신규 추가] 초기 불입금액 저장 (첫 매수 직전 KRW 잔고)
+     * - 첫 자동매매 시작 시 호출
+     * - 이후 불입금액 계산의 기준점으로 사용
+     */
+    @Transactional
+    public void saveInitialDeposit(String userId, BigDecimal initialKrwBalance) {
+        LocalDate today = LocalDate.now(KST);
+
+        // 이미 스냅샷이 있으면 저장하지 않음 (중복 방지)
+        if (snapshotRepository.existsByUserIdAndSnapshotDate(userId, today)) {
+            log.info("초기 불입금액 - 이미 오늘 스냅샷 존재: userId={}", userId);
+            return;
+        }
+
+        DailyAssetSnapshot snapshot = DailyAssetSnapshot.builder()
+                .userId(userId)
+                .snapshotDate(today)
+                .evaluationAmount(initialKrwBalance)
+                .depositAmount(initialKrwBalance)
+                .krwBalance(initialKrwBalance)
+                .coinEvaluation(BigDecimal.ZERO)
+                .profitAmount(BigDecimal.ZERO)
+                .profitRate(BigDecimal.ZERO)
+                .build();
+
+        snapshotRepository.save(snapshot);
+        log.info("🎯 초기 불입금액 스냅샷 저장 - userId: {}, KRW 잔고: {}원", userId, initialKrwBalance);
+    }
+
+    /**
      * 기간별 스냅샷 조회 (프론트엔드 차트용)
      * @param period "7" / "month" / "year" / "all"
      */
@@ -293,13 +323,14 @@ public class DailyAssetSnapshotService {
                 return BigDecimal.ZERO;
             }
 
-            // 2. 첫 자동매매 거래 시점 조회
+            /// 2. 첫 자동매매 거래 시점 조회
             Optional<Transaction> firstTx = transactionRepository.findTopByUserIdOrderByCreatedAtAsc(userId);
             if (firstTx.isEmpty()) {
                 log.warn("거래 내역 없음 - userId: {}", userId);
                 return BigDecimal.ZERO;
             }
             LocalDateTime firstTradeTime = firstTx.get().getCreatedAt();
+            LocalDate firstTradeDate = firstTradeTime.toLocalDate();
             // 업비트 API created_at 형식("2026-01-30T09:00:00+09:00")과 비교하기 위해 KST offset 형식으로 변환
             String firstTradeTimeStr = firstTradeTime.atZone(KST)
                     .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX"));
@@ -309,7 +340,36 @@ public class DailyAssetSnapshotService {
             List<UpbitDepositDTO> deposits = upbitApiService.getAllKrwDeposits(apiKeys[0], apiKeys[1]);
             List<UpbitWithdrawDTO> withdraws = upbitApiService.getAllKrwWithdraws(apiKeys[0], apiKeys[1]);
 
-            // 4. 첫 거래 시점 이전의 입출금 누적합 = 초기 불입금액
+            // ⭐⭐⭐ [신규 추가] 첫 거래일 스냅샷에 초기 불입금액이 저장되어 있으면 사용 ⭐⭐⭐
+            // 왜: 입출금 API로는 코인 거래 손익이 반영되지 않아 정확한 초기 자본을 알 수 없음
+            //     첫 매수 직전 KRW 잔고(saveInitialDeposit)가 저장되어 있으면 그것이 가장 정확
+            Optional<DailyAssetSnapshot> firstDaySnapshot = snapshotRepository
+                    .findByUserIdAndSnapshotDate(userId, firstTradeDate);
+            if (firstDaySnapshot.isPresent()) {
+                BigDecimal savedInitial = firstDaySnapshot.get().getDepositAmount();
+                if (savedInitial.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal depositsAfterTrade = deposits.stream()
+                            .filter(d -> "ACCEPTED".equals(d.getState()))
+                            .filter(d -> d.getCreatedAt() != null && d.getCreatedAt().compareTo(firstTradeTimeStr) >= 0)
+                            .map(UpbitDepositDTO::getAmount)
+                            .filter(Objects::nonNull)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                    BigDecimal withdrawsAfterTrade = withdraws.stream()
+                            .filter(w -> "DONE".equals(w.getState()))
+                            .filter(w -> w.getCreatedAt() != null && w.getCreatedAt().compareTo(firstTradeTimeStr) >= 0)
+                            .map(UpbitWithdrawDTO::getAmount)
+                            .filter(Objects::nonNull)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                    BigDecimal currentDeposit = savedInitial.add(depositsAfterTrade).subtract(withdrawsAfterTrade);
+                    log.info("불입금액 계산 (스냅샷 기준) - userId: {}, 초기: {}원, 이후입금: {}원, 이후출금: {}원, 현재: {}원",
+                            userId, savedInitial, depositsAfterTrade, withdrawsAfterTrade, currentDeposit);
+                    return currentDeposit;
+                }
+            }
+
+            // 4. 첫 거래 시점 이전의 입출금 누적합 = 초기 불입금액 (스냅샷이 없는 경우 폴백)
             BigDecimal depositsBefore = deposits.stream()
                     .filter(d -> "ACCEPTED".equals(d.getState()))
                     .filter(d -> d.getCreatedAt() != null && d.getCreatedAt().compareTo(firstTradeTimeStr) < 0)

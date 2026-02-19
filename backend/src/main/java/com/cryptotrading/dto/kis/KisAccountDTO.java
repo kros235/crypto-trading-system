@@ -10,6 +10,9 @@ import java.util.List;
  * KIS API 계좌 잔고 조회 DTO
  * Phase 2 Day 50: 잔고 조회
  */
+
+@Getter
+@Setter
 public class KisAccountDTO {
 
     /**

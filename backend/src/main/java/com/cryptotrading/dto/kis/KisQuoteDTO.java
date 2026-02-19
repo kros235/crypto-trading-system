@@ -24,6 +24,10 @@ public class KisQuoteDTO {
         @JsonProperty("stck_prpr")
         private String currentPrice;
 
+        // ⭐ Day 51 추가: 종목명 (종목 검색 시 활용)
+       @JsonProperty("hts_kor_isnm")
+        private String stockName;
+
         /** 전일 대비 */
         @JsonProperty("prdy_vrss")
         private String changeFromPrevDay;

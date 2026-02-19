@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import com.cryptotrading.dto.stock.StockInfoDTO;
+
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
@@ -324,4 +326,44 @@ public class KisApiService {
         headers.set("tr_id", trId);
         headers.set("custtype", "P");  // P: 개인
     }
+
+    // ===================================================================
+    // ⭐⭐⭐ Day 51 추가: 주문/잔고/종목검색 API ⭐⭐⭐
+    // ===================================================================
+
+    
+    /**
+     * 종목 검색 (StockInfoService에서 호출)
+     * 키워드로 종목명을 검색하여 StockInfoDTO 목록 반환
+     * 참고: KIS API에는 종목 검색 전용 API가 없으므로,
+     *       로컬 DB 기반 검색 + 수동 종목코드 입력 방식 병행
+     */
+    public List<StockInfoDTO> searchStocks(String keyword) {
+        // KIS API는 종목코드 기반 조회만 지원하므로,
+        // 정확한 종목코드가 입력된 경우 해당 종목 정보를 조회
+        log.info("종목 검색 - keyword: {}", keyword);
+        
+        List<StockInfoDTO> results = new java.util.ArrayList<>();
+        
+        // 종목코드(숫자 6자리)가 입력된 경우 직접 조회
+        // 종목코드(숫자 6자리)가 입력된 경우 직접 등록 후보로 반환
+        if (keyword.matches("\\d{6}")) {
+            try {
+                // ⭐ KIS API 호출 없이 종목코드를 등록 후보로 반환
+                // 실제 유효성은 사용자가 거래 시 KIS API를 통해 검증됨
+                log.info("[KIS] 종목코드 직접 입력: {}", keyword);
+                results.add(StockInfoDTO.builder()
+                        .stockCode(keyword)
+                        .stockName(keyword + " (코드 직접 입력)")
+                        .market("KRX")
+                        .etfType("NORMAL")
+                        .isActive(true)
+                        .build());
+            } catch (Exception e) {
+                log.warn("종목코드 처리 실패: {}", keyword);
+            }
+        }
+        
+        return results;
+    }    
 }

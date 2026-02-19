@@ -90,14 +90,15 @@ public class SecurityConfig {
 	  .requestMatchers("/api/news/**").authenticated()       // 나머지 뉴스 API - 인증 필요
 
    	  // 릴리즈 노트 API 권한 설정
-	  .requestMatchers(HttpMethod.GET, "/api/release-notes/**").authenticated()  // 조회는 인증된 사용자
-	  .requestMatchers(HttpMethod.POST, "/api/release-notes/**").hasRole("ADMIN") // 작성은 관리자만
-	  .requestMatchers(HttpMethod.PUT, "/api/release-notes/**").hasRole("ADMIN")  // 수정은 관리자만
-	  .requestMatchers(HttpMethod.DELETE, "/api/release-notes/**").hasRole("ADMIN") // 삭제는 관리자만
+	  .requestMatchers(HttpMethod.GET, "/api/release-notes/**").authenticated()
+	  .requestMatchers(HttpMethod.POST, "/api/release-notes/**").hasRole("ADMIN")
+	  .requestMatchers(HttpMethod.PUT, "/api/release-notes/**").hasRole("ADMIN")
+	  .requestMatchers(HttpMethod.DELETE, "/api/release-notes/**").hasRole("ADMIN")
 
-                // ⭐ Phase 2: 주식/ETF API 권한 설정 (Day 50 추가)
-	  .requestMatchers("/api/stock/**").authenticated()           // 주식 API - 인증 필요
-	  .requestMatchers("/api/stock/admin/**").hasRole("ADMIN")    // 주식 관리자 API
+                // ⭐ Phase 2: 주식/ETF API 권한 설정 (Day 50 추가, Day 51 수정)
+	  .requestMatchers("/api/stock/info/active").permitAll()      // 활성 종목 목록 - 공개
+	  .requestMatchers("/api/stock/admin/**").hasRole("ADMIN")    // 주식 관리자 API - 관리자만
+	  .requestMatchers("/api/stock/**").authenticated()           // 나머지 주식 API - 인증 필요
 
                 // 나머지는 인증 필요
                 .anyRequest().authenticated()

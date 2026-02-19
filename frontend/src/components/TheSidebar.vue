@@ -92,10 +92,11 @@
           title="주식 거래 내역"
           disabled
         />
+        <!-- ⭐⭐⭐ 변경: disabled 제거, @click 추가 ⭐⭐⭐ -->
         <v-list-item
           prepend-icon="mdi-cog-outline"
           title="주식 거래 설정"
-          disabled
+          @click="$router.push('/stock/settings')"
         />
       </v-list-group>
 

@@ -134,6 +134,31 @@
                       <p class="mb-2 text-grey-darken-4">백테스팅 기능을 활용하여 과거 데이터로 전략을 검증하세요.</p>
                       <p class="mb-0 text-grey-darken-4">시스템이 정상 작동하는 것을 확인한 후 투자금을 늘려가세요.</p>
                     </v-alert>
+
+                    <!-- ⭐ 추가: Phase 2 주식/ETF 안내 섹션 -->
+                    <v-divider class="my-4" />
+
+                    <h3 class="text-h6 mb-4">
+                      <v-icon class="mr-2" color="orange-darken-2">mdi-numeric-5-circle</v-icon>
+                      주식/ETF 자동매매 (Phase 2)
+                      <v-chip color="orange-darken-2" size="x-small" variant="flat" class="ml-2 text-white">Phase 2</v-chip>
+                    </h3>
+
+                    <v-alert color="orange-lighten-5" border="start" border-color="orange-darken-2" class="mb-4 guide-alert">
+                      <p class="font-weight-bold mb-2 text-orange-darken-4">📈 주식/ETF 자동매매 시작하기</p>
+                      <p class="mb-2 text-grey-darken-4"><strong class="text-orange-darken-3">KIS API 키 발급:</strong> <a href="https://apiportal.koreainvestment.com" target="_blank" class="text-primary">한국투자증권 개발자 포털</a>에서 API 키를 발급받으세요.</p>
+                      <p class="mb-2 text-grey-darken-4"><strong class="text-orange-darken-3">API 키 등록:</strong> 프로필 설정 페이지에서 KIS API 키를 등록하세요.</p>
+                      <p class="mb-2 text-grey-darken-4"><strong class="text-orange-darken-3">거래 설정:</strong> 주식 거래 설정 페이지에서 종목과 매매 조건을 설정하세요.</p>
+                      <p class="mb-0 text-grey-darken-4"><strong class="text-orange-darken-3">모의투자 권장:</strong> 처음에는 모의투자 모드로 전략을 검증하세요.</p>
+                    </v-alert>
+
+                    <v-alert color="red-lighten-5" border="start" border-color="red" class="guide-alert">
+                      <p class="font-weight-bold mb-2 text-red-darken-4">⚠️ 레버리지 ETF 주의사항</p>
+                      <p class="mb-2 text-grey-darken-4">• 장기 보유 시 <strong class="text-red">복리 효과로 인한 가치 침식(Volatility Drag)</strong>이 발생합니다.</p>
+                      <p class="mb-2 text-grey-darken-4">• 권장 보유 기간: <strong>최대 20거래일</strong></p>
+                      <p class="mb-2 text-grey-darken-4">• 환노출형(TIGER) vs 환헤지형(KODEX) 선택에 따라 수익률이 최대 20%p 차이날 수 있습니다.</p>
+                      <p class="mb-0 text-grey-darken-4">• 거래 시간: 한국 증시 09:00 ~ 15:30 (KST)</p>
+                    </v-alert>
                   </v-card-text>
                 </v-window-item>
 
@@ -1271,7 +1296,13 @@ const faqList = ref([
   { category: '보안', question: 'API 키가 유출되면 어떻게 하나요?', answer: '즉시 업비트에서 해당 API 키를 폐기하고 새로 발급받으세요.' },
   { category: '보안', question: 'IP 화이트리스트는 꼭 설정해야 하나요?', answer: '권장하지만 필수는 아닙니다. 설정하면 보안이 강화됩니다.' },
   { category: '기타', question: '최소 투자금은 얼마인가요?', answer: '업비트 최소 주문 금액인 <strong>5,000원</strong> 이상이면 가능합니다.' },
-  { category: '기타', question: '봇은 언제 실행되나요?', answer: '봇은 <strong>5분 간격</strong>으로 자동 실행됩니다.' }
+  { category: '기타', question: '봇은 언제 실행되나요?', answer: '봇은 <strong>5분 간격</strong>으로 자동 실행됩니다.' },
+  // ⭐ 추가: Phase 2 주식/ETF 관련 FAQ
+  { category: '거래', question: '주식/ETF 자동매매는 어떻게 시작하나요?', answer: '프로필 설정에서 <strong>KIS API 키</strong>를 등록하고, <strong>주식 거래 설정</strong> 페이지에서 종목과 매매 조건을 설정하면 됩니다. 처음에는 모의투자 모드로 테스트를 권장합니다.' },
+  { category: '거래', question: '레버리지 ETF를 장기 보유하면 안 되나요?', answer: '레버리지 ETF는 <strong>일일 수익률의 2배</strong>를 추종하므로, 장기 보유 시 <strong>복리 효과에 의한 가치 침식(Volatility Drag)</strong>이 발생합니다. 횡보장에서 특히 손실이 누적되므로 <strong>최대 20거래일</strong> 내 청산을 권장합니다.' },
+  { category: '거래', question: '환노출형과 환헤지형 ETF의 차이는?', answer: '<strong>환노출형(TIGER)</strong>: 원달러 환율 변동에 영향을 받습니다. 환율 상승 시 추가 수익, 하락 시 추가 손실.<br><strong>환헤지형(KODEX)</strong>: 환율 변동 영향을 최소화합니다. 순수 지수 수익률만 추종합니다.<br>환율 상승기에는 환노출형이, 환율 하락기에는 환헤지형이 유리합니다.' },
+  { category: 'API', question: 'KIS API 키는 어떻게 발급받나요?', answer: '<a href="https://apiportal.koreainvestment.com" target="_blank">한국투자증권 개발자 포털</a>에 가입 후 앱을 등록하면 APP KEY / APP SECRET을 발급받을 수 있습니다. 모의투자와 실전투자 키가 별도입니다. API 사용료는 <strong>무료</strong>이며, 3개월 미거래 시 자동 해지됩니다.' },
+  { category: '설정', question: '주식과 코인 설정값이 다른 이유는?', answer: '주식/ETF는 암호화폐 대비 변동성이 낮습니다. 매수 기준: 코인 -6% → 주식 -3%, 목표 수익률: 코인 +4% → 주식 +2.5%, 손절매: 코인 -8% → 주식 -5%, RSI: 코인 32/68 → 주식 35/65로 조정되어 있습니다.' }
 ])
 
 const commonIssues = ref([
@@ -1283,7 +1314,11 @@ const commonIssues = ref([
 const apiIssues = ref([
   { title: 'API 키 등록 실패', description: 'Access Key 또는 Secret Key가 올바르지 않습니다.', solution: '업비트에서 키를 다시 확인하고, 복사 시 공백이 포함되지 않았는지 확인하세요.' },
   { title: '잔고 조회 실패', description: 'API 키에 자산조회 권한이 없을 수 있습니다.', solution: '업비트에서 API 키 권한을 확인하고, 자산조회 권한이 있는지 확인하세요.' },
-  { title: '주문 실패', description: '잔고 부족, 최소 주문 금액 미달, 또는 API 권한 문제일 수 있습니다.', solution: '잔고와 최소 주문 금액(5,000원)을 확인하고, API에 주문 권한이 있는지 확인하세요.' }
+  { title: '주문 실패', description: '잔고 부족, 최소 주문 금액 미달, 또는 API 권한 문제일 수 있습니다.', solution: '잔고와 최소 주문 금액(5,000원)을 확인하고, API에 주문 권한이 있는지 확인하세요.' },
+  // ⭐ 추가: KIS API 관련 문제 해결
+  { title: 'KIS API 키 등록 실패', description: 'APP KEY 또는 APP SECRET이 올바르지 않습니다.', solution: '한국투자증권 개발자 포털에서 키를 다시 확인하세요. 모의투자 키와 실전투자 키가 다르므로 모드에 맞는 키를 입력했는지 확인하세요.' },
+  { title: 'KIS API 토큰 발급 실패', description: 'API 인증 토큰 발급이 실패했습니다.', solution: 'APP KEY, APP SECRET, 계좌번호가 정확한지 확인하세요. 3개월 미거래 시 API가 자동 해지되므로 개발자 포털에서 상태를 확인하세요.' },
+  { title: '장 시간 외 주문 불가', description: '한국 증시 거래 시간(09:00~15:30) 외에는 주문이 불가합니다.', solution: '주식 자동매매는 장 시간 내에만 실행됩니다. 시간외 거래(08:30~09:00, 15:40~16:00)는 현재 미지원입니다.' }
 ])
 
 const filteredGlossary = (category: string) => {

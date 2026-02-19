@@ -104,6 +104,13 @@ const router = createRouter({
       name: 'help',
       component: () => import('../views/HelpView.vue'),
       meta: { requiresAuth: true }
+    },
+    // ⭐⭐⭐ Phase 2: 주식 거래 라우트 추가 ⭐⭐⭐
+    {
+      path: '/stock/settings',
+      name: 'stock-settings',
+      component: () => import('../views/StockTradingSettingsView.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })

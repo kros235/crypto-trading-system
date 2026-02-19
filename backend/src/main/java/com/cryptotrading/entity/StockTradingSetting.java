@@ -77,13 +77,15 @@ public class StockTradingSetting {
     @Builder.Default
     private Integer bbPeriod = 20;
 
-    @Column(name = "bb_multiplier")
+    @Column(name = "bb_multiplier", precision = 5, scale = 2)
     @Builder.Default
-    private Integer bbMultiplier = 2;
+    // ⭐ 수정: int 리터럴 → BigDecimal 객체 (BigDecimal 필드에 정수 직접 할당 불가)
+    private BigDecimal bbMultiplier = new BigDecimal("2.00");
 
-    @Column(name = "volume_threshold")
+    @Column(name = "volume_threshold", precision = 10, scale = 2)
     @Builder.Default
-    private Integer volumeThreshold = 120;
+    // ⭐ 수정: int 리터럴 → BigDecimal 객체
+    private BigDecimal volumeThreshold = new BigDecimal("120.00");
 
     // 리스크 관리 설정
     @Column(name = "daily_trade_limit_pct")

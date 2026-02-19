@@ -396,4 +396,5 @@ export const profitApi = {
   // ⭐⭐⭐ [신규 추가 끝] ⭐⭐⭐
 }
 
+export { stockInfoApi, stockSettingApi } from './stock'
 export default api

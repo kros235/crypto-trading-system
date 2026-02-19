@@ -298,9 +298,11 @@
         </v-row>     
 
         <!-- 업비트 API 키 설정 카드 -->
-        <v-row>
-          <v-col cols="12">
-            <v-card>
+         <!-- 업비트 API 키 설정 카드 -->
+        <!-- ⭐ 변경: cols="12" → cols="12" md="6" (좌우 5:5 레이아웃) -->
+        <v-row class="equal-height-row">
+          <v-col cols="12" md="6" class="d-flex">
+            <v-card class="flex-grow-1">
               <v-card-title class="bg-success text-white d-flex align-center">
                 <v-icon icon="mdi-key-variant" class="mr-2" />
                 업비트 API 키 설정
@@ -427,6 +429,173 @@
               </v-card-text>
             </v-card>
           </v-col>
+
+          <!-- ⭐ 추가: KIS API 키 설정 카드 (Phase 2 - 주식/ETF) -->
+          <v-col cols="12" md="6" class="d-flex">
+            <v-card class="flex-grow-1">
+              <v-card-title class="bg-orange-darken-2 text-white d-flex align-center">
+                <v-icon icon="mdi-key" class="mr-2" />
+                KIS API 키 설정
+                <v-chip color="white" size="x-small" variant="flat" class="ml-2 text-orange-darken-2">Phase 2</v-chip>
+                <v-spacer />
+                <HelpButton
+                  :useDialog="true"
+                  :dialogTitle="helpContents.kisApiKey.title"
+                  :dialogContent="helpContents.kisApiKey.content"
+                  iconColor="white"
+                  size="28"
+                />
+              </v-card-title>
+
+              <v-card-text class="pt-4">
+                <v-alert
+                  v-if="kisApiKeyMessage"
+                  :type="kisApiKeyMessageType"
+                  dismissible
+                  class="mb-4"
+                  @click:close="kisApiKeyMessage = ''"
+                >
+                  {{ kisApiKeyMessage }}
+                </v-alert>
+
+                <!-- KIS API 키 등록 상태 -->
+                <v-alert
+                  :type="hasKisApiKey ? 'success' : 'warning'"
+                  class="mb-4"
+                  prominent
+                >
+                  <div class="d-flex align-center">
+                    <div>
+                      <div class="text-h6">
+                        {{ hasKisApiKey ? 'KIS API 키가 등록되어 있습니다' : 'KIS API 키가 등록되지 않았습니다' }}
+                      </div>
+                      <div class="text-body-2">
+                        {{ hasKisApiKey ? '주식/ETF 자동매매를 사용할 수 있습니다' : '주식 자동매매를 사용하려면 KIS API 키를 등록해주세요' }}
+                      </div>
+                    </div>
+                  </div>
+                </v-alert>
+
+                <!-- 모의투자/실전 모드 -->
+                <v-switch
+                  v-model="kisMockMode"
+                  label="모의투자 모드"
+                  color="blue"
+                  density="compact"
+                  hide-details
+                  class="mb-3"
+                >
+                  <template v-slot:append>
+                    <v-chip
+                      :color="kisMockMode ? 'blue' : 'red'"
+                      size="x-small"
+                      variant="flat"
+                    >
+                      {{ kisMockMode ? '모의투자' : '실전투자' }}
+                    </v-chip>
+                  </template>
+                </v-switch>
+
+                <v-alert v-if="!kisMockMode" type="error" density="compact" class="mb-3">
+                  ⚠️ 실전투자 모드입니다. 실제 금액이 거래됩니다!
+                </v-alert>
+
+                <v-form ref="kisApiKeyFormRef" v-model="kisApiKeyValid">
+                  <v-text-field
+                    v-model="kisApiKeyForm.appKey"
+                    label="APP KEY"
+                    prepend-icon="mdi-key"
+                    :rules="[rules.required]"
+                    :type="showKisKeys ? 'text' : 'password'"
+                    :append-inner-icon="showKisKeys ? 'mdi-eye' : 'mdi-eye-off'"
+                    @click:append-inner="showKisKeys = !showKisKeys"
+                    variant="outlined"
+                    class="mb-2"
+                    hint="한국투자증권에서 발급받은 APP KEY를 입력하세요"
+                  />
+
+                  <v-text-field
+                    v-model="kisApiKeyForm.appSecret"
+                    label="APP SECRET"
+                    prepend-icon="mdi-key-variant"
+                    :rules="[rules.required]"
+                    :type="showKisKeys ? 'text' : 'password'"
+                    variant="outlined"
+                    class="mb-2"
+                    hint="한국투자증권에서 발급받은 APP SECRET를 입력하세요"
+                  />
+
+                  <v-text-field
+                    v-model="kisApiKeyForm.accountNo"
+                    label="계좌번호"
+                    prepend-icon="mdi-bank"
+                    :rules="[rules.required]"
+                    variant="outlined"
+                    class="mb-4"
+                    placeholder="예: 50123456-01"
+                    hint="계좌번호 전체를 입력하세요 (하이픈 포함)"
+                  />
+
+                  <div class="d-flex gap-2">
+                    <v-btn
+                      color="orange-darken-2"
+                      :loading="kisApiKeyLoading"
+                      :disabled="!kisApiKeyValid"
+                      @click="saveKisApiKeys"
+                    >
+                      <v-icon icon="mdi-content-save" class="mr-2" />
+                      API 키 저장
+                    </v-btn>
+
+                    <v-btn
+                      color="error"
+                      :disabled="!hasKisApiKey"
+                      :loading="kisApiKeyDeleteLoading"
+                      @click="confirmDeleteKisApiKeys"
+                    >
+                      <v-icon icon="mdi-delete" class="mr-2" />
+                      API 키 삭제
+                    </v-btn>
+                  </div>
+                </v-form>
+
+                <!-- KIS API 키 발급 가이드 -->
+                <v-alert
+                  type="info"
+                  variant="tonal"
+                  class="mt-4"
+                  icon="mdi-lightbulb-on"
+                >
+                  <div class="text-body-2 text-black">
+                    <strong>KIS API 키 발급 가이드</strong>
+                    <ol class="mt-2 mb-0">
+                      <li>
+                        <a href="https://apiportal.koreainvestment.com" target="_blank" class="text-primary font-weight-bold">
+                          한국투자증권 개발자 포털
+                        </a> 접속
+                      </li>
+                      <li>앱 등록 후 APP KEY / APP SECRET 발급</li>
+                      <li>발급받은 키를 위 입력란에 붙여넣기</li>
+                    </ol>
+                  </div>
+                </v-alert>
+
+                <v-alert
+                  type="warning"
+                  class="mt-3"
+                  icon="mdi-shield-alert"
+                >
+                  <div class="text-body-2">
+                    <strong>API 키 보안 주의사항</strong>
+                    <ul class="mt-2 mb-0">
+                      <li>API 키는 AES-256 암호화되어 안전하게 저장됩니다</li>
+                      <li>API 키를 타인과 절대 공유하지 마세요</li>
+                    </ul>
+                  </div>
+                </v-alert>
+              </v-card-text>
+            </v-card>
+          </v-col>
         </v-row>   
 
         <!-- API 키 삭제 확인 다이얼로그 -->
@@ -465,6 +634,43 @@
             </v-card-actions>
           </v-card>
         </v-dialog>
+
+        <!-- ⭐ 추가: KIS API 키 삭제 확인 다이얼로그 -->
+        <v-dialog v-model="kisDeleteDialog" max-width="400">
+          <v-card>
+            <v-card-title class="bg-error text-white">
+              <v-icon icon="mdi-alert" class="mr-2" />
+              KIS API 키 삭제 확인
+            </v-card-title>
+
+            <v-card-text class="pt-4">
+              <p class="text-body-1">
+                정말로 KIS API 키를 삭제하시겠습니까?
+              </p>
+              <p class="text-body-2 text-grey">
+                삭제하면 주식/ETF 자동매매 기능을 사용할 수 없게 됩니다.
+              </p>
+            </v-card-text>
+
+            <v-card-actions>
+              <v-spacer />
+              <v-btn
+                color="grey"
+                variant="text"
+                @click="kisDeleteDialog = false"
+              >
+                취소
+              </v-btn>
+              <v-btn
+                color="error"
+                variant="elevated"
+                @click="deleteKisApiKeys"
+              >
+                삭제
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
       </v-container>
     </v-main>
   </v-app>
@@ -478,7 +684,8 @@ import TheHeader from '@/components/TheHeader.vue'
 import TheSidebar from '@/components/TheSidebar.vue'
 import HelpButton from '@/components/HelpButton.vue'
 import { notificationApi } from '@/api'
-
+// ⭐ 추가: KIS API 관련 import
+import { stockSettingApi } from '@/api/stock'
 
 
 const authStore = useAuthStore()
@@ -573,6 +780,30 @@ const helpContents = {
         </tr>
       </table>
     `
+  },
+  // ⭐ 추가: KIS API 키 도움말
+  kisApiKey: {
+    title: 'KIS API 키 설정 안내 (Phase 2 - 주식/ETF)',
+    content: `
+      <p><strong>KIS API 키 발급 방법:</strong></p>
+      <ol style="padding-left: 40px; margin-top: 8px;">
+        <li><a href="https://apiportal.koreainvestment.com" target="_blank" style="color: #1976D2;">한국투자증권 개발자 포털</a> 접속 및 회원가입</li>
+        <li>앱 등록 → APP KEY / APP SECRET 발급</li>
+        <li>모의투자 또는 실전투자 계좌 연결</li>
+        <li>발급받은 키와 계좌번호를 입력</li>
+      </ol>
+      <p style="margin-top: 16px;"><strong>모의투자 vs 실전투자:</strong></p>
+      <ul style="padding-left: 40px; margin-top: 8px;">
+        <li><strong>모의투자</strong>: 가상 자금 5억원으로 테스트 (실제 거래 없음)</li>
+        <li><strong>실전투자</strong>: 실제 금액이 거래됩니다 (주의!)</li>
+      </ul>
+      <p style="margin-top: 16px;">⚠️ <strong>주의사항:</strong></p>
+      <ul style="padding-left: 40px; margin-top: 8px;">
+        <li>API 키는 AES-256 암호화되어 안전하게 저장됩니다</li>
+        <li>3개월 미거래 시 API 서비스가 자동 해지됩니다</li>
+        <li>처음에는 모의투자 모드로 테스트를 권장합니다</li>
+      </ul>
+    `
   }
 }
 
@@ -622,6 +853,24 @@ const showSecretKey = ref(false)
 
 // 삭제 확인 다이얼로그
 const deleteDialog = ref(false)
+
+// ⭐ 추가: KIS API 키 관련 변수
+const kisDeleteDialog = ref(false)
+const kisApiKeyFormRef = ref()
+const kisApiKeyValid = ref(false)
+const kisApiKeyLoading = ref(false)
+const kisApiKeyDeleteLoading = ref(false)
+const kisApiKeyMessage = ref('')
+const kisApiKeyMessageType = ref<'success' | 'error'>('success')
+const hasKisApiKey = ref(false)
+const showKisKeys = ref(false)
+const kisMockMode = ref(true)
+
+const kisApiKeyForm = ref({
+  appKey: '',
+  appSecret: '',
+  accountNo: ''
+})
 
 // 프로필 폼 데이터
 const profileForm = ref({
@@ -840,6 +1089,61 @@ const deleteApiKeys = async () => {
   }
 }
 
+// ⭐ 추가: KIS API 키 저장
+const saveKisApiKeys = async () => {
+  if (!kisApiKeyFormRef.value) return
+  const { valid } = await kisApiKeyFormRef.value.validate()
+  if (!valid) return
+
+  kisApiKeyLoading.value = true
+  kisApiKeyMessage.value = ''
+
+  try {
+    await stockSettingApi.saveKisApiKeys({
+      appKey: kisApiKeyForm.value.appKey,
+      appSecret: kisApiKeyForm.value.appSecret,
+      accountNo: kisApiKeyForm.value.accountNo
+    })
+
+    kisApiKeyMessage.value = 'KIS API 키가 안전하게 저장되었습니다 (AES-256 암호화)'
+    kisApiKeyMessageType.value = 'success'
+    hasKisApiKey.value = true
+
+    // 폼 초기화
+    kisApiKeyForm.value = { appKey: '', appSecret: '', accountNo: '' }
+    kisApiKeyFormRef.value.reset()
+  } catch (error: any) {
+    kisApiKeyMessage.value = error.response?.data?.message || 'KIS API 키 저장에 실패했습니다'
+    kisApiKeyMessageType.value = 'error'
+  } finally {
+    kisApiKeyLoading.value = false
+  }
+}
+
+// ⭐ 추가: KIS API 키 삭제 확인
+const confirmDeleteKisApiKeys = () => {
+  kisDeleteDialog.value = true
+}
+
+// ⭐ 추가: KIS API 키 삭제
+const deleteKisApiKeys = async () => {
+  kisApiKeyDeleteLoading.value = true
+  kisApiKeyMessage.value = ''
+
+  try {
+    await stockSettingApi.deleteKisApiKeys()
+    kisApiKeyMessage.value = 'KIS API 키가 삭제되었습니다'
+    kisApiKeyMessageType.value = 'success'
+    hasKisApiKey.value = false
+    kisDeleteDialog.value = false
+  } catch (error: any) {
+    kisApiKeyMessage.value = error.response?.data?.message || 'KIS API 키 삭제에 실패했습니다'
+    kisApiKeyMessageType.value = 'error'
+  } finally {
+    kisApiKeyDeleteLoading.value = false
+  }
+}
+
 // ★★★ 추가: Discord User ID 저장 ★★★
 const saveDiscordUserId = async () => {
   discordLoading.value = true
@@ -977,8 +1281,20 @@ const testStopLossDM = async () => {
 
 
 // 컴포넌트 마운트 시 프로필 로드
-onMounted(() => {
-  loadProfile()
+// ⭐ 수정: () => 를 async () => 로 변경 (await 사용을 위해 필수)
+onMounted(async () => {
+  await loadProfile()
+
+  // ⭐ 추가: KIS API 키 등록 상태 확인
+  try {
+    const response = await stockSettingApi.getSettings()
+    if (response.data) {
+      hasKisApiKey.value = response.data.hasKisApiKey ?? false
+      kisMockMode.value = response.data.kisMockMode ?? true
+    }
+  } catch (error) {
+    console.log('KIS API 키 상태 확인 실패 (무시)')
+  }
 })
 </script>
 

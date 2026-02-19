@@ -101,11 +101,34 @@ public class StockSettingService {
 
     /**
      * KIS API 키만 별도 업데이트
+     * ⭐ 수정: 주식 거래 설정이 없으면 기본값으로 자동 생성 후 KIS API 키 저장
      */
     @Transactional
     public void updateKisApiKeys(String userId, String appKey, String appSecret, String accountNo) {
+        // ⭐ 변경: orElseThrow → orElseGet (설정 없으면 기본값으로 자동 생성)
         StockTradingSetting setting = settingRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("주식 거래 설정을 먼저 생성해주세요."));
+                .orElseGet(() -> {
+                    log.info("주식 거래 설정이 없어 기본값으로 자동 생성 - userId: {}", userId);
+                    StockTradingSetting newSetting = new StockTradingSetting();
+                    newSetting.setUserId(userId);
+                    newSetting.setStockCodes("[]");
+                    newSetting.setBasePeriod(20);
+                    newSetting.setBuyThresholdPct(new BigDecimal("-3.00"));
+                    newSetting.setSellTargetPct(new BigDecimal("2.50"));
+                    newSetting.setStopLossPct(new BigDecimal("-5.00"));
+                    newSetting.setMaxHoldingsPerStock(3);
+                    newSetting.setDailyLimitAmount(new BigDecimal("1000000.00"));
+                    newSetting.setUseTrailingStop(true);
+                    newSetting.setTrailingStopPct(new BigDecimal("-2.50"));
+                    newSetting.setRsiPeriod(14);
+                    newSetting.setRsiBuyThreshold(35);
+                    newSetting.setRsiSellThreshold(65);
+                    newSetting.setBbPeriod(20);
+                    newSetting.setBbMultiplier(new BigDecimal("2.00"));
+                    newSetting.setVolumeThreshold(new BigDecimal("120.00"));
+                    newSetting.setKisMockMode(true);
+                    return settingRepository.save(newSetting);
+                });
 
         try {
             setting.setKisAppKeyEncrypted(encryptionUtil.encrypt(appKey));
@@ -121,11 +144,16 @@ public class StockSettingService {
 
     /**
      * KIS API 키 삭제
+     * ⭐ 수정: 설정이 없으면 이미 삭제된 것으로 간주 (예외 대신 로그만 남김)
      */
     @Transactional
     public void deleteKisApiKeys(String userId) {
-        StockTradingSetting setting = settingRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("주식 거래 설정을 찾을 수 없습니다."));
+        Optional<StockTradingSetting> optSetting = settingRepository.findByUserId(userId);
+        if (optSetting.isEmpty()) {
+            log.info("KIS API 키 삭제 요청 - 설정 없음 (이미 삭제됨) - userId: {}", userId);
+            return;
+        }
+        StockTradingSetting setting = optSetting.get();
         setting.setKisAppKeyEncrypted(null);
         setting.setKisAppSecretEncrypted(null);
         setting.setKisAccountNoEncrypted(null);
@@ -155,8 +183,9 @@ public class StockSettingService {
         entity.setRsiBuyThreshold(dto.getRsiBuyThreshold() != null ? dto.getRsiBuyThreshold() : 35);
         entity.setRsiSellThreshold(dto.getRsiSellThreshold() != null ? dto.getRsiSellThreshold() : 65);
         entity.setBbPeriod(dto.getBbPeriod() != null ? dto.getBbPeriod() : 20);
-        entity.setBbMultiplier(dto.getBbMultiplier() != null ? dto.getBbMultiplier() : 2);
-        entity.setVolumeThreshold(dto.getVolumeThreshold() != null ? dto.getVolumeThreshold() : 120);
+        // ⭐ 수정: Entity 필드 타입이 BigDecimal이므로 BigDecimal 값으로 세팅
+        entity.setBbMultiplier(dto.getBbMultiplier() != null ? dto.getBbMultiplier() : new BigDecimal("2.00"));
+        entity.setVolumeThreshold(dto.getVolumeThreshold() != null ? dto.getVolumeThreshold() : new BigDecimal("120.00"));
         
         // 리스크 관리
         entity.setDailyTradeLimitPct(dto.getDailyTradeLimitPct() != null ? dto.getDailyTradeLimitPct() : 20);

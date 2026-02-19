@@ -39,8 +39,8 @@ public class StockTradingSettingDTO {
     private Integer rsiBuyThreshold;
     private Integer rsiSellThreshold;
     private Integer bbPeriod;
-    private Integer bbMultiplier;
-    private Integer volumeThreshold;
+    private BigDecimal bbMultiplier;        // 볼린저밴드 배수
+    private BigDecimal volumeThreshold;     // 거래량 급증 기준(%)
     
     // 리스크 관리
     private Integer dailyTradeLimitPct;

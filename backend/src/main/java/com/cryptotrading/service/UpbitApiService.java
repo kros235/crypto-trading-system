@@ -400,53 +400,73 @@ public class UpbitApiService {
     public List<UpbitDepositDTO> getAllKrwDeposits(String accessKey, String secretKey) {
         log.info("전체 KRW 입금 내역 조회 시작");
         List<UpbitDepositDTO> allDeposits = new ArrayList<>();
-        int page = 1;
-        int limit = 100;
-
-        while (true) {
-            try {
-                // ⭐ 람다에서 참조하기 위해 effectively final 변수로 복사
-                final int currentPage = page;
-                final int currentLimit = limit;
-
-                // ⭐ URL 쿼리파라미터와 동일한 순서로 queryString 직접 생성
-                // 왜: HashMap은 순서 비보장 → query_hash 불일치 → 401 Unauthorized 발생
-                String queryString = "currency=KRW&state=ACCEPTED&limit=" + currentLimit + "&page=" + currentPage;
-                String token = generateTokenWithQueryString(accessKey, secretKey, queryString);
-
-                List<UpbitDepositDTO> deposits = webClient.get()
-                        .uri(uriBuilder -> uriBuilder
-                                .path("/deposits")
-                                .queryParam("currency", "KRW")
-                                .queryParam("state", "ACCEPTED")
-                                .queryParam("limit", currentLimit)
-                                .queryParam("page", currentPage)
-                                .build())
-                        .header("Authorization", "Bearer " + token)
-                        .retrieve()
-                        .bodyToMono(new ParameterizedTypeReference<List<UpbitDepositDTO>>() {})
-                        .retryWhen(getRetrySpec())
-                        .block();
-
-                if (deposits == null || deposits.isEmpty()) break;
-
-                allDeposits.addAll(deposits);
-                log.info("KRW 입금 내역 페이지 {} 조회: {}건", page, deposits.size());
-
-                if (deposits.size() < limit) break; // 마지막 페이지
-                page++;
-                if (page > 10) { // 무한 루프 방지 (최대 1000건)
-                    log.warn("KRW 입금 내역 10페이지 초과, 조회 중단");
+    
+        // ⭐⭐⭐ [변경] ACCEPTED + DONE 두 가지 상태 모두 조회 ⭐⭐⭐
+        // 왜: 예치금 이용료(interest)는 state=DONE으로 들어오는 경우가 있어,
+        //     ACCEPTED만 조회하면 예치금 이용료가 누락되어 불입금액이 갱신되지 않음
+        String[] states = {"ACCEPTED", "DONE"};
+    
+        for (String state : states) {
+            int page = 1;
+            int limit = 100;
+            
+            while (true) {
+                try {
+                    final int currentPage = page;
+                    final int currentLimit = limit;
+                    final String currentState = state;
+    
+                    String queryString = "currency=KRW&state=" + currentState + "&limit=" + currentLimit + "&page=" + currentPage;
+                    String token = generateTokenWithQueryString(accessKey, secretKey, queryString);
+    
+                    List<UpbitDepositDTO> deposits = webClient.get()
+                            .uri(uriBuilder -> uriBuilder
+                                    .path("/deposits")
+                                    .queryParam("currency", "KRW")
+                                    .queryParam("state", currentState)
+                                    .queryParam("limit", currentLimit)
+                                    .queryParam("page", currentPage)
+                                    .build())
+                            .header("Authorization", "Bearer " + token)
+                            .retrieve()
+                            .bodyToMono(new ParameterizedTypeReference<List<UpbitDepositDTO>>() {})
+                            .retryWhen(getRetrySpec())
+                            .block();
+    
+                    if (deposits == null || deposits.isEmpty()) break;
+    
+                    allDeposits.addAll(deposits);
+                    log.info("KRW 입금 내역 (state={}) 페이지 {} 조회: {}건", state, page, deposits.size());
+    
+                    if (deposits.size() < limit) break;
+                    page++;
+                    if (page > 10) {
+                        log.warn("KRW 입금 내역 (state={}) 10페이지 초과, 조회 중단", state);
+                        break;
+                    }
+                } catch (Exception e) {
+                    log.error("KRW 입금 내역 (state={}) 페이지 {} 조회 오류: {}", state, page, e.getMessage());
                     break;
                 }
-            } catch (Exception e) {
-                log.error("KRW 입금 내역 페이지 {} 조회 오류: {}", page, e.getMessage());
-                break;
             }
         }
-
-        log.info("전체 KRW 입금 내역 조회 완료: 총 {}건", allDeposits.size());
-        return allDeposits;
+    
+        // UUID 기준 중복 제거 (ACCEPTED→DONE 전환 시 양쪽에 모두 나올 수 있음)
+        List<UpbitDepositDTO> deduplicated = allDeposits.stream()
+                .collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toCollection(
+                                () -> new java.util.TreeSet<>((a, b) -> {
+                                    if (a.getUuid() != null && b.getUuid() != null) {
+                                        return a.getUuid().compareTo(b.getUuid());
+                                    }
+                                    return a.equals(b) ? 0 : 1;
+                                })
+                        ),
+                        ArrayList::new
+                ));
+    
+        log.info("전체 KRW 입금 내역 조회 완료: 총 {}건 (중복 제거 후)", deduplicated.size());
+        return deduplicated;
     }
 
     // ⭐⭐⭐ [신규 추가] KRW 출금 내역 조회 ⭐⭐⭐

@@ -11,8 +11,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users", indexes = {
-    @Index(name = "idx_email", columnList = "email"),
-    @Index(name = "idx_user_id", columnList = "user_id")
+        @Index(name = "idx_email", columnList = "email"),
+        @Index(name = "idx_user_id", columnList = "user_id")
 })
 @Getter
 @Setter
@@ -43,9 +43,11 @@ public class User extends BaseEntity {
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
 
+    @Builder.Default
     @Column(name = "is_active")
     private Boolean isActive = true;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "role", length = 10)
     private UserRole role = UserRole.USER;
@@ -65,8 +67,13 @@ public class User extends BaseEntity {
     @Column(name = "totp_secret", length = 100)
     private String totpSecret;
 
+    @Builder.Default
     @Column(name = "two_factor_enabled")
     private Boolean twoFactorEnabled = false;
+
+    @Builder.Default
+    @Column(name = "ip_whitelist_enabled")
+    private Boolean ipWhitelistEnabled = false;
 
     @PrePersist
     public void prePersist() {
@@ -76,6 +83,10 @@ public class User extends BaseEntity {
 
         if (twoFactorEnabled == null) {
             twoFactorEnabled = false;
+        }
+
+        if (ipWhitelistEnabled == null) {
+            ipWhitelistEnabled = false;
         }
     }
 }

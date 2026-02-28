@@ -41,8 +41,8 @@ public class UserService {
                 .isActive(user.getIsActive())
                 .hasApiKey(user.getApiKeyEncrypted() != null)
                 .allowedIps(user.getAllowedIps())
-                .ipWhitelistEnabled(user.getAllowedIps() != null && !user.getAllowedIps().isEmpty())    
-                .twoFactorEnabled(user.getTwoFactorEnabled() != null && user.getTwoFactorEnabled())           
+                .ipWhitelistEnabled(user.getIpWhitelistEnabled())
+                .twoFactorEnabled(user.getTwoFactorEnabled() != null && user.getTwoFactorEnabled())
                 .build();
     }
 
@@ -54,8 +54,8 @@ public class UserService {
         // 이메일 업데이트
         if (updates.containsKey("email")) {
             String newEmail = updates.get("email");
-            if (userRepository.existsByEmail(newEmail) && 
-                !newEmail.equals(user.getEmail())) {
+            if (userRepository.existsByEmail(newEmail) &&
+                    !newEmail.equals(user.getEmail())) {
                 throw new RuntimeException("이미 사용 중인 이메일입니다");
             }
             user.setEmail(newEmail);
@@ -120,7 +120,7 @@ public class UserService {
         String accessKey = encryptionUtil.decrypt(user.getApiKeyEncrypted());
         String secretKey = encryptionUtil.decrypt(user.getSecretKeyEncrypted());
 
-        return new String[]{accessKey, secretKey};
+        return new String[] { accessKey, secretKey };
     }
 
     // 비밀번호 변경 메서드
@@ -128,20 +128,19 @@ public class UserService {
     public void changePassword(String userId, String currentPassword, String newPassword) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
-        
+
         // 현재 비밀번호 확인
         if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
             throw new RuntimeException("현재 비밀번호가 일치하지 않습니다");
         }
-        
+
         // 새 비밀번호 저장
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
-        
+
         log.info("비밀번호 변경 완료: {}", userId);
     }
 
-    
     // IP 화이트리스트 관리 메서드 추가
 
     /**

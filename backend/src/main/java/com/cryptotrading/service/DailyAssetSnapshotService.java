@@ -20,12 +20,10 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.Optional; 
+import java.util.Optional;
 
-import com.cryptotrading.dto.upbit.UpbitDepositDTO;    // ⭐ [추가] 입금 내역 DTO
-import com.cryptotrading.dto.upbit.UpbitWithdrawDTO;   // ⭐ [추가] 출금 내역 DTO
-
-
+import com.cryptotrading.dto.upbit.UpbitDepositDTO; // ⭐ [추가] 입금 내역 DTO
+import com.cryptotrading.dto.upbit.UpbitWithdrawDTO; // ⭐ [추가] 출금 내역 DTO
 
 @Slf4j
 @Service
@@ -36,8 +34,8 @@ public class DailyAssetSnapshotService {
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
     private final RiskManagementService riskManagementService;
-    private final UpbitApiService upbitApiService;       // ⭐ [추가] 입출금 내역 조회
-    private final UserService userService;               // ⭐ [추가] API 키 복호화
+    private final UpbitApiService upbitApiService; // ⭐ [추가] 입출금 내역 조회
+    private final UserService userService; // ⭐ [추가] API 키 복호화
 
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
@@ -59,20 +57,18 @@ public class DailyAssetSnapshotService {
                 return;
             }
 
-           // ⭐⭐⭐ [변경] 업비트 입출금 내역 기반으로 불입금액 계산 ⭐⭐⭐
+            // ⭐⭐⭐ [변경] 업비트 입출금 내역 기반으로 불입금액 계산 ⭐⭐⭐
             // 왜: 기존에는 이전 스냅샷 값을 복사만 하여 예치금 이용료 등 실제 입금/출금이 반영되지 않았음
             // 변경: 업비트 API로 KRW 입금 내역(예치금 이용료 포함) - KRW 출금 내역을 계산하여 정확한 불입금액 산출
-            
-            // ⭐ [추가] 거래 내역이 없는 사용자는 스냅샷 생성하지 않음
-            // 왜: 거래 0건 시 calculateNetDepositFromUpbit이 ZERO를 반환하여
-            //     폴백 기본값(1,000,000원)으로 잘못된 스냅샷이 생성될 수 있음.
-            //     첫 매수 시 saveInitialDeposit에서 정확한 KRW 잔고로 스냅샷이 생성됨.
-            int txCount = transactionRepository.countByUserId(userId);
-            if (txCount == 0) {
-                log.info("거래 내역 없음, 스냅샷 생성 건너뜀 - userId: {}", userId);
-                return;
-            }
-            
+
+            // ⭐ [삭제된 로직] 이전에 거래 내역이 없으면 스냅샷 자동 생성을 건너뛰도록 했으나,
+            // 실 거래가 없어도(관망 중이어도) 매일매일의 자산 변동 추이를 차트에 그리기 위해 제거함.
+            // int txCount = transactionRepository.countByUserId(userId);
+            // if (txCount == 0) {
+            // log.info("거래 내역 없음, 스냅샷 생성 건너뜀 - userId: {}", userId);
+            // return;
+            // }
+
             BigDecimal depositAmount = calculateNetDepositFromUpbit(userId);
             if (depositAmount.compareTo(BigDecimal.ZERO) <= 0) {
                 // 업비트 API 조회 실패 시 이전 스냅샷 값으로 폴백
@@ -84,7 +80,7 @@ public class DailyAssetSnapshotService {
             BigDecimal profitAmount = totalAsset.subtract(depositAmount);
             BigDecimal profitRate = depositAmount.compareTo(BigDecimal.ZERO) > 0
                     ? profitAmount.divide(depositAmount, 4, RoundingMode.HALF_UP)
-                        .multiply(new BigDecimal("100"))
+                            .multiply(new BigDecimal("100"))
                     : BigDecimal.ZERO;
 
             // 4. 스냅샷 저장 (이미 있으면 갱신, 없으면 신규 생성)
@@ -159,7 +155,7 @@ public class DailyAssetSnapshotService {
             BigDecimal profitAmount = snapshot.getEvaluationAmount().subtract(depositAmount);
             BigDecimal profitRate = depositAmount.compareTo(BigDecimal.ZERO) > 0
                     ? profitAmount.divide(depositAmount, 4, RoundingMode.HALF_UP)
-                        .multiply(new BigDecimal("100"))
+                            .multiply(new BigDecimal("100"))
                     : BigDecimal.ZERO;
             snapshot.setProfitAmount(profitAmount);
             snapshot.setProfitRate(profitRate);
@@ -180,11 +176,11 @@ public class DailyAssetSnapshotService {
 
         // ⭐ 기존 스냅샷이 있으면 초기 불입금액만 덮어쓰기 (23:59 스케줄러가 먼저 만든 경우 대비)
         // 왜: 거래 0건인 사용자도 23:59 스케줄러에서 스냅샷이 생성될 수 있고,
-        //     이때 폴백 기본값(1,000,000원)이 들어갈 수 있음.
-        //     첫 매수 직전 실제 KRW 잔고가 가장 정확하므로 덮어쓰기해야 함.
+        // 이때 폴백 기본값(1,000,000원)이 들어갈 수 있음.
+        // 첫 매수 직전 실제 KRW 잔고가 가장 정확하므로 덮어쓰기해야 함.
         Optional<DailyAssetSnapshot> existing = snapshotRepository
                 .findByUserIdAndSnapshotDate(userId, today);
-        
+
         if (existing.isPresent()) {
             DailyAssetSnapshot snapshot = existing.get();
             snapshot.setDepositAmount(initialKrwBalance);
@@ -194,7 +190,7 @@ public class DailyAssetSnapshotService {
                 BigDecimal profitAmount = snapshot.getEvaluationAmount().subtract(initialKrwBalance);
                 BigDecimal profitRate = initialKrwBalance.compareTo(BigDecimal.ZERO) > 0
                         ? profitAmount.divide(initialKrwBalance, 4, RoundingMode.HALF_UP)
-                            .multiply(new BigDecimal("100"))
+                                .multiply(new BigDecimal("100"))
                         : BigDecimal.ZERO;
                 snapshot.setProfitAmount(profitAmount);
                 snapshot.setProfitRate(profitRate);
@@ -219,6 +215,8 @@ public class DailyAssetSnapshotService {
 
     /**
      * 기간별 스냅샷 조회 (프론트엔드 차트용)
+     * 중간에 빠진 날짜(Gap)가 있으면 전일 데이터를 복사하여 차트가 끊기지 않도록 보완.
+     * 
      * @param period "7" / "month" / "year" / "all"
      */
     public List<DailyAssetSnapshotDTO> getSnapshots(String userId, String period) {
@@ -237,21 +235,62 @@ public class DailyAssetSnapshotService {
                 break;
             case "all":
             default:
-                return snapshotRepository.findByUserIdOrderBySnapshotDateAsc(userId)
-                        .stream().map(this::toDTO).collect(Collectors.toList());
+                List<DailyAssetSnapshot> allSnapshots = snapshotRepository.findByUserIdOrderBySnapshotDateAsc(userId);
+                if (allSnapshots.isEmpty())
+                    return Collections.emptyList();
+                startDate = allSnapshots.get(0).getSnapshotDate();
+                break;
         }
 
-        return snapshotRepository.findByUserIdAndDateRange(userId, startDate, endDate)
-                .stream().map(this::toDTO).collect(Collectors.toList());
+        List<DailyAssetSnapshot> rawSnapshots = snapshotRepository.findByUserIdAndDateRange(userId, startDate, endDate);
+        return fillSnapshotGaps(rawSnapshots, startDate, endDate);
     }
 
     /**
-     * 사용자 지정 기간 스냅샷 조회
+     * 사용자 지정 기간 스냅샷 조회 (Gap 채우기 포함)
      */
     public List<DailyAssetSnapshotDTO> getSnapshotsByCustomRange(
             String userId, LocalDate startDate, LocalDate endDate) {
-        return snapshotRepository.findByUserIdAndDateRange(userId, startDate, endDate)
-                .stream().map(this::toDTO).collect(Collectors.toList());
+        List<DailyAssetSnapshot> rawSnapshots = snapshotRepository.findByUserIdAndDateRange(userId, startDate, endDate);
+        return fillSnapshotGaps(rawSnapshots, startDate, endDate);
+    }
+
+    /**
+     * 누락된 날짜(Gap)를 전일 데이터로 채우는 유틸리티 메서드
+     */
+    private List<DailyAssetSnapshotDTO> fillSnapshotGaps(List<DailyAssetSnapshot> rawSnapshots, LocalDate start,
+            LocalDate end) {
+        if (rawSnapshots.isEmpty())
+            return Collections.emptyList();
+
+        Map<LocalDate, DailyAssetSnapshotDTO> map = new HashMap<>();
+        for (DailyAssetSnapshot s : rawSnapshots) {
+            map.put(s.getSnapshotDate(), toDTO(s));
+        }
+
+        List<DailyAssetSnapshotDTO> result = new ArrayList<>();
+        DailyAssetSnapshotDTO lastKnown = null;
+
+        // start 날짜부터 end 날짜까지 순회
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            if (map.containsKey(d)) {
+                lastKnown = map.get(d);
+                result.add(lastKnown);
+            } else if (lastKnown != null) {
+                // 데이터 없는 날 = 직전 데이터 복사본 생성 (날짜만 변경)
+                DailyAssetSnapshotDTO filled = DailyAssetSnapshotDTO.builder()
+                        .date(d.toString())
+                        .evaluationAmount(lastKnown.getEvaluationAmount())
+                        .depositAmount(lastKnown.getDepositAmount())
+                        .profitAmount(lastKnown.getProfitAmount())
+                        .profitRate(lastKnown.getProfitRate())
+                        .krwBalance(lastKnown.getKrwBalance())
+                        .coinEvaluation(lastKnown.getCoinEvaluation())
+                        .build();
+                result.add(filled);
+            }
+        }
+        return result;
     }
 
     /**
@@ -303,7 +342,7 @@ public class DailyAssetSnapshotService {
                 BigDecimal profitAmount = currentBalance.subtract(initialDeposit);
                 BigDecimal profitRate = initialDeposit.compareTo(BigDecimal.ZERO) > 0
                         ? profitAmount.divide(initialDeposit, 4, RoundingMode.HALF_UP)
-                            .multiply(new BigDecimal("100"))
+                                .multiply(new BigDecimal("100"))
                         : BigDecimal.ZERO;
 
                 snapshotRepository.save(DailyAssetSnapshot.builder()
@@ -352,41 +391,55 @@ public class DailyAssetSnapshotService {
                 return BigDecimal.ZERO;
             }
 
-            /// 2. 첫 자동매매 거래 시점 조회
+            /// 2. 시작 기준점(시간) 잡기
+            // 거래(Transaction) 내역이 있는지 확인. 없다면 가장 오래된 AssetSnapshot 생성 일을 기준으로 삼음.
+            LocalDateTime referenceTime;
+            LocalDate referenceDate;
+
             Optional<Transaction> firstTx = transactionRepository.findTopByUserIdOrderByCreatedAtAsc(userId);
-            if (firstTx.isEmpty()) {
-                log.warn("거래 내역 없음 - userId: {}", userId);
-                return BigDecimal.ZERO;
+            if (firstTx.isPresent()) {
+                referenceTime = firstTx.get().getCreatedAt();
+                referenceDate = referenceTime.toLocalDate();
+            } else {
+                // 거래 내역이 없으면 가장 오래된 스냅샷부터 입출금 추적
+                List<DailyAssetSnapshot> allSnapshots = snapshotRepository.findByUserIdOrderBySnapshotDateAsc(userId);
+                if (!allSnapshots.isEmpty()) {
+                    referenceDate = allSnapshots.get(0).getSnapshotDate();
+                    referenceTime = referenceDate.atStartOfDay();
+                } else {
+                    // 스냅샷도 없고 거래 내역도 없으면 입출금을 추적할 기준점이 없음
+                    log.warn("거래 내역 및 스냅샷 없음 - userId: {}", userId);
+                    return BigDecimal.ZERO;
+                }
             }
-            LocalDateTime firstTradeTime = firstTx.get().getCreatedAt();
-            LocalDate firstTradeDate = firstTradeTime.toLocalDate();
-            // 업비트 API created_at 형식("2026-01-30T09:00:00+09:00")과 비교하기 위해 KST offset 형식으로 변환
-            String firstTradeTimeStr = firstTradeTime.atZone(KST)
+
+            // 업비트 API created_at 형식("2026-01-30T09:00:00+09:00")과 비교하기 위해 KST offset 형식으로
+            // 변환
+            String referenceTimeStr = referenceTime.atZone(KST)
                     .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX"));
-            log.info("불입금액 계산 - userId: {}, 첫 거래 시점: {}", userId, firstTradeTimeStr);
+            log.info("불입금액 계산 기준점 - userId: {}, 시간: {}", userId, referenceTimeStr);
 
             // 3. 업비트 KRW 입출금 내역 전체 조회
             List<UpbitDepositDTO> deposits = upbitApiService.getAllKrwDeposits(apiKeys[0], apiKeys[1]);
             List<UpbitWithdrawDTO> withdraws = upbitApiService.getAllKrwWithdraws(apiKeys[0], apiKeys[1]);
 
-            // ⭐⭐⭐ [신규 추가] 첫 거래일 스냅샷에 초기 불입금액이 저장되어 있으면 사용 ⭐⭐⭐
-            // 왜: 입출금 API로는 코인 거래 손익이 반영되지 않아 정확한 초기 자본을 알 수 없음
-            //     첫 매수 직전 KRW 잔고(saveInitialDeposit)가 저장되어 있으면 그것이 가장 정확
+            // ⭐⭐⭐ [신규 추가] 기준일 스냅샷에 초기 불입금액이 저장되어 있으면 사용 ⭐⭐⭐
             Optional<DailyAssetSnapshot> firstDaySnapshot = snapshotRepository
-                    .findByUserIdAndSnapshotDate(userId, firstTradeDate);
+                    .findByUserIdAndSnapshotDate(userId, referenceDate);
             if (firstDaySnapshot.isPresent()) {
                 BigDecimal savedInitial = firstDaySnapshot.get().getDepositAmount();
                 if (savedInitial.compareTo(BigDecimal.ZERO) > 0) {
                     BigDecimal depositsAfterTrade = deposits.stream()
-                            .filter(d -> "ACCEPTED".equals(d.getState()))
-                            .filter(d -> d.getCreatedAt() != null && d.getCreatedAt().compareTo(firstTradeTimeStr) >= 0)
+                            // 예치금 이용료가 DONE 등 다른 상태코드일 수 있으므로 포괄수용 하도록 조건 완화 (혹은 ACCEPTED/DONE 확인)
+                            .filter(d -> "ACCEPTED".equals(d.getState()) || "DONE".equals(d.getState()))
+                            .filter(d -> d.getCreatedAt() != null && d.getCreatedAt().compareTo(referenceTimeStr) >= 0)
                             .map(UpbitDepositDTO::getAmount)
                             .filter(Objects::nonNull)
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
                     BigDecimal withdrawsAfterTrade = withdraws.stream()
                             .filter(w -> "DONE".equals(w.getState()))
-                            .filter(w -> w.getCreatedAt() != null && w.getCreatedAt().compareTo(firstTradeTimeStr) >= 0)
+                            .filter(w -> w.getCreatedAt() != null && w.getCreatedAt().compareTo(referenceTimeStr) >= 0)
                             .map(UpbitWithdrawDTO::getAmount)
                             .filter(Objects::nonNull)
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -398,34 +451,34 @@ public class DailyAssetSnapshotService {
                 }
             }
 
-            // 4. 첫 거래 시점 이전의 입출금 누적합 = 초기 불입금액 (스냅샷이 없는 경우 폴백)
+            // 4. 기준일 이전의 입출금 누적합 = 초기 불입금액 (스냅샷이 없는 경우 폴백)
             BigDecimal depositsBefore = deposits.stream()
-                    .filter(d -> "ACCEPTED".equals(d.getState()))
-                    .filter(d -> d.getCreatedAt() != null && d.getCreatedAt().compareTo(firstTradeTimeStr) < 0)
+                    .filter(d -> "ACCEPTED".equals(d.getState()) || "DONE".equals(d.getState()))
+                    .filter(d -> d.getCreatedAt() != null && d.getCreatedAt().compareTo(referenceTimeStr) < 0)
                     .map(UpbitDepositDTO::getAmount)
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal withdrawsBefore = withdraws.stream()
                     .filter(w -> "DONE".equals(w.getState()))
-                    .filter(w -> w.getCreatedAt() != null && w.getCreatedAt().compareTo(firstTradeTimeStr) < 0)
+                    .filter(w -> w.getCreatedAt() != null && w.getCreatedAt().compareTo(referenceTimeStr) < 0)
                     .map(UpbitWithdrawDTO::getAmount)
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal initialDeposit = depositsBefore.subtract(withdrawsBefore);
 
-            // 5. 첫 거래 시점 이후의 입출금 가감
+            // 5. 기준일 이후의 입출금 가감
             BigDecimal depositsAfter = deposits.stream()
-                    .filter(d -> "ACCEPTED".equals(d.getState()))
-                    .filter(d -> d.getCreatedAt() != null && d.getCreatedAt().compareTo(firstTradeTimeStr) >= 0)
+                    .filter(d -> "ACCEPTED".equals(d.getState()) || "DONE".equals(d.getState()))
+                    .filter(d -> d.getCreatedAt() != null && d.getCreatedAt().compareTo(referenceTimeStr) >= 0)
                     .map(UpbitDepositDTO::getAmount)
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal withdrawsAfter = withdraws.stream()
                     .filter(w -> "DONE".equals(w.getState()))
-                    .filter(w -> w.getCreatedAt() != null && w.getCreatedAt().compareTo(firstTradeTimeStr) >= 0)
+                    .filter(w -> w.getCreatedAt() != null && w.getCreatedAt().compareTo(referenceTimeStr) >= 0)
                     .map(UpbitWithdrawDTO::getAmount)
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);

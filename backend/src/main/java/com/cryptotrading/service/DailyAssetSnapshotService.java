@@ -50,8 +50,12 @@ public class DailyAssetSnapshotService {
         LocalDate today = LocalDate.now(KST);
 
         try {
-            // 1. 업비트에서 현재 총자산(평가금액) 조회
-            BigDecimal totalAsset = riskManagementService.getDailyTotalAssetSnapshot(userId);
+            // ⭐⭐⭐ [변경] 캐시 우회 → 업비트 API 직접 호출로 최신 평가금액 조회 ⭐⭐⭐
+            // 왜: getDailyTotalAssetSnapshot()은 일일 한도 계산의 안정성을 위해 하루 중 첫 호출 값을 캐시함.
+            //     그러나 23:59 스냅샷 저장 시에는 "현재 시점의 정확한 평가금액"이 필요.
+            //     캐시된 값은 당일 새벽/아침에 봇이 호출한 시점의 값이므로,
+            //     하루 중 발생한 입금/출금/코인 가격 변동이 반영되지 않아 실제 잔고와 차이 발생.
+            BigDecimal totalAsset = riskManagementService.fetchTotalAssetFromUpbit(userId);
             if (totalAsset == null || totalAsset.compareTo(BigDecimal.ZERO) <= 0) {
                 log.warn("총자산 조회 실패 또는 0원 - userId: {}", userId);
                 return;

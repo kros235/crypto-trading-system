@@ -506,7 +506,9 @@ public class RiskManagementService {
      * 
      * KRW 잔고 + 모든 코인의 현재 평가액 합계
      */
-     private BigDecimal fetchTotalAssetFromUpbit(String userId) {
+    // ⭐⭐⭐ [변경] private → public: DailyAssetSnapshotService에서 캐시 우회하여 직접 호출 필요 ⭐⭐⭐
+    // 왜: 23:59 스냅샷 저장 시 캐시된 값이 아닌 업비트 실시간 잔고를 조회해야 정확한 평가금액 기록 가능
+    public BigDecimal fetchTotalAssetFromUpbit(String userId) {
         // 사용자 API 키 조회 (String[] 반환: [0]=accessKey, [1]=secretKey)
         String[] apiKeys = userService.getDecryptedApiKeys(userId);
         if (apiKeys == null || apiKeys[0] == null) {

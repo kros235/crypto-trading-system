@@ -699,6 +699,7 @@
                           thumb-label
                           hide-details
                           color="info"
+                          :disabled="!request.useStopLoss"
                         >
                           <template v-slot:append>
                             <span class="text-body-2">{{ request.consecutiveStopLossLimit }}회</span>

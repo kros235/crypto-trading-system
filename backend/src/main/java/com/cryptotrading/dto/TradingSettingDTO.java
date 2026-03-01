@@ -2,7 +2,7 @@ package com.cryptotrading.dto;
 
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Max; 
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
@@ -18,38 +18,38 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class TradingSettingDTO {
-    
+
     private Long id;
-    
+
     @NotEmpty(message = "거래할 코인을 최소 1개 이상 선택해주세요")
     private List<String> coinSymbols;
-    
+
     @Min(value = 7, message = "기준 기간은 최소 7일 이상이어야 합니다")
     private Integer basePeriod;
-    
+
     @DecimalMin(value = "-20.00", message = "매수 기준은 -20% 이상이어야 합니다")
     @DecimalMax(value = "0.00", message = "매수 기준은 0% 이하여야 합니다")
     private BigDecimal buyThresholdPct;
-    
+
     @DecimalMin(value = "0.00", message = "목표 수익률은 0% 이상이어야 합니다")
     @DecimalMax(value = "50.00", message = "목표 수익률은 50% 이하여야 합니다")
     private BigDecimal sellTargetPct;
-    
+
     @DecimalMin(value = "-30.00", message = "손절매는 -30% 이상이어야 합니다")
     @DecimalMax(value = "0.00", message = "손절매는 0% 이하여야 합니다")
     private BigDecimal stopLossPct;
-    
+
     @Min(value = 1, message = "종목당 최대 보유 건수는 최소 1건 이상이어야 합니다")
     private Integer maxHoldingsPerCoin;
-    
+
     // ⚠️ DEPRECATED: 일일 한도는 이제 총자산 기준으로 자동 계산됩니다.
     // 프론트엔드 호환성을 위해 필드는 유지하지만, 실제 로직에서는 사용하지 않습니다.
     @Deprecated
     private BigDecimal dailyLimitAmount;
-    
+
     private Boolean useAiAnalysis;
     private Boolean useTrailingStop;
-    
+
     @DecimalMin(value = "-20.00", message = "트레일링 스톱은 -20% 이상이어야 합니다")
     @DecimalMax(value = "0.00", message = "트레일링 스톱은 0% 이하여야 합니다")
     private BigDecimal trailingStopPct;
@@ -99,11 +99,11 @@ public class TradingSettingDTO {
 
     // ⭐⭐⭐ Day 29 추가: 급락장 보호 기능 ⭐⭐⭐
     private Boolean useMarketTrendFilter;
-    
+
     @Min(value = -50, message = "누적 손실 한도는 -50% 이상이어야 합니다")
     @Max(value = 0, message = "누적 손실 한도는 0% 이하여야 합니다")
     private Integer cumulativeLossLimitPct;
-    
+
     @Min(value = 1, message = "연속 손절 제한은 1회 이상이어야 합니다")
     @Max(value = 10, message = "연속 손절 제한은 10회 이하여야 합니다")
     private Integer consecutiveStopLossLimit;
@@ -121,4 +121,10 @@ public class TradingSettingDTO {
     // true: 라운드로빈 방식 (일일 한도 균등 분배)
     // false: 고정 금액 방식 (fixedBuyAmount 사용)
     private Boolean useRoundRobin;
+
+    @DecimalMin(value = "0.00", message = "추가 매수 하락률은 0% 이상이어야 합니다")
+    @DecimalMax(value = "10.00", message = "추가 매수 하락률은 10% 이하여야 합니다")
+    private BigDecimal additionalDropPct;
+
+    private Boolean useStopLoss;
 }

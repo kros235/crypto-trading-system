@@ -180,6 +180,22 @@
                         </v-slider>
 
                         <div class="d-flex align-center mb-1">
+                          <v-switch
+                            v-model="request.useStopLoss"
+                            label="손절매 사용"
+                            color="error"
+                            hide-details
+                            density="compact"
+                          />
+                          <HelpButton 
+                            use-dialog
+                            :dialog-title="helpContents.useStopLoss.title"
+                            :dialog-content="helpContents.useStopLoss.content"
+                            size="x-small"
+                            color="grey"
+                          />
+                        </div>
+                        <div class="d-flex align-center mb-1 mt-2">
                           <span class="text-caption text-grey">손절매 기준 (%)</span>
                           <HelpButton 
                             use-dialog
@@ -192,15 +208,29 @@
                         <v-slider
                           v-model="request.stopLossPct"
                           :min="-30"
-                          :max="0"
+                          :max="-1"
                           :step="0.5"
                           thumb-label
                           hide-details
+                          :disabled="!request.useStopLoss"
+                          class="mb-2"
                         >
                           <template v-slot:append>
                             <span class="text-body-2">{{ request.stopLossPct }}%</span>
                           </template>
                         </v-slider>
+                        
+                        <!-- 손절매 미사용 시 경고 문구 -->
+                        <v-alert
+                          v-if="!request.useStopLoss"
+                          type="error"
+                          variant="tonal"
+                          density="compact"
+                          class="mt-2 mb-4"
+                          style="font-size: 12px;"
+                        >
+                          ⚠️ 손절매 기능을 끄면 하락장에서 큰 손실이 발생할 수 있습니다!
+                        </v-alert>
 
                         <div class="d-flex align-center mb-1">
                           <span class="text-caption text-grey">종목당 최대 보유</span>
@@ -224,6 +254,36 @@
                             <span class="text-body-2">{{ request.maxHoldingsPerCoin }}건</span>
                           </template>
                         </v-slider>
+                        
+                        <!-- ★★★ [신규] 추가 매수 하락률 ★★★ -->
+                        <!-- maxHoldingsPerCoin이 1보다 클 때만 표시 -->
+                        <div v-if="request.maxHoldingsPerCoin > 1">
+                          <div class="d-flex align-center mb-1 mt-4">
+                            <span class="text-caption text-grey">추가 매수 하락률 (%)</span>
+                            <HelpButton 
+                              use-dialog
+                              :dialog-title="helpContents.additionalDropPct.title"
+                              :dialog-content="helpContents.additionalDropPct.content"
+                              size="x-small"
+                              color="grey"
+                            />
+                          </div>
+                          <v-slider
+                            v-model="request.additionalDropPct"
+                            :min="0.1"
+                            :max="20"
+                            :step="0.1"
+                            thumb-label
+                            hide-details
+                          >
+                            <template v-slot:append>
+                              <span class="text-body-2">-{{ request.additionalDropPct }}%</span>
+                            </template>
+                          </v-slider>
+                          <div class="text-caption text-grey-darken-1 mb-2">
+                            이전 매수가 대비 {{ request.additionalDropPct }}% 추가 하락 시 추가 매수
+                          </div>
+                        </div>
 
                         <!-- ⭐⭐⭐ 추가: 1건 + 소액 매수 시 손절매 교착 상태 안내 ⭐⭐⭐ -->
                         <!-- 추가 이유: 백테스팅에서도 동일 조건 시 실제 운영에서 -->
@@ -1460,6 +1520,81 @@ const helpContents = {
     `
   },
 
+  // ★★★ [신규] 추가 매수 하락률 - 분리된 도움말 ★★★
+  additionalDropPct: {
+    title: '📉 추가 매수 하락률',
+    content: `
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"다음 번 매수는 이전 매수가보다 얼마나 더 떨어졌을 때 할 것인가?"</p>
+          </div>
+        </div>
+        
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">📉 물타기 간격 비유</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            같은 코인을 여러 번 나눠서 살 때, 조금씩 떨어질 때마다 사면 금방 한도를 다 채웁니다.<br/><br/>
+            - 0.5% 설정: 1차 매수 후 -0.5% 더 떨어지면 2차 매수<br/>
+            - 2.0% 설정: 1차 매수 후 -2.0% 더 크게 떨어지면 2차 매수<br/><br/>
+            <strong style="color: #4CAF50;">장점:</strong> 충분히 하락한 후에 매수하여 "물타기" 효과를 극대화할 수 있습니다.<br/><br/>
+            📊 <strong style="color: #4CAF50;">코인 예시:</strong><br/>
+            [설정: 종목당 최대 보유 3건, 추가 매수 하락률 2%]<br/>
+            1차 매수: 1,000원에 매수완료<br/>
+            2차 매수: 980원 (-2%) 이하 도달 시 매수<br/>
+            3차 매수: 960원 (-2% 추가 하락) 이하 도달 시 매수
+          </div>
+        </div>
+        
+        <div class="mb-2">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">📋 설정 팁</span>
+          </div>
+          <div style="padding-left: 24px; font-size: 13px; line-height: 1.6;">
+            - 하락장에서 안전하게 매수하려면 이 값을 <strong>높게(예: 3% 이상)</strong> 설정하세요.<br/>
+            - 횡보장에서 잦은 매매를 원하면 이 값을 <strong>작게(예: 0.5%)</strong> 설정하세요.<br/>
+            <strong style="color: #F44336;">주의:</strong> 너무 작게 설정하면 하락 시 한 번에 여러 번 매수가 발생할 수 있습니다.
+          </div>
+        </div>
+      </div>
+    `
+  },
+
+  // ★★★ [신규] 손절매 사용 기능 - 분리된 도움말 ★★★
+  useStopLoss: {
+    title: '🛡️ 손절매 사용 여부',
+    content: `
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"가격이 하락할 때 손해를 보더라도 팔 것인가?"</p>
+          </div>
+        </div>
+        
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">⚠️ 위험 안내</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            <strong style="color: #F44336;">손절매를 끄는(OFF) 것은 매우 위험한 선택입니다.</strong><br/><br/>
+            - 장점: 일시적인 하락 후에 가격이 반등할 때 손해를 확정짓지 않고 기다릴 수 있습니다. 이른바 "존버" 전략입니다.<br/>
+            - 단점: 끝없이 하락하는 코인(예: 상장폐지 등)을 샀을 경우, 투자금이 -99%가 될 때까지 시스템이 매도하지 못합니다. 자산이 장기간 묶이는 교착 상태에 빠질 수 있습니다.<br/><br/>
+            💡 <strong style="color: #FF9800;">권장 사항:</strong><br/>
+            반드시 켜두는(ON) 것을 권장하며, 시장에 대한 확신이 있고 장기 투자를 목적으로 매수할 때만 아주 예외적으로 끄십시오. 기본 설정은 사용하는 것입니다.
+          </div>
+        </div>
+      </div>
+    `
+  },
+
   // ★★★ 트레일링 스톱 - 도움말 페이지에서 이식 ★★★
   trailingStop: {
     title: '🎯 트레일링 스톱',
@@ -2239,8 +2374,10 @@ const request = ref({
   basePeriod: 20,
   buyThresholdPct: -6,
   sellTargetPct: 4,
+  useStopLoss: true,           // ★★★ [신규] 손절매 사용 여부 추가 ★★★
   stopLossPct: -8,
   maxHoldingsPerCoin: 2,
+  additionalDropPct: 0.5,      // ★★★ [신규] 추가 매수 하락률 추가 ★★★
   useTrailingStop: true,
   trailingStopPct: 4,
   // RSI 설정

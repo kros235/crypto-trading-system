@@ -20,14 +20,14 @@ public class TradingSettingService {
     @Transactional(readOnly = true)
     public TradingSettingDTO getTradingSetting(String userId) {
         log.info("거래 설정 조회: userId={}", userId);
-    
+
         Optional<TradingSetting> setting = tradingSettingRepository.findByUserId(userId);
-    
+
         if (setting.isEmpty()) {
             log.info("거래 설정이 없습니다: userId={}", userId);
-            return null;  // 예외 던지지 않고 null 반환
+            return null; // 예외 던지지 않고 null 반환
         }
-    
+
         return convertToDTO(setting.get());
     }
 
@@ -46,7 +46,8 @@ public class TradingSettingService {
                 .stopLossPct(dto.getStopLossPct())
                 .maxHoldingsPerCoin(dto.getMaxHoldingsPerCoin())
                 // ⚠️ dailyLimitAmount는 deprecated - 기존 호환성을 위해 값은 저장하되 사용하지 않음
-                .dailyLimitAmount(dto.getDailyLimitAmount() != null ? dto.getDailyLimitAmount() : new BigDecimal("1000000.00"))
+                .dailyLimitAmount(
+                        dto.getDailyLimitAmount() != null ? dto.getDailyLimitAmount() : new BigDecimal("1000000.00"))
                 .useAiAnalysis(dto.getUseAiAnalysis())
                 .useTrailingStop(dto.getUseTrailingStop())
                 .trailingStopPct(dto.getTrailingStopPct())
@@ -61,12 +62,16 @@ public class TradingSettingService {
                 .dailyStopLossPct(dto.getDailyStopLossPct() != null ? dto.getDailyStopLossPct() : -5)
                 .useMarketTrendFilter(dto.getUseMarketTrendFilter() != null ? dto.getUseMarketTrendFilter() : false)
                 .cumulativeLossLimitPct(dto.getCumulativeLossLimitPct() != null ? dto.getCumulativeLossLimitPct() : -10)
-                .consecutiveStopLossLimit(dto.getConsecutiveStopLossLimit() != null ? dto.getConsecutiveStopLossLimit() : 3)
+                .consecutiveStopLossLimit(
+                        dto.getConsecutiveStopLossLimit() != null ? dto.getConsecutiveStopLossLimit() : 3)
                 // ⭐⭐⭐ 변경: buyAmountPct → fixedBuyAmount ⭐⭐⭐
                 .fixedBuyAmount(dto.getFixedBuyAmount() != null ? dto.getFixedBuyAmount() : new BigDecimal("10000.00"))
-                .useDailyLimitRecovery(dto.getUseDailyLimitRecovery() != null ? dto.getUseDailyLimitRecovery() : false) 
+                .useDailyLimitRecovery(dto.getUseDailyLimitRecovery() != null ? dto.getUseDailyLimitRecovery() : false)
                 // ⭐⭐⭐ 변경: usePerTradeLimit → useRoundRobin ⭐⭐⭐
                 .useRoundRobin(dto.getUseRoundRobin() != null ? dto.getUseRoundRobin() : true)
+                .additionalDropPct(
+                        dto.getAdditionalDropPct() != null ? dto.getAdditionalDropPct() : new BigDecimal("0.5"))
+                .useStopLoss(dto.getUseStopLoss() != null ? dto.getUseStopLoss() : true)
                 .build();
 
         TradingSetting saved = tradingSettingRepository.save(setting);
@@ -101,13 +106,20 @@ public class TradingSettingService {
         setting.setMaxPositionPct(dto.getMaxPositionPct() != null ? dto.getMaxPositionPct() : 25);
         setting.setDailyStopLossPct(dto.getDailyStopLossPct() != null ? dto.getDailyStopLossPct() : -5);
         setting.setUseMarketTrendFilter(dto.getUseMarketTrendFilter() != null ? dto.getUseMarketTrendFilter() : false);
-        setting.setCumulativeLossLimitPct(dto.getCumulativeLossLimitPct() != null ? dto.getCumulativeLossLimitPct() : -10);
-        setting.setConsecutiveStopLossLimit(dto.getConsecutiveStopLossLimit() != null ? dto.getConsecutiveStopLossLimit() : 3);
+        setting.setCumulativeLossLimitPct(
+                dto.getCumulativeLossLimitPct() != null ? dto.getCumulativeLossLimitPct() : -10);
+        setting.setConsecutiveStopLossLimit(
+                dto.getConsecutiveStopLossLimit() != null ? dto.getConsecutiveStopLossLimit() : 3);
         // ⭐⭐⭐ 변경: buyAmountPct → fixedBuyAmount ⭐⭐⭐
-        setting.setFixedBuyAmount(dto.getFixedBuyAmount() != null ? dto.getFixedBuyAmount() : new BigDecimal("10000.00"));
-        setting.setUseDailyLimitRecovery(dto.getUseDailyLimitRecovery() != null ? dto.getUseDailyLimitRecovery() : false);    
+        setting.setFixedBuyAmount(
+                dto.getFixedBuyAmount() != null ? dto.getFixedBuyAmount() : new BigDecimal("10000.00"));
+        setting.setUseDailyLimitRecovery(
+                dto.getUseDailyLimitRecovery() != null ? dto.getUseDailyLimitRecovery() : false);
         // ⭐⭐⭐ 변경: usePerTradeLimit → useRoundRobin ⭐⭐⭐
         setting.setUseRoundRobin(dto.getUseRoundRobin() != null ? dto.getUseRoundRobin() : true);
+        setting.setAdditionalDropPct(
+                dto.getAdditionalDropPct() != null ? dto.getAdditionalDropPct() : new BigDecimal("0.5"));
+        setting.setUseStopLoss(dto.getUseStopLoss() != null ? dto.getUseStopLoss() : true);
 
         TradingSetting updated = tradingSettingRepository.save(setting);
         log.info("거래 설정 수정 완료: userId={}", userId);
@@ -144,7 +156,7 @@ public class TradingSettingService {
                 .bbPeriod(setting.getBbPeriod())
                 .bbMultiplier(setting.getBbMultiplier())
                 .volumeThreshold(setting.getVolumeThreshold())
-	  .dailyTradeLimitPct(setting.getDailyTradeLimitPct())
+                .dailyTradeLimitPct(setting.getDailyTradeLimitPct())
                 .maxPositionPct(setting.getMaxPositionPct())
                 .dailyStopLossPct(setting.getDailyStopLossPct())
                 .useMarketTrendFilter(setting.getUseMarketTrendFilter())
@@ -154,7 +166,9 @@ public class TradingSettingService {
                 .fixedBuyAmount(setting.getFixedBuyAmount())
                 .useDailyLimitRecovery(setting.getUseDailyLimitRecovery())
                 // ⭐⭐⭐ 변경: usePerTradeLimit → useRoundRobin ⭐⭐⭐
-                .useRoundRobin(setting.getUseRoundRobin())  
+                .useRoundRobin(setting.getUseRoundRobin())
+                .additionalDropPct(setting.getAdditionalDropPct())
+                .useStopLoss(setting.getUseStopLoss())
                 .build();
     }
 }

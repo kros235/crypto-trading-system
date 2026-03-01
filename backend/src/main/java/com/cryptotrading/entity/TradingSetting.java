@@ -10,7 +10,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "trading_settings", indexes = {
-    @Index(name = "idx_user_id", columnList = "user_id")
+        @Index(name = "idx_user_id", columnList = "user_id")
 })
 @Getter
 @Setter
@@ -113,7 +113,7 @@ public class TradingSetting extends BaseEntity {
     @Column(name = "fixed_buy_amount", precision = 15, scale = 2)
     private BigDecimal fixedBuyAmount = new BigDecimal("10000.00");
 
-    // 일일 한도 복구 옵션 
+    // 일일 한도 복구 옵션
     @Column(name = "use_daily_limit_recovery")
     private Boolean useDailyLimitRecovery = false;
 
@@ -121,10 +121,18 @@ public class TradingSetting extends BaseEntity {
     // true: 라운드로빈 (일일 한도를 매수 신호 수로 균등 분배)
     // false: 고정 금액 (fixedBuyAmount만큼 각 코인에 매수)
     @Column(name = "use_round_robin")
-    private Boolean useRoundRobin = true;  // 기본값: true (라운드로빈 방식)
+    @Builder.Default
+    private Boolean useRoundRobin = true; // 기본값: true (라운드로빈 방식)
+
+    @Column(name = "additional_drop_pct", precision = 5, scale = 2)
+    @Builder.Default
+    private BigDecimal additionalDropPct = new BigDecimal("0.5");
+
+    @Column(name = "use_stop_loss", nullable = false)
+    @Builder.Default
+    private Boolean useStopLoss = true;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", referencedColumnName = "user_id", 
-                insertable = false, updatable = false)
+    @JoinColumn(name = "user_id", referencedColumnName = "user_id", insertable = false, updatable = false)
     private User user;
 }

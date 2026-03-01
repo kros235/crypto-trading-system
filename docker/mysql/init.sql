@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS trading_settings (
     fixed_buy_amount DECIMAL(15,2) DEFAULT 10000.00 COMMENT '1회 매수 금액 (원) - 고정 금액 매수 시 사용 (최소 5,000원)',
     use_daily_limit_recovery BOOLEAN DEFAULT FALSE COMMENT '일일 한도 복구 옵션 - 매도 시 한도 복구',
     use_round_robin BOOLEAN DEFAULT TRUE COMMENT '매수 방식 - ON: 라운드로빈 균등분배, OFF: 고정 금액 매수',
+    additional_drop_pct DECIMAL(5,2) DEFAULT 0.50 COMMENT '추가 하락시 매수 비율 (%)',
+    use_stop_loss BOOLEAN DEFAULT TRUE COMMENT '손절매 사용 여부',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,

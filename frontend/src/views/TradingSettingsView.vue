@@ -185,6 +185,36 @@
                     </div>
                   </v-col>
 
+                  <!-- ⭐⭐⭐ 신규 추가: 분할 매수 시 하락률 기준 ⭐⭐⭐ -->
+                  <v-col cols="12" md="4" v-if="settings.maxHoldingsPerCoin > 1">
+                    <div class="d-flex align-center mb-1">
+                      <span class="text-body-2">추가 매수 하락률 (%)</span>
+                      <HelpButton 
+                        use-dialog 
+                        :dialog-title="helpContents.additionalDropPct.title"
+                        :dialog-content="helpContents.additionalDropPct.content"
+                        color="grey-darken-1"
+                      />
+                    </div>
+                    <v-text-field
+                      v-model.number="settings.additionalDropPct"
+                      type="number"
+                      :rules="[
+                        rules.required,
+                        (v: number) => v >= 0 || '0% 이상이어야 합니다',
+                        (v: number) => v <= 10 || '10% 이하여야 합니다'
+                      ]"
+                      variant="outlined"
+                      suffix="%"
+                      density="compact"
+                      hint="이전 매수가 대비 이 값 이상 하락 시 추가 매수"
+                      persistent-hint
+                      step="0.1"
+                      min="0"
+                      max="10"
+                    />
+                  </v-col>
+
                   <!-- ⭐ 위치 변경: 일일 거래 한도 -->
                   <v-col cols="12" md="4">
                     <!-- ⭐⭐⭐ 수정: 입력 필드 → 안내 메시지로 변경 ⭐⭐⭐ -->
@@ -305,15 +335,43 @@
                   </v-col>
 
                   <v-col cols="12" md="4">
+                    <div class="d-flex align-center mb-1">
+                      <v-switch
+                        v-model="settings.useStopLoss"
+                        label="손절매 사용"
+                        color="error"
+                        hide-details
+                        density="compact"
+                      />
+                      <HelpButton 
+                        use-dialog 
+                        :dialog-title="helpContents.useStopLoss.title"
+                        :dialog-content="helpContents.useStopLoss.content"
+                        color="grey-darken-1"
+                      />
+                    </div>
                     <v-text-field
                       v-model.number="settings.stopLossPct"
                       label="손절매 기준 (%)"
                       type="number"
-                      :rules="[rules.negative]"
+                      :rules="settings.useStopLoss ? [rules.negative] : []"
                       variant="outlined"
                       suffix="%"
                       hint="매수가 대비 이 값 이하로 하락 시 매도"
+                      :disabled="!settings.useStopLoss"
+                      persistent-hint
                     />
+                    <!-- 손절매 미사용 시 경고 문구 -->
+                    <v-alert
+                      v-if="!settings.useStopLoss"
+                      type="error"
+                      variant="tonal"
+                      density="compact"
+                      class="mt-2"
+                      style="font-size: 12px;"
+                    >
+                      ⚠️ 손절매 기능을 끄면 하락장에서 큰 손실이 발생할 수 있습니다!
+                    </v-alert>
                   </v-col>
                 </v-row>
 	  <v-row class="mt-2">
@@ -691,6 +749,7 @@
                   :step="1"
                   thumb-label
                   color="warning"
+                  :disabled="!settings.useStopLoss"
                   class="mt-2"
                 >
                   <template v-slot:append>
@@ -1498,6 +1557,67 @@ const helpContents = {
     `
   },
 
+  // ★★★ [신규] 추가 매수 하락률 - 분리된 도움말 ★★★
+  additionalDropPct: {
+    title: '📉 추가 매수 하락률',
+    content: `
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"이미 보유한 코인을 추가로 살 때, 얼만큼 더 떨어져야 살 것인가?"</p>
+          </div>
+        </div>
+        
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">💧 물타기 예시</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            종목당 최대 보유를 2건 이상으로 설정했을 때 작동합니다.<br/><br/>
+            📊 <strong style="color: #4CAF50;">동작 방식 (0.5% 설정 시):</strong><br/>
+            - 1차 매수: BTC 10,000원 매수<br/>
+            - 2차 매수 조건: 다음 번 자동매매 주기에서 BTC 가격이 <strong>1차 매수가보다 0.5% 이상 더 하락해 있어야만</strong> 추가로 10,000원을 매수합니다.<br/><br/>
+            <strong style="color: #4CAF50;">효과:</strong><br/>
+            단기간에 같은 가격에서 여러 번 사버리는 것을 방지하고, <strong>진짜로 가격이 떨어졌을 때만 분할 매수(물타기)</strong>하여 평균 단가를 낮춥니다.
+          </div>
+        </div>
+      </div>
+    `
+  },
+
+  // ★★★ [신규] 손절매 사용 기능 - 분리된 도움말 ★★★
+  useStopLoss: {
+    title: '🛡️ 손절매 사용 여부',
+    content: `
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"가격이 하락할 때 손해를 보더라도 팔 것인가?"</p>
+          </div>
+        </div>
+        
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">⚠️ 위험 안내</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            <strong style="color: #F44336;">손절매를 끄는(OFF) 것은 매우 위험한 선택입니다.</strong><br/><br/>
+            - 장점: 일시적인 하락 후에 가격이 반등할 때 손해를 확정짓지 않고 기다릴 수 있습니다. 이른바 "존버" 전략입니다.<br/>
+            - 단점: 끝없이 하락하는 코인(예: 상장폐지 등)을 샀을 경우, 투자금이 -99%가 될 때까지 시스템이 매도하지 못합니다. 자산이 장기간 묶이는 교착 상태에 빠질 수 있습니다.<br/><br/>
+            💡 <strong style="color: #FF9800;">권장 사항:</strong><br/>
+            반드시 켜두는(ON) 것을 권장하며, 시장에 대한 확신이 있고 장기 투자를 목적으로 매수할 때만 아주 예외적으로 끄십시오. 기본 설정은 사용하는 것입니다.
+          </div>
+        </div>
+      </div>
+    `
+  },
+
   // ★★★ [신규] 단일 종목 최대 비중 - 분리된 도움말 ★★★
   maxPosition: {
     title: '🥚 단일 종목 최대 비중',
@@ -1857,7 +1977,9 @@ const settings = ref({
   fixedBuyAmount: 10000,      // 1회 고정 매수 금액 (원)
   useDailyLimitRecovery: false,
   // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
-  useRoundRobin: true         // 매수 방식: true=라운드로빈, false=고정금액
+  useRoundRobin: true,        // 매수 방식: true=라운드로빈, false=고정금액
+  additionalDropPct: 0.5,
+  useStopLoss: true
 })
 
 // 기본값 (초기화용)
@@ -1888,7 +2010,9 @@ const defaultSettings = {
   fixedBuyAmount: 10000,      // 기본값: 10,000원
   useDailyLimitRecovery: false,
   // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
-  useRoundRobin: true         // 기본값: 라운드로빈 방식
+  useRoundRobin: true,        // 기본값: 라운드로빈 방식
+  additionalDropPct: 0.5,
+  useStopLoss: true
 }
 
 // 유효성 검증 규칙
@@ -1995,7 +2119,9 @@ const loadSettings = async () => {
         fixedBuyAmount: data.fixedBuyAmount || 10000,
         useDailyLimitRecovery: data.useDailyLimitRecovery ?? false,
         // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
-        useRoundRobin: data.useRoundRobin ?? true
+        useRoundRobin: data.useRoundRobin ?? true,
+        additionalDropPct: data.additionalDropPct ?? 0.5,
+        useStopLoss: data.useStopLoss ?? true
       }
 
       hasExistingSettings.value = true
@@ -2043,7 +2169,9 @@ const createDefaultSettings = async () => {
       fixedBuyAmount: Number(settings.value.fixedBuyAmount),
       useDailyLimitRecovery: Boolean(settings.value.useDailyLimitRecovery),
       // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
-      useRoundRobin: Boolean(settings.value.useRoundRobin)
+      useRoundRobin: Boolean(settings.value.useRoundRobin),
+      additionalDropPct: Number(settings.value.additionalDropPct),
+      useStopLoss: Boolean(settings.value.useStopLoss)
     }
     
     await tradingApi.createSettings(payload)
@@ -2104,7 +2232,9 @@ const saveSettings = async () => {
       fixedBuyAmount: Number(settings.value.fixedBuyAmount),
       useDailyLimitRecovery: Boolean(settings.value.useDailyLimitRecovery),
       // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
-      useRoundRobin: Boolean(settings.value.useRoundRobin)
+      useRoundRobin: Boolean(settings.value.useRoundRobin),
+      additionalDropPct: Number(settings.value.additionalDropPct),
+      useStopLoss: Boolean(settings.value.useStopLoss)
     }
 
     console.log('Sending payload:', payload) // 디버깅용
@@ -2207,7 +2337,9 @@ const deleteSettings = async () => {
       fixedBuyAmount: Number(settings.value.fixedBuyAmount),
       useDailyLimitRecovery: Boolean(settings.value.useDailyLimitRecovery),
       // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
-      useRoundRobin: Boolean(settings.value.useRoundRobin)
+      useRoundRobin: Boolean(settings.value.useRoundRobin),
+      additionalDropPct: Number(settings.value.additionalDropPct),
+      useStopLoss: Boolean(settings.value.useStopLoss)
     }
     
     await tradingApi.createSettings(payload)

@@ -1408,7 +1408,17 @@ const portfolio3dSlices = computed(() => {
     const x2 = cx + rx * Math.cos(endRad)
     const y2 = cy + ry * Math.sin(endRad)
     const largeArc = angle > 180 ? 1 : 0
-    const path = `M ${cx} ${cy} L ${x1} ${y1} A ${rx} ${ry} 0 ${largeArc} 1 ${x2} ${y2} Z`
+    // ★ 100% 단일 항목일 때 SVG Arc가 시작점=끝점으로 렌더링 안 되는 문제 해결
+    let path: string
+    if (angle >= 359.99) {
+      // 100%인 경우: 두 개의 반원(Arc)으로 나눠서 완전한 타원을 그림
+      const midRad = (startRad + endRad) / 2
+      const mx = cx + rx * Math.cos(midRad)
+      const my = cy + ry * Math.sin(midRad)
+      path = `M ${cx} ${cy} L ${x1} ${y1} A ${rx} ${ry} 0 0 1 ${mx} ${my} A ${rx} ${ry} 0 0 1 ${x2} ${y2} Z`
+    } else {
+      path = `M ${cx} ${cy} L ${x1} ${y1} A ${rx} ${ry} 0 ${largeArc} 1 ${x2} ${y2} Z`
+    }
     // % 라벨 위치 (도넛 중간, 타원 비율 반영)
     const midAngle = ((startAngle + endAngle) / 2) * Math.PI / 180
     const innerR = 50  // 도넛 홀 반지름

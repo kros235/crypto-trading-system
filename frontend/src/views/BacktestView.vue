@@ -2378,7 +2378,7 @@ const request = ref({
   useStopLoss: true,           // ★★★ [신규] 손절매 사용 여부 추가 ★★★
   stopLossPct: -8,
   maxHoldingsPerCoin: 2,
-  additionalDropPct: 0.5,      // ★★★ [신규] 추가 매수 하락률 추가 ★★★
+  additionalDropPct: 1.0,      // ★★★ [신규] 추가 매수 하락률 추가 ★★★
   useTrailingStop: true,
   trailingStopPct: 4,
   // RSI 설정

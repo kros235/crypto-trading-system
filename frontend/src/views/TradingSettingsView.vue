@@ -2003,7 +2003,7 @@ const settings = ref({
   useDailyLimitRecovery: false,
   // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
   useRoundRobin: true,        // 매수 방식: true=라운드로빈, false=고정금액
-  additionalDropPct: 0.5,
+  additionalDropPct: 1.0,
   useStopLoss: true
 })
 
@@ -2036,7 +2036,7 @@ const defaultSettings = {
   useDailyLimitRecovery: false,
   // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
   useRoundRobin: true,        // 기본값: 라운드로빈 방식
-  additionalDropPct: 0.5,
+  additionalDropPct: 1.0,
   useStopLoss: true
 }
 
@@ -2145,7 +2145,7 @@ const loadSettings = async () => {
         useDailyLimitRecovery: data.useDailyLimitRecovery ?? false,
         // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
         useRoundRobin: data.useRoundRobin ?? true,
-        additionalDropPct: data.additionalDropPct ?? 0.5,
+        additionalDropPct: data.additionalDropPct ?? 1.0,
         useStopLoss: data.useStopLoss ?? true
       }
 

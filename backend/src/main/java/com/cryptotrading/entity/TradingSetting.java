@@ -126,7 +126,7 @@ public class TradingSetting extends BaseEntity {
 
     @Column(name = "additional_drop_pct", precision = 5, scale = 2)
     @Builder.Default
-    private BigDecimal additionalDropPct = new BigDecimal("0.5");
+    private BigDecimal additionalDropPct = new BigDecimal("1.0");
 
     @Column(name = "use_stop_loss", nullable = false)
     @Builder.Default

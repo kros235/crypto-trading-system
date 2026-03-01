@@ -187,17 +187,9 @@
 
                   <!-- ⭐⭐⭐ 신규 추가: 분할 매수 시 하락률 기준 ⭐⭐⭐ -->
                   <v-col cols="12" md="4" v-if="settings.maxHoldingsPerCoin > 1">
-                    <div class="d-flex align-center mb-1">
-                      <span class="text-body-2">추가 매수 하락률 (%)</span>
-                      <HelpButton 
-                        use-dialog 
-                        :dialog-title="helpContents.additionalDropPct.title"
-                        :dialog-content="helpContents.additionalDropPct.content"
-                        color="grey-darken-1"
-                      />
-                    </div>
                     <v-text-field
                       v-model.number="settings.additionalDropPct"
+                      label="추가 매수 하락률 (%)"
                       type="number"
                       :rules="[
                         rules.required,
@@ -206,13 +198,22 @@
                       ]"
                       variant="outlined"
                       suffix="%"
-                      density="compact"
                       hint="이전 매수가 대비 이 값 이상 하락 시 추가 매수"
                       persistent-hint
                       step="0.1"
                       min="0"
                       max="10"
-                    />
+                    >
+                      <template v-slot:append-inner>
+                        <HelpButton 
+                          use-dialog 
+                          :dialog-title="helpContents.additionalDropPct.title"
+                          :dialog-content="helpContents.additionalDropPct.content"
+                          color="grey-darken-1"
+                          size="x-small"
+                        />
+                      </template>
+                    </v-text-field>
                   </v-col>
 
                   <!-- ⭐ 위치 변경: 일일 거래 한도 -->
@@ -238,17 +239,9 @@
 
                   <!-- ⭐⭐⭐ 수정: 1회 매수 비율(%) → 1회 고정 매수 금액(원) ⭐⭐⭐ -->
                   <v-col cols="12" md="4">
-                    <div class="d-flex align-center mb-1">
-                      <span class="text-body-2">1회 매수 금액</span>
-                      <HelpButton 
-                        use-dialog 
-                        :dialog-title="helpContents.fixedBuyAmount.title"
-                        :dialog-content="helpContents.fixedBuyAmount.content"
-                        color="grey-darken-1"
-                      />
-                    </div>
                     <v-text-field
                       v-model.number="settings.fixedBuyAmount"
+                      label="1회 매수 금액"
                       type="number"
                       :rules="[
                         (v: number) => v >= 5000 || '최소 5,000원 이상 (업비트 최소 주문금액)',
@@ -256,10 +249,19 @@
                       ]"
                       variant="outlined"
                       suffix="원"
-                      density="compact"
                       hint="라운드로빈 OFF 시 각 코인에 이 금액만큼 매수"
                       persistent-hint
-                    />
+                    >
+                      <template v-slot:append-inner>
+                        <HelpButton 
+                          use-dialog 
+                          :dialog-title="helpContents.fixedBuyAmount.title"
+                          :dialog-content="helpContents.fixedBuyAmount.content"
+                          color="grey-darken-1"
+                          size="x-small"
+                        />
+                      </template>
+                    </v-text-field>
                     <p class="text-caption text-warning mt-1" v-if="settings.fixedBuyAmount < 5000">
                       ⚠️ 업비트 최소 주문금액은 5,000원입니다
                     </p>
@@ -333,9 +335,12 @@
                       hint="매수가 대비 이 값 이상 상승 시 매도"
                     />
                   </v-col>
+                </v-row>
 
+                <!-- ⭐ 손절매 행 (단독 행) -->
+                <v-row class="mt-2">
                   <v-col cols="12" md="4">
-                    <div class="d-flex align-center mb-1">
+                    <div class="d-flex align-center">
                       <v-switch
                         v-model="settings.useStopLoss"
                         label="손절매 사용"
@@ -350,17 +355,6 @@
                         color="grey-darken-1"
                       />
                     </div>
-                    <v-text-field
-                      v-model.number="settings.stopLossPct"
-                      label="손절매 기준 (%)"
-                      type="number"
-                      :rules="settings.useStopLoss ? [rules.negative] : []"
-                      variant="outlined"
-                      suffix="%"
-                      hint="매수가 대비 이 값 이하로 하락 시 매도"
-                      :disabled="!settings.useStopLoss"
-                      persistent-hint
-                    />
                     <!-- 손절매 미사용 시 경고 문구 -->
                     <v-alert
                       v-if="!settings.useStopLoss"
@@ -373,15 +367,31 @@
                       ⚠️ 손절매 기능을 끄면 하락장에서 큰 손실이 발생할 수 있습니다!
                     </v-alert>
                   </v-col>
+                  <v-col cols="12" md="4">
+                    <v-text-field
+                      v-model.number="settings.stopLossPct"
+                      label="손절매 기준 (%)"
+                      type="number"
+                      :rules="settings.useStopLoss ? [rules.negative] : []"
+                      variant="outlined"
+                      suffix="%"
+                      hint="매수가 대비 이 값 이하로 하락 시 매도"
+                      :disabled="!settings.useStopLoss"
+                      persistent-hint
+                    />
+                  </v-col>
                 </v-row>
-	  <v-row class="mt-2">
+
+                <!-- ⭐ 트레일링 스톱 행 (손절매와 열 맞춤) -->
+                <v-row class="mt-2">
                   <v-col cols="12" md="4">
                     <div class="d-flex align-center">
-                      <v-checkbox
+                      <v-switch
                         v-model="settings.useTrailingStop"
                         label="트레일링 스톱 사용"
                         color="primary"
                         hide-details
+                        density="compact"
                       />
                       <HelpButton 
                         use-dialog 
@@ -391,7 +401,7 @@
                       />
                     </div>
                   </v-col>
-                  <v-col cols="12" md="4" v-if="settings.useTrailingStop">
+                  <v-col cols="12" md="4">                                    
                     <v-text-field
                       v-model.number="settings.trailingStopPct"
                       label="트레일링 스톱 비율 (%)"
@@ -403,6 +413,7 @@
                       persistent-hint
                       min="1"
                       max="20"
+                      :disabled="!settings.useTrailingStop"                   
                     />
                   </v-col>
                 </v-row>
@@ -434,9 +445,10 @@
                       label="RSI 기간 (일)"
                       type="number"
                       :rules="[v => v >= 5 && v <= 50 || '5~50 사이 입력']"
+                      variant="outlined"
+                      suffix="일"
                       hint="기본값: 14일"
                       persistent-hint
-                      density="compact"
                     />
                   </v-col>
                   <v-col cols="12" md="4">
@@ -445,9 +457,9 @@
                       label="매수 신호 (이하)"
                       type="number"
                       :rules="[v => v >= 10 && v <= 50 || '10~50 사이 입력']"
+                      variant="outlined"
                       hint="기본값: 30 이하"
                       persistent-hint
-                      density="compact"
                     />
                   </v-col>
                   <v-col cols="12" md="4">
@@ -456,9 +468,9 @@
                       label="매도 신호 (이상)"
                       type="number"
                       :rules="[v => v >= 50 && v <= 90 || '50~90 사이 입력']"
+                      variant="outlined"
                       hint="기본값: 70 이상"
                       persistent-hint
-                      density="compact"
                     />
                   </v-col>
                 </v-row>
@@ -484,9 +496,10 @@
                       label="볼린저 밴드 기간 (일)"
                       type="number"
                       :rules="[v => v >= 10 && v <= 50 || '10~50 사이 입력']"
+                      variant="outlined"
+                      suffix="일"
                       hint="기본값: 20일"
                       persistent-hint
-                      density="compact"
                     />
                   </v-col>
                   <v-col cols="12" md="6">
@@ -494,9 +507,10 @@
                       v-model="settings.bbMultiplier"
                       :items="[1, 2, 3, 4]"
                       label="표준편차 승수"
+                      variant="outlined"
+                      suffix="배"
                       hint="기본값: 2배"
                       persistent-hint
-                      density="compact"
                     />
                   </v-col>
                 </v-row>
@@ -761,6 +775,17 @@
                 <p class="text-caption text-grey">
                   동일 코인에서 {{ settings.consecutiveStopLossLimit }}회 연속 손절 시 해당 코인 24시간 매수를 금지합니다
                 </p>
+                <!-- ⭐ 손절매 OFF 시 연속 손절 제한 비활성 안내 -->
+                <v-alert
+                  v-if="!settings.useStopLoss"
+                  type="info"
+                  variant="tonal"
+                  density="compact"
+                  class="mt-2"
+                  style="font-size: 12px;"
+                >
+                  손절매 기능이 꺼져 있어 연속 손절 제한이 비활성화되었습니다. 이 기능을 사용하려면 매도 조건 설정에서 손절매를 다시 켜주세요.
+                </v-alert>
               </div>
 
               <v-divider class="my-6" />

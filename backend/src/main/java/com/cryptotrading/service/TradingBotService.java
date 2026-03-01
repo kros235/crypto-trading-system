@@ -480,8 +480,46 @@ public class TradingBotService {
         BigDecimal usedAmount = BigDecimal.ZERO;
         BigDecimal carryOver = BigDecimal.ZERO; // 비중 제한으로 못 쓴 금액 (라운드로빈에서만 사용)
         
+        // ⭐⭐⭐ [신규 추가] 매수 실행 전 리스크 사전 체크 (시장추세필터, 누적손실, 긴급정지) ⭐⭐⭐
+        // 추가 이유: 기존에는 processRoundRobinBuy()에서 executeBuyOrder()를 직접 호출하면서
+        //           riskManagementService.canBuy()를 거치지 않아,
+        //           시장 추세 필터, 누적 손실률, 연속 손절 제한, 긴급 정지 등
+        //           모든 리스크 체크가 우회되는 치명적 버그가 있었음.
+        //           4단계 루프 진입 전에 공통 리스크(시장추세필터, 누적손실, 긴급정지)를 먼저 체크하고,
+        //           개별 코인 체크(연속손절)는 루프 내에서 수행.
+        if (setting.getUseMarketTrendFilter() != null && setting.getUseMarketTrendFilter()) {
+            if (!riskManagementService.checkMarketTrendFilter()) {
+                log.warn("⚠️ 시장 추세 필터 발동 - BTC가 20일 이동평균선 하회, 전체 매수 중단");
+                result.addSkipped("시장 추세 필터 발동 - 전체 매수 중단");
+                return;
+            }
+        }
+        if (!riskManagementService.checkCumulativeLossLimit(userId, setting)) {
+            log.warn("⚠️ 누적 손실 한도 도달 - 전체 매수 중단");
+            result.addSkipped("누적 손실 한도 도달 - 전체 매수 중단");
+            return;
+        }
+        if (!riskManagementService.checkDailyStopLoss(userId, setting)) {
+            log.warn("⚠️ 긴급 정지 발동 - 일일 손실 한도 도달, 전체 매수 중단");
+            result.addSkipped("긴급 정지 발동 - 전체 매수 중단");
+            return;
+        }
+        // ⭐⭐⭐ [신규 추가 끝] ⭐⭐⭐
+        
         for (int i = 0; i < candidates.size(); i++) {
             BuyCandidate candidate = candidates.get(i);
+            
+            // ⭐⭐⭐ [신규 추가] 개별 코인 리스크 체크 (연속 손절 제한) ⭐⭐⭐
+            // 추가 이유: 연속 손절 제한은 코인별로 적용되므로 루프 내에서 개별 체크 필요
+            if (!riskManagementService.checkConsecutiveStopLossLimit(userId, candidate.getMarket(), setting)) {
+                log.info("⚠️ {} 연속 손절 제한 - 24시간 매수 금지", candidate.getMarket());
+                result.addSkipped(candidate.getMarket() + ": 연속 손절 제한");
+                if (useRoundRobin) {
+                    carryOver = carryOver.add(perCoinAmount);
+                }
+                continue;
+            }
+            // ⭐⭐⭐ [신규 추가 끝] ⭐⭐⭐
             
             // ⭐⭐⭐ 수정: 매수 방식에 따른 금액 계산 ⭐⭐⭐
             BigDecimal actualAmount;
@@ -670,6 +708,17 @@ public class TradingBotService {
             );
         }
 
+        // ⭐⭐⭐ [신규 추가] 매수 완료 후 당일 자산 스냅샷 즉시 갱신 ⭐⭐⭐
+        // 추가 이유: 기존에는 23:59 스케줄러에서만 스냅샷이 생성되어,
+        //           매수 직후 대시보드/자산변동 차트에 변동이 반영되지 않았음.
+        //           매수 완료 직후 스냅샷을 갱신하면 실시간 자산 추이 확인 가능.
+        try {
+            dailyAssetSnapshotService.createDailySnapshot(userId);
+            log.info("📸 매수 후 자산 스냅샷 갱신 완료: userId={}", userId);
+        } catch (Exception e) {
+            log.warn("매수 후 자산 스냅샷 갱신 실패 (매수는 정상 처리됨): {}", e.getMessage());
+        }
+
         result.addBuy(market, buyAmount);
         log.info("매수 완료: {} - {}원 (주문ID: {})", market, buyAmount, order.getUuid());
     }
@@ -834,6 +883,14 @@ public class TradingBotService {
                 
                 log.info("합산 매도 완료: {} - {}건 매도, 총손익: {}원 (주문ID: {})", 
                         symbol, targets.size(), totalProfitLoss.setScale(0, RoundingMode.HALF_UP), order.getUuid());
+
+                // ⭐⭐⭐ [신규 추가] 합산 매도 완료 후 당일 자산 스냅샷 즉시 갱신 ⭐⭐⭐
+                try {
+                    dailyAssetSnapshotService.createDailySnapshot(targets.get(0).getUserId());
+                    log.info("📸 합산 매도 후 자산 스냅샷 갱신 완료: userId={}", targets.get(0).getUserId());
+                } catch (Exception e) {
+                    log.warn("합산 매도 후 자산 스냅샷 갱신 실패: {}", e.getMessage());
+                }
                 
             } catch (Exception e) {
                 log.error("합산 매도 실패: {} - {}", symbol, e.getMessage());
@@ -944,6 +1001,16 @@ public class TradingBotService {
             } else if (profitLoss.compareTo(BigDecimal.ZERO) > 0) {
                 // 수익 실현 - 카운터 리셋
                 riskManagementService.recordProfitSell(holding.getUserId(), holding.getCoinSymbol());
+            }
+
+            // ⭐⭐⭐ [신규 추가] 매도 완료 후 당일 자산 스냅샷 즉시 갱신 ⭐⭐⭐
+            // 추가 이유: 매도 시 코인이 KRW로 전환되어 총 자산 구성이 변동됨.
+            //           실시간 자산 추이 확인을 위해 즉시 스냅샷 갱신 필요.
+            try {
+                dailyAssetSnapshotService.createDailySnapshot(holding.getUserId());
+                log.info("📸 매도 후 자산 스냅샷 갱신 완료: userId={}", holding.getUserId());
+            } catch (Exception e) {
+                log.warn("매도 후 자산 스냅샷 갱신 실패 (매도는 정상 처리됨): {}", e.getMessage());
             }
 
             result.addSell(holding.getCoinSymbol(), sellAmount, profitLoss);

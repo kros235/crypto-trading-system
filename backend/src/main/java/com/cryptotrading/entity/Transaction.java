@@ -35,13 +35,13 @@ public class Transaction {
     @Column(nullable = false, precision = 20, scale = 8)
     private BigDecimal quantity;
 
-    @Column(nullable = false, precision = 15, scale = 2)
+    @Column(nullable = false, precision = 20, scale = 8)
     private BigDecimal price;
 
-    @Column(precision = 15, scale = 2)
+    @Column(precision = 20, scale = 8)
     private BigDecimal fee = BigDecimal.ZERO;
 
-    @Column(name = "total_amount", nullable = false, precision = 15, scale = 2)
+    @Column(name = "total_amount", nullable = false, precision = 20, scale = 8)
     private BigDecimal totalAmount;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -50,19 +50,19 @@ public class Transaction {
     @Column(name = "sold_at")
     private LocalDateTime soldAt;
 
-    @Column(name = "sold_price", precision = 15, scale = 2)
+    @Column(name = "sold_price", precision = 20, scale = 8)
     private BigDecimal soldPrice;
 
-    @Column(name = "profit_loss", precision = 15, scale = 2)
+    @Column(name = "profit_loss", precision = 20, scale = 8)
     private BigDecimal profitLoss;
 
-    @Column(name = "profit_loss_pct", precision = 5, scale = 2)
+    @Column(name = "profit_loss_pct", precision = 10, scale = 4)
     private BigDecimal profitLossPct;
 
-    @Column(name = "target_sell_price", precision = 15, scale = 2)
+    @Column(name = "target_sell_price", precision = 20, scale = 8)
     private BigDecimal targetSellPrice;
 
-    @Column(name = "stop_loss_price", precision = 15, scale = 2)
+    @Column(name = "stop_loss_price", precision = 20, scale = 8)
     private BigDecimal stopLossPrice;
 
     @Enumerated(EnumType.STRING)

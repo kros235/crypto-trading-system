@@ -168,7 +168,7 @@ public class EmailService {
         variables.put("typeClass", "BUY".equals(type) ? "buy" : "sell");
         variables.put("coinSymbol", coinSymbol);
         variables.put("quantity", quantity.toPlainString());
-        variables.put("price", KRW_FORMAT.format(price));
+        variables.put("price", formatPriceForEmail(price));
         variables.put("totalAmount", KRW_FORMAT.format(totalAmount));
         variables.put("timestamp", LocalDateTime.now().format(DATETIME_FORMAT));
         // ⭐⭐⭐ [추가] reason 변수 추가 ⭐⭐⭐
@@ -220,8 +220,8 @@ public class EmailService {
                 formatted.put("coinSymbol", coin.getCoinSymbol());
                 formatted.put("holdingCount", coin.getHoldingCount());
                 formatted.put("totalQuantity", coin.getTotalQuantity().toPlainString());
-                formatted.put("averagePrice", KRW_FORMAT.format(coin.getAveragePrice()));
-                formatted.put("currentPrice", KRW_FORMAT.format(coin.getCurrentPrice()));
+                formatted.put("averagePrice", formatPriceForEmail(coin.getAveragePrice()));
+	  formatted.put("currentPrice", formatPriceForEmail(coin.getCurrentPrice()));
                 formatted.put("profitLoss", KRW_FORMAT.format(coin.getProfitLoss().setScale(0, java.math.RoundingMode.HALF_UP)));
                 formatted.put("profitRate", coin.getProfitRate().setScale(2, java.math.RoundingMode.HALF_UP));
                 formatted.put("isProfit", coin.getProfitLoss().compareTo(BigDecimal.ZERO) >= 0);
@@ -306,5 +306,20 @@ public class EmailService {
         }
     }
 
+    // ⭐ [추가] 저가코인 가격 포맷팅 유틸리티 메서드
+    private String formatPriceForEmail(BigDecimal price) {
+        if (price == null) return "0";
+        
+        // 1원 이상: 기존 KRW 포맷 (예: 130,000,000)
+        if (price.compareTo(BigDecimal.ONE) >= 0) {
+            return KRW_FORMAT.format(price);
+        }
+        // 0.01원 이상: 소수점 2자리 (예: 0.35)
+        if (price.compareTo(new BigDecimal("0.01")) >= 0) {
+            return String.format("%,.2f", price);
+        }
+        // 0.01원 미만 (SHIB 등): 유효숫자 보존 (예: 0.00824)
+        return price.stripTrailingZeros().toPlainString();
+    }
 
 }

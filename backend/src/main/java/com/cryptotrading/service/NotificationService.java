@@ -158,7 +158,7 @@ public class NotificationService {
             ⏰ 체결 시간: %s
             """,
             notification.getCoinSymbol(),
-            formatNumber(notification.getPrice()),
+            formatPrice(notification.getPrice()),
             formatQuantity(notification.getQuantity()),
             formatNumber(notification.getAmount()),
             reasonText,  // ⭐⭐⭐ [추가] 매수 사유 ⭐⭐⭐
@@ -190,7 +190,7 @@ public class NotificationService {
             ⏰ 체결 시간: %s
             """,
             notification.getCoinSymbol(),
-            formatNumber(notification.getPrice()),
+            formatPrice(notification.getPrice()),
             formatQuantity(notification.getQuantity()),
             formatNumber(notification.getAmount()),
             profitEmoji,
@@ -216,7 +216,7 @@ public class NotificationService {
             ⏰ 체결 시간: %s
             """,
             notification.getCoinSymbol(),
-            formatNumber(notification.getPrice()),
+            formatPrice(notification.getPrice()),
             formatNumber(notification.getProfitLoss()),
             notification.getProfitRate().setScale(2, RoundingMode.HALF_UP),
             notification.getUserId(),
@@ -320,6 +320,21 @@ public class NotificationService {
     private String formatNumber(BigDecimal number) {
         if (number == null) return "0";
         return String.format("%,.0f", number);
+    }
+
+    // ⭐ [추가] 저가코인 가격 포맷팅 (가격 전용 - SHIB 등 1원 미만 코인 대응)
+    private String formatPrice(BigDecimal price) {
+        if (price == null) return "0";
+        // 1원 이상: 정수 표시 (기존과 동일)
+        if (price.compareTo(BigDecimal.ONE) >= 0) {
+            return String.format("%,.0f", price);
+        }
+        // 0.01원 이상: 소수점 2자리
+        if (price.compareTo(new BigDecimal("0.01")) >= 0) {
+            return String.format("%,.2f", price);
+        }
+        // 0.01원 미만 (SHIB 등): 유효숫자 보존
+        return price.stripTrailingZeros().toPlainString();
     }
 
     private String formatQuantity(BigDecimal quantity) {

@@ -281,12 +281,12 @@ public class TradingBotService {
             User userEntity = userRepository.findById(userId).orElse(null);
             if (userEntity != null && userEntity.getDiscordUserId() != null) {
                 discordBotService.sendBuyNotification(
-                        userEntity.getDiscordUserId(),
-                        market,
-                        transaction.getQuantity().toPlainString(),
-                        String.format("%,.0f", signal.getCurrentPrice()),
-                        String.format("%,.0f", buyAmount),
-                        signal.getReason() // ⭐⭐⭐ [추가] 매수 사유 전달 ⭐⭐⭐
+                    userEntity.getDiscordUserId(),
+                    market,
+                    transaction.getQuantity().toPlainString(),
+                    formatPrice(signal.getCurrentPrice()),              // ← 수정
+                    String.format("%,.0f", buyAmount),                  // 총 금액은 원 단위라 기존 유지
+                    signal.getReason()			// 매수 사유
                 );
             }
 
@@ -715,10 +715,10 @@ public class TradingBotService {
                     userEntity.getDiscordUserId(),
                     market,
                     transaction.getQuantity().toPlainString(),
-                    String.format("%,.0f", signal.getCurrentPrice()),
+                    formatPrice(signal.getCurrentPrice()),              // ← 수정
                     String.format("%,.0f", buyAmount),
                     signal.getReason());
-        }
+                    }
 
         // 이메일 발송
         if (userEntity != null && userEntity.getEmail() != null && !userEntity.getEmail().isEmpty()) {
@@ -891,7 +891,7 @@ public class TradingBotService {
                     discordBotService.sendSellNotification(
                             userEntity.getDiscordUserId(), symbol,
                             totalVolume.toPlainString(),
-                            String.format("%,.0f", currentPrice),
+                            formatPrice(currentPrice),                          // ← 수정
                             profitSign + String.format("%,.0f", totalProfitLoss),
                             profitSign + totalProfitRate.setScale(2, RoundingMode.HALF_UP).toPlainString(),
                             "합산 손절매 (" + targets.size() + "건 합산, 최소주문금액 미달)");
@@ -995,10 +995,10 @@ public class TradingBotService {
                         userEntity.getDiscordUserId(),
                         holding.getCoinSymbol(),
                         holding.getQuantity().toPlainString(),
-                        String.format("%,.0f", sellPrice),
+                        formatPrice(sellPrice),                             // ← 수정
                         profitSign + String.format("%,.0f", profitLoss),
                         profitSign + profitRate.setScale(2, RoundingMode.HALF_UP).toPlainString(),
-                        signal.getReason() // ⭐⭐⭐ [추가] 매도 사유 전달 ⭐⭐⭐
+                        signal.getReason()	//	매도 사유 전달
                 );
             }
 
@@ -1225,5 +1225,21 @@ public class TradingBotService {
         public List<String> getErrors() {
             return errors;
         }
+    }
+
+    // ⭐ [추가] TradingBotService.java 내 유틸리티 메서드
+    private String formatPrice(BigDecimal price) {
+        if (price == null) return "0";
+    
+        // 1원 이상: 정수 표시 (기존과 동일)
+        if (price.compareTo(BigDecimal.ONE) >= 0) {
+            return String.format("%,.0f", price);
+        }
+        // 0.01원 이상: 소수점 2자리
+        if (price.compareTo(new BigDecimal("0.01")) >= 0) {
+            return String.format("%,.2f", price);
+        }
+        // 0.01원 미만 (SHIB 등): 유효숫자 보존
+        return price.stripTrailingZeros().toPlainString();
     }
 }

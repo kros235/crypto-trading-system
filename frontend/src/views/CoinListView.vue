@@ -14,7 +14,7 @@
             <p class="text-subtitle-1 text-grey">거래 가능한 코인 목록을 확인하세요</p>
           </v-col>
           <v-col cols="auto">
-            <v-btn color="indigo-darken-1" @click="fetchCoins" :loading="loading" variant="flat">
+            <v-btn color="indigo-darken-1" @click="refreshWithRanks" :loading="loading || rankLoading" variant="flat">
               <v-icon left>mdi-refresh</v-icon>
               새로고침
             </v-btn>
@@ -224,6 +224,7 @@ const helpContents = {
 }
 
 const loading = ref(false)
+const rankLoading = ref(false)
 const priceLoading = ref(false)
 const priceLoadedCount = ref(0)
 const priceTargetCount = ref(0)
@@ -445,7 +446,20 @@ const goToTradingWithCoin = (symbol: string | undefined) => {
 }
 const showSnackbar = (message: string, color: string) => { snackbar.value = { show: true, message, color } }
 
-onMounted(() => { fetchCoins() })
+// ★★★ 신규: 새로고침 시 시총순위 갱신 + 코인 목록 조회 ★★★
+const refreshWithRanks = async () => {
+  rankLoading.value = true
+  try {
+    await coinApi.updateMarketCapRanks()
+  } catch (error) {
+    console.error('시가총액 순위 갱신 실패 (무시하고 계속 진행):', error)
+  } finally {
+    rankLoading.value = false
+  }
+  await fetchCoins()
+}
+
+onMounted(async () => { await refreshWithRanks() })
 </script>
 
 <style scoped>

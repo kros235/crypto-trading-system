@@ -176,7 +176,11 @@ export const coinApi = {
 
   // 계좌 정보
   getAccounts: () =>
-    api.get('/coins/accounts')
+    api.get('/coins/accounts'),
+
+  // ★★★ 신규: 시가총액 순위 갱신 API ★★★
+  updateMarketCapRanks: () => 
+    api.post('/coins/update-market-cap-ranks')
 }
 
 // 시스템 API

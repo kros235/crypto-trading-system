@@ -61,6 +61,11 @@ public class StockTradingSettingDTO {
     private String kisAppSecret;
     private String kisAccountNo;
     private Boolean kisMockMode;
+
+    // ⭐ [신규] 코인 설정과 동일하게 추가
+    private Boolean useStopLoss;
+    private BigDecimal additionalDropPct;
+    private Boolean useAiAnalysis;
     
     // 조회 전용 (API 키 등록 여부)
     private Boolean hasKisApiKey;

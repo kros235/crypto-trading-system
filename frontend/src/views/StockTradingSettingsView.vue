@@ -156,15 +156,18 @@
                   color="grey"
                 />
               </div>
-              <v-text-field
-                v-model.number="settings.basePeriod"
-                type="number"
-                density="compact"
-                :rules="[rules.required, rules.basePeriod]"
-                hint="기본: 20일"
-                persistent-hint
-                class="mb-2"
-              />
+              <v-radio-group
+                v-model="settings.basePeriod"
+                inline
+                hide-details
+                class="mb-3"
+              >
+                <v-radio label="7일 이동평균" :value="7" />
+                <v-radio label="14일 이동평균" :value="14" />
+                <v-radio label="20일 이동평균" :value="20" />
+                <v-radio label="30일 이동평균" :value="30" />
+              </v-radio-group>
+              <p class="text-caption text-grey mb-2">기준가 산정을 위한 이동평균선 기간을 선택하세요</p>
 
               <!-- ⭐ 수정: RSI 2열 → 3열 + 개별 도움말 -->
               <!-- 변경 이유: RSI 기간/매수/매도를 한눈에 보기 위해 3열, 개별 도움말로 SVG 차트 제공 -->
@@ -318,26 +321,58 @@
                 class="mb-2"
               />
 
-              <!-- ⭐ 수정: 손절매 - 개별 도움말 추가 -->
-              <div class="d-flex align-center mb-1">
-                <span class="text-subtitle-2 text-grey">손절매 기준 (%)</span>
-                <HelpButton
-                  :useDialog="true"
-                  :dialogTitle="helpContents.stopLoss.title"
-                  :dialogContent="helpContents.stopLoss.content"
-                  size="x-small"
-                  color="grey"
-                />
-              </div>
-              <v-text-field
-                v-model.number="settings.stopLossPct"
-                type="number"
-                density="compact"
-                :rules="[rules.required, rules.negative]"
-                hint="기본: -5.0%"
-                persistent-hint
-                class="mb-2"
-              />
+              <!-- 손절매 ON/OFF + 기준값 (코인 설정과 동일 구조) -->
+              <v-row class="mt-1 mb-2" no-gutters>
+                <v-col cols="12" md="4">
+                  <div class="d-flex align-center">
+                    <v-switch
+                      v-model="settings.useStopLoss"
+                      label="손절매 사용"
+                      color="error"
+                      hide-details
+                      density="compact"
+                    />
+                    <HelpButton
+                      :useDialog="true"
+                      :dialogTitle="helpContents.useStopLoss.title"
+                      :dialogContent="helpContents.useStopLoss.content"
+                      size="x-small"
+                      color="grey"
+                    />
+                  </div>
+                  <v-alert
+                    v-if="!settings.useStopLoss"
+                    type="error"
+                    variant="tonal"
+                    density="compact"
+                    class="mt-2"
+                    style="font-size: 12px;"
+                  >
+                    ⚠️ 손절매 기능을 끄면 하락장에서 큰 손실이 발생할 수 있습니다!
+                  </v-alert>
+                </v-col>
+                <v-col cols="12" md="4" class="pl-md-3">
+                  <div class="d-flex align-center mb-1">
+                    <span class="text-subtitle-2 text-grey">손절매 기준 (%)</span>
+                    <HelpButton
+                      :useDialog="true"
+                      :dialogTitle="helpContents.stopLoss.title"
+                      :dialogContent="helpContents.stopLoss.content"
+                      size="x-small"
+                      color="grey"
+                    />
+                  </div>
+                  <v-text-field
+                    v-model.number="settings.stopLossPct"
+                    type="number"
+                    density="compact"
+                    :rules="settings.useStopLoss ? [rules.required, rules.negative] : []"
+                    hint="기본: -5.0%"
+                    persistent-hint
+                    :disabled="!settings.useStopLoss"
+                  />
+                </v-col>
+              </v-row>
 
               <!-- ⭐ 수정: 트레일링 스톱 - 개별 도움말 추가 -->
               <div class="d-flex align-center mb-1">
@@ -404,6 +439,28 @@
                   />
                 </v-col>
               </v-row>
+              <!-- ⭐ [신규] 추가 매수 하락률 (코인 설정과 동일) -->
+              <div class="d-flex align-center mb-1 mt-3">
+                <span class="text-subtitle-2 text-grey">추가 매수 하락률 (%)</span>
+                <HelpButton
+                  :useDialog="true"
+                  :dialogTitle="helpContents.additionalDropPct.title"
+                  :dialogContent="helpContents.additionalDropPct.content"
+                  size="x-small"
+                  color="grey"
+                />
+              </div>
+              <v-text-field
+                v-model.number="settings.additionalDropPct"
+                type="number"
+                density="compact"
+                :rules="[v => v > 0 || '양수 입력']"
+                hint="이전 매수가 대비 이 값 이상 하락 시 추가 매수 허용 (기본: 1.0%)"
+                persistent-hint
+                min="0.1"
+                max="10"
+                step="0.1"
+              />
             </v-card-text>
           </v-card>
 
@@ -562,9 +619,50 @@
                     density="compact"
                     hint="기본: 3회"
                     persistent-hint
+                    :disabled="!settings.useStopLoss"
                   />
                 </v-col>
               </v-row>
+              <!-- ⭐ 손절매 OFF 시 안내 메시지 -->
+              <v-alert
+                v-if="!settings.useStopLoss"
+                type="info"
+                variant="tonal"
+                density="compact"
+                class="mt-2"
+                style="font-size: 12px;"
+              >
+                손절매 기능이 꺼져 있어 연속 손절 제한이 비활성화되었습니다. 이 기능을 사용하려면 매수/매도 조건에서 손절매를 다시 켜주세요.
+              </v-alert>
+            </v-card-text>
+          </v-card>
+
+          <!-- ⭐ [신규] 추가 옵션: AI 뉴스 분석 (코인 설정과 동일 구조) -->
+          <v-card class="mb-4" elevation="2">
+            <v-card-title class="d-flex align-center">
+              <v-icon class="mr-2" color="purple">mdi-robot</v-icon>
+              추가 옵션
+            </v-card-title>
+            <v-card-text>
+              <div class="d-flex align-center">
+                <v-switch
+                  v-model="settings.useAiAnalysis"
+                  label="AI 뉴스 분석 사용"
+                  color="purple"
+                  hide-details
+                  density="compact"
+                />
+                <HelpButton
+                  :useDialog="true"
+                  dialogTitle="🤖 AI 뉴스 분석 (주식/ETF)"
+                  dialogContent="<p>Groq API (Llama 3.3 70B)를 통해 나스닥100 관련 뉴스를 분석합니다.</p><ul style='padding-left:20px; margin-top:8px;'><li>뉴스 소스: MarketWatch, Yahoo Finance (나스닥/기술주 전문)</li><li>분석 주기: 3시간마다 자동 실행</li><li>가중치 적용: 호재/악재 분석 → 매수 조건 ±0.5% 범위 내 자동 조정</li></ul><p style='margin-top:8px; background:#f3e5f5; padding:8px; border-radius:4px;'>💡 나스닥100 지수를 추종하는 ETF(TIGER 409820, KODEX 409810 등) 투자 시 미국 기술주 관련 뉴스 감성을 매수 조건에 반영합니다.</p>"
+                  size="x-small"
+                  color="grey"
+                />
+              </div>
+              <p class="text-caption text-grey mt-1">
+                Groq API (Llama 3.3 70B)를 통한 나스닥100 관련 뉴스 분석으로 매수 조건 가중치를 자동 조정합니다
+              </p>
             </v-card-text>
           </v-card>
 
@@ -1012,6 +1110,35 @@ const helpContents = {
     `
   },
 
+   // ===== ⭐ 신규: 손절매 ON/OFF 스위치 =====
+  useStopLoss: {
+    title: '🔘 손절매 사용 여부',
+    content: `
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"손절매 기능 자체를 켜고 끌 수 있는 스위치"</p>
+          </div>
+        </div>
+        <div class="help-example-card mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">⚠️ 주의사항</span>
+          </div>
+          <div style="padding-left: 24px; background: #FFEBEE; padding: 16px; border-radius: 8px; border-left: 4px solid #e53935;">
+            <strong>ON (권장)</strong>: 손절매 기준 도달 시 자동으로 손실을 확정하고 매도<br/>
+            → 추가 손실 방지, 자금 회수 후 재투자 가능<br/><br/>
+            <strong>OFF (비권장)</strong>: 아무리 손실이 나도 자동 매도 안 함<br/>
+            → 레버리지 ETF는 큰 손실로 이어질 수 있어 <strong>강력 비권장</strong><br/><br/>
+            ※ OFF 시 연속 손절 제한 기능도 함께 비활성화됩니다.
+          </div>
+        </div>
+      </div>
+    `
+  },
+
   // ===== ⭐ 신규: 손절매 (코인 거래 설정에서 이식, -5% 기본값 반영) =====
   stopLoss: {
     title: '🛑 손절매 기준',
@@ -1232,8 +1359,70 @@ const helpContents = {
         </div>
       </div>
     `
+  },
+
+  // ⭐ [신규] 손절매 ON/OFF 스위치 도움말
+  useStopLoss: {
+    title: '🔘 손절매 사용 여부',
+    content: `
+      <div class="glossary-detail pa-3">
+        <div class="help-example-card mb-4">
+          <div style="padding-left: 24px; background: #FFEBEE; padding: 16px; border-radius: 8px; border-left: 4px solid #e53935;">
+            <strong>ON (권장)</strong>: 손절매 기준 도달 시 자동 매도 → 추가 손실 방지<br/><br/>
+            <strong>OFF (비권장)</strong>: 아무리 손실이 나도 자동 매도 안 함<br/>
+            → 레버리지 ETF는 큰 손실로 이어질 수 있어 <strong>강력 비권장</strong><br/><br/>
+            ※ OFF 시 연속 손절 제한 기능도 함께 비활성화됩니다.
+          </div>
+        </div>
+      </div>
+    `
+  },
+
+  // ⭐ [신규] 추가 매수 하락률 도움말
+  additionalDropPct: {
+    title: '📉 추가 매수 하락률',
+    content: `
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"직전 매수가 대비 얼마나 더 떨어지면 추가 매수를 허용할 것인가?"</p>
+          </div>
+        </div>
+        <div class="help-example-card mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🛒 예시</span>
+          </div>
+          <div style="padding-left: 24px; background: #FFF8E1; padding: 16px; border-radius: 8px; border-left: 4px solid #FFA000;">
+            10만원에 TIGER 나스닥100레버리지를 1차 매수했을 때<br/>
+            - 1.0% 설정: 99,000원 이하로 떨어지면 2차 매수 허용<br/>
+            - 2.0% 설정: 98,000원 이하로 떨어지면 2차 매수 허용<br/><br/>
+            💡 너무 낮게 설정하면 작은 변동에도 추가 매수가 발생하고,<br/>
+            너무 높게 설정하면 추가 매수 기회를 놓칠 수 있습니다.<br/><br/>
+            ※ 주식/ETF 기본값: 1.0% (코인 대비 변동성 낮음)
+          </div>
+        </div>
+        <div class="mb-2">
+          <div style="padding-left: 24px;">
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #E0E0E0; font-size: 13px;">
+              <thead><tr style="background-color: #ECEFF1;"><th style="padding: 8px 12px; text-align: left; border-bottom: 1px solid #E0E0E0;">설정값</th><th style="padding: 8px 12px; text-align: left; border-bottom: 1px solid #E0E0E0;">특징</th></tr></thead>
+              <tbody>
+                <tr><td style="padding: 8px 12px; border-bottom: 1px solid #EEE;">0.5%</td><td style="padding: 8px 12px; border-bottom: 1px solid #EEE;">자주 추가 매수 (공격적)</td></tr>
+                <tr style="background-color: #E3F2FD;"><td style="padding: 8px 12px; border-bottom: 1px solid #EEE; color: #1565C0;"><strong>1.0%</strong></td><td style="padding: 8px 12px; border-bottom: 1px solid #EEE; color: #1565C0;">기본값 추천 ✅</td></tr>
+                <tr><td style="padding: 8px 12px;">2.0% 이상</td><td style="padding: 8px 12px;">신중한 추가 매수</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `
   }
 }
+
+
+
 
 const defaultSettings = {
   stockCodes: [] as string[],
@@ -1260,7 +1449,10 @@ const defaultSettings = {
   fixedBuyAmount: 100000,
   useDailyLimitRecovery: false,
   useRoundRobin: true,
-  maxHoldingDays: 20
+  maxHoldingDays: 20,
+  useStopLoss: true,
+  additionalDropPct: 1.0,
+  useAiAnalysis: false
 }
 
 const settings = ref({ ...defaultSettings })
@@ -1385,7 +1577,10 @@ const buildPayload = () => ({
   fixedBuyAmount: Number(settings.value.fixedBuyAmount),
   useDailyLimitRecovery: Boolean(settings.value.useDailyLimitRecovery),
   useRoundRobin: Boolean(settings.value.useRoundRobin),
-  maxHoldingDays: Number(settings.value.maxHoldingDays)
+  maxHoldingDays: Number(settings.value.maxHoldingDays),
+  useStopLoss: Boolean(settings.value.useStopLoss),
+  additionalDropPct: Number(settings.value.additionalDropPct),
+  useAiAnalysis: Boolean(settings.value.useAiAnalysis)
 })
 
 const loadSettings = async () => {
@@ -1423,7 +1618,11 @@ const loadSettings = async () => {
         fixedBuyAmount: data.fixedBuyAmount || 100000,
         useDailyLimitRecovery: data.useDailyLimitRecovery ?? false,
         useRoundRobin: data.useRoundRobin ?? true,
-        maxHoldingDays: data.maxHoldingDays || 20
+        maxHoldingDays: data.maxHoldingDays || 20,
+        // ⭐ [신규]
+        useStopLoss: data.useStopLoss ?? true,
+        additionalDropPct: data.additionalDropPct ?? 1.0,
+        useAiAnalysis: data.useAiAnalysis ?? false
       }
       hasExistingSettings.value = true
       message.value = '기존 주식 거래 설정을 불러왔습니다.'

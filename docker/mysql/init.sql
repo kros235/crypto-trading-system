@@ -354,6 +354,10 @@ CREATE TABLE IF NOT EXISTS stock_trading_settings (
     use_round_robin BOOLEAN DEFAULT TRUE,
     -- Phase 2 전용: 레버리지 ETF 관련
     max_holding_days INT DEFAULT 20 COMMENT '최대 보유일수 (레버리지 decay 방지)',
+    -- ⭐ [신규] 코인 설정과 동일하게 추가: 손절매 ON/OFF, 추가 매수 하락률, AI 뉴스 분석
+    use_stop_loss TINYINT(1) DEFAULT 1 COMMENT '손절매 사용 여부 (코인과 동일)',
+    additional_drop_pct DECIMAL(5,2) DEFAULT 1.00 COMMENT '추가 매수 발생 시 직전 매수가 대비 최소 하락률 (%)',
+    use_ai_analysis BOOLEAN DEFAULT FALSE COMMENT 'AI 뉴스 분석 사용 여부 (나스닥100 관련 뉴스)',
     -- Phase 2 전용: KIS API 키 (사용자별)
     kis_app_key_encrypted TEXT COMMENT 'KIS APP KEY (AES-256 암호화)',
     kis_app_secret_encrypted TEXT COMMENT 'KIS APP SECRET (AES-256 암호화)',

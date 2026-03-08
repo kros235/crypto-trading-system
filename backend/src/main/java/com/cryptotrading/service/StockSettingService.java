@@ -127,6 +127,9 @@ public class StockSettingService {
                     newSetting.setBbMultiplier(new BigDecimal("2.00"));
                     newSetting.setVolumeThreshold(new BigDecimal("120.00"));
                     newSetting.setKisMockMode(true);
+                    newSetting.setUseStopLoss(true);
+                    newSetting.setAdditionalDropPct(new BigDecimal("1.00"));
+                    newSetting.setUseAiAnalysis(false);
                     return settingRepository.save(newSetting);
                 });
 
@@ -201,6 +204,10 @@ public class StockSettingService {
         // Phase 2 전용
         entity.setMaxHoldingDays(dto.getMaxHoldingDays() != null ? dto.getMaxHoldingDays() : 20);
         entity.setKisMockMode(dto.getKisMockMode() != null ? dto.getKisMockMode() : true);
+        // ⭐ [신규] 코인 설정과 동일하게 추가
+        entity.setUseStopLoss(dto.getUseStopLoss() != null ? dto.getUseStopLoss() : true);
+        entity.setAdditionalDropPct(dto.getAdditionalDropPct() != null ? dto.getAdditionalDropPct() : new BigDecimal("1.00"));
+        entity.setUseAiAnalysis(dto.getUseAiAnalysis() != null ? dto.getUseAiAnalysis() : false);
     }
 
     private void encryptAndSetKisApiKeys(StockTradingSettingDTO dto, StockTradingSetting entity) {
@@ -255,6 +262,10 @@ public class StockSettingService {
                 .useRoundRobin(entity.getUseRoundRobin())
                 .maxHoldingDays(entity.getMaxHoldingDays())
                 .kisMockMode(entity.getKisMockMode())
+                // ⭐ [신규] 코인 설정과 동일하게 추가
+                .useStopLoss(entity.getUseStopLoss())
+                .additionalDropPct(entity.getAdditionalDropPct())
+                .useAiAnalysis(entity.getUseAiAnalysis())
                 // API 키는 노출하지 않음 (등록 여부만)
                 .hasKisApiKey(entity.getKisAppKeyEncrypted() != null && 
                              !entity.getKisAppKeyEncrypted().isBlank())

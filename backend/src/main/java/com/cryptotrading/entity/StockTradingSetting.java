@@ -129,6 +129,19 @@ public class StockTradingSetting {
     @Builder.Default
     private Integer maxHoldingDays = 20;
 
+    // ⭐ [신규] 코인 설정과 동일하게 추가
+    @Column(name = "use_stop_loss")
+    @Builder.Default
+    private Boolean useStopLoss = true;
+
+    @Column(name = "additional_drop_pct", precision = 5, scale = 2)
+    @Builder.Default
+    private BigDecimal additionalDropPct = new BigDecimal("1.00");
+
+    @Column(name = "use_ai_analysis")
+    @Builder.Default
+    private Boolean useAiAnalysis = false;
+
     @Column(name = "kis_app_key_encrypted", columnDefinition = "TEXT")
     private String kisAppKeyEncrypted;
 

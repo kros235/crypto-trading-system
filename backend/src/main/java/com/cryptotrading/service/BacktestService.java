@@ -172,7 +172,11 @@ public class BacktestService {
         if (state.isCumulativeLossTriggered()) {
             // 매도만 진행 (기존 포지션 청산)
             for (String coinSymbol : request.getCoinSymbols()) {
-                // ... 매도 로직만 실행
+                List<UpbitCandleDTO> candles = candleDataMap.get(coinSymbol);
+                UpbitCandleDTO todayCandle = findCandleByDate(candles, date);
+                if (todayCandle == null) continue;
+                // ★★★ 실제 매도 신호 체크 추가 ★★★
+                checkSellSignals(coinSymbol, todayCandle.getTradePrice(), date, request, state);
             }
             recordDailyBalance(date, candleDataMap, request, state);
             return;
@@ -207,7 +211,7 @@ public class BacktestService {
             checkSellSignals(coinSymbol, currentPrice, date, request, state);
 
             // 2. 매수 체크
-            if (canBuy(coinSymbol, currentPrice, request, state)) {
+            if (canBuy(coinSymbol, currentPrice, request, state, date)) {
                 // ★★★ 수정: 사용자 설정값으로 매수 신호 체크 ★★★
                 if (checkBuySignal(coinSymbol, candles, date, request, candleDataMap)) {
                     executeBuy(coinSymbol, currentPrice, date, "매수 신호", request, state);
@@ -408,9 +412,13 @@ public class BacktestService {
 
         BigDecimal buyAmount;
         if (useRoundRobin) {
-            // ⭐⭐⭐ 라운드로빈: 남은 한도를 매수 후보 수로 균등 분배 ⭐⭐⭐
-            // 백테스팅에서는 단일 코인 처리이므로 남은 한도 전체 사용
-            buyAmount = remainingDailyLimit.min(state.getCashBalance());
+            // ⭐ 라운드로빈: 남은 한도를 코인 수(여기선 1개 처리)로 사용하되
+            // 1회 매수 금액 상한을 초기자본 × maxPositionPct 이하로 제한
+            BigDecimal maxPerTrade = request.getInitialBalance()
+                    .multiply(new BigDecimal(
+                        request.getMaxPositionPct() != null ? request.getMaxPositionPct() : 100))
+                    .divide(new BigDecimal("100"), SCALE, RoundingMode.DOWN);
+            buyAmount = remainingDailyLimit.min(state.getCashBalance()).min(maxPerTrade);
         } else {
             // ⭐⭐⭐ 고정 금액: fixedBuyAmount 사용 ⭐⭐⭐
             BigDecimal fixedAmount = request.getFixedBuyAmount() != null
@@ -568,19 +576,17 @@ public class BacktestService {
      * 매수 가능 여부 확인 (리스크 관리 추가)
      */
     private boolean canBuy(String coinSymbol, BigDecimal currentPrice, BacktestRequestDTO request,
-            SimulationState state) {
+        SimulationState state, LocalDate date) {  // ★ date 파라미터 추가
 
         // 누적 손실 긴급정지 체크
         if (state.isCumulativeLossTriggered()) {
-            return false;
+           return false;
         }
 
-        // 연속 손절 제한 체크
+        // ★★★ 수정: 연속 손절 제한 체크 - date 비교로 실제 동작 ★★★
         LocalDate blockedUntil = state.getCoinBuyBlockedUntil().get(coinSymbol);
-        if (blockedUntil != null) {
-            // 백테스팅에서는 1일 = 24시간으로 간주
-            // 현재 날짜가 매수금지 해제일 이전이면 매수 불가
-            // (simulateDay의 date 파라미터 사용 필요 - 메서드 시그니처 수정 필요)
+        if (blockedUntil != null && !date.isAfter(blockedUntil)) {
+            return false;  // 매수 금지 기간 중
         }
 
         // 0. 긴급 정지 발동 여부 확인
@@ -632,9 +638,16 @@ public class BacktestService {
 
         BigDecimal buyAmount;
         if (useRoundRobin) {
-            // 라운드로빈: 남은 한도 사용 (canBuy에서는 단순화)
+            // ★★★ 수정: executeBuy()와 동일하게 maxPositionPct 상한 적용 ★★★
+            // 이유: canBuy에서 buyAmount가 전액으로 계산되면
+            // 아래 4번 maxPositionPct 체크에서 항상 false가 되어 거래 0건 버그 발생
+            BigDecimal maxPerTrade = request.getInitialBalance()
+                    .multiply(new BigDecimal(
+                        request.getMaxPositionPct() != null ? request.getMaxPositionPct() : 100))
+                    .divide(new BigDecimal("100"), SCALE, RoundingMode.DOWN);
             buyAmount = dailyLimit.subtract(state.getDailyBuyAmount())
-                    .min(state.getCashBalance());
+                    .min(state.getCashBalance())
+                    .min(maxPerTrade); // ★ maxPositionPct 상한 추가
         } else {
             // 고정 금액: fixedBuyAmount 사용
             BigDecimal fixedAmount = request.getFixedBuyAmount() != null
@@ -644,7 +657,7 @@ public class BacktestService {
         }
 
         // 3. 일일 거래 한도 체크
-        if (request.getDailyTradeLimitPct() != null && request.getDailyTradeLimitPct() < 100) {
+        if (request.getDailyTradeLimitPct() != null) {
             // dailyLimit은 이미 위에서 계산됨 - 재선언 제거
 
             // ⭐⭐⭐ Day 41 수정: 복구 금액 반영한 남은 한도 계산 ⭐⭐⭐

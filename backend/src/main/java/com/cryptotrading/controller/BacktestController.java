@@ -4,6 +4,7 @@ import com.cryptotrading.dto.backtest.BacktestRequestDTO;
 import com.cryptotrading.dto.backtest.BacktestResultDTO;
 import com.cryptotrading.service.BacktestService;
 import com.cryptotrading.service.UpbitApiService;
+import com.cryptotrading.repository.CoinInfoRepository;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +30,8 @@ import java.util.HashMap;
 public class BacktestController {
 
     private final BacktestService backtestService;
-    private final UpbitApiService upbitApiService;  // ★★★ 신규 추가 ★★★
+    private final UpbitApiService upbitApiService;
+private final CoinInfoRepository coinInfoRepository;  // ★★★ 추가: DB 시총순위 조회용 ★★★
 
     /**
      * 백테스트 실행
@@ -83,62 +85,68 @@ public class BacktestController {
         return ResponseEntity.ok(result);
     }
 
+        // ★★★ 수정 후 - getAvailableCoins() 메서드 ★★★
     /**
-     * ★★★ 수정: 전체 코인 목록 (시가총액 순 정렬) ★★★
+     * 전체 코인 목록 (DB의 시가총액 순위 기준 정렬 - 코인 목록 페이지와 동일 기준)
+     * ★★★ 변경: 24시간 거래대금 기준 → DB market_cap_rank 기준으로 변경 ★★★
+     * - 이유: BacktestView의 코인 순위가 CoinListView의 시총순위와 일치하도록 통일
      */
     @GetMapping("/available-coins")
     public ResponseEntity<Map<String, Object>> getAvailableCoins() {
         try {
-            // 업비트에서 전체 KRW 마켓 코인 조회
+            // 업비트에서 전체 KRW 마켓 코인 조회 (한글명 확보용)
             List<UpbitMarketDTO> allMarkets = upbitApiService.getMarketAll();
-        
-            // KRW 마켓만 필터링
-            List<String> krwMarkets = allMarkets.stream()
-                    .filter(m -> m.getMarket().startsWith("KRW-"))
-                    .map(UpbitMarketDTO::getMarket)
-                    .toList();
-        
-            // 현재가 조회 (시가총액 정보 포함)
-            List<UpbitTickerDTO> tickers = upbitApiService.getTicker(krwMarkets);
-        
-            // 시가총액 순 정렬 (거래대금 기준 - acc_trade_price_24h)
-            tickers.sort((a, b) -> {
-                BigDecimal aValue = a.getAccTradePrice24h() != null ? a.getAccTradePrice24h() : BigDecimal.ZERO;
-                BigDecimal bValue = b.getAccTradePrice24h() != null ? b.getAccTradePrice24h() : BigDecimal.ZERO;
-                return bValue.compareTo(aValue);  // 내림차순
+
+            // ★★★ 변경: DB의 market_cap_rank 기준으로 정렬 (코인 목록 페이지와 동일) ★★★
+            // CoinGecko 기준 시총순위가 저장된 DB를 활용
+            List<com.cryptotrading.entity.CoinInfo> dbCoins = coinInfoRepository.findAll();
+
+            // market_cap_rank 기준 정렬: 순위 있는 것 먼저(오름차순), null은 마지막
+            dbCoins.sort((a, b) -> {
+                if (a.getMarketCapRank() == null && b.getMarketCapRank() == null) return 0;
+                if (a.getMarketCapRank() == null) return 1;
+                if (b.getMarketCapRank() == null) return -1;
+                return a.getMarketCapRank().compareTo(b.getMarketCapRank());
             });
-        
-            // DTO 변환
+
+            // 한글명 맵 구성 (업비트 마켓 정보 기반)
+            Map<String, String> koreanNameMap = allMarkets.stream()
+                    .filter(m -> m.getMarket().startsWith("KRW-"))
+                    .collect(java.util.stream.Collectors.toMap(
+                            UpbitMarketDTO::getMarket,
+                            UpbitMarketDTO::getKoreanName,
+                            (existing, replacement) -> existing
+                    ));
+
+            // DTO 변환 (활성 코인만 포함)
             List<Map<String, Object>> coins = new ArrayList<>();
-            for (int i = 0; i < tickers.size(); i++) {
-                UpbitTickerDTO ticker = tickers.get(i);
-                String market = ticker.getMarket();
-            
-                // 마켓 정보에서 한글명 찾기
-                String koreanName = allMarkets.stream()
-                        .filter(m -> m.getMarket().equals(market))
-                        .findFirst()
-                        .map(UpbitMarketDTO::getKoreanName)
-                        .orElse(market.replace("KRW-", ""));
-            
+            for (com.cryptotrading.entity.CoinInfo dbCoin : dbCoins) {
+                if (Boolean.FALSE.equals(dbCoin.getIsActive())) continue; // 비활성 코인 제외
+
+                String symbol = dbCoin.getSymbol();
+                // DB 한글명 우선, 없으면 업비트 마켓 한글명, 없으면 심볼에서 추출
+                String koreanName = dbCoin.getNameKr() != null && !dbCoin.getNameKr().isEmpty()
+                        ? dbCoin.getNameKr()
+                        : koreanNameMap.getOrDefault(symbol, symbol.replace("KRW-", ""));
+
                 Map<String, Object> coin = new HashMap<>();
-                coin.put("symbol", market);
+                coin.put("symbol", symbol);
                 coin.put("name", koreanName);
-                coin.put("rank", i + 1);
-                coin.put("accTradePrice24h", ticker.getAccTradePrice24h());
+                // ★★★ 변경: DB의 market_cap_rank를 rank로 사용 (null이면 "-" 표시용 null 유지) ★★★
+                coin.put("rank", dbCoin.getMarketCapRank());
                 coins.add(coin);
             }
-        
+
             return ResponseEntity.ok(Map.of(
                     "coins", coins,
                     "maxPeriodDays", 365,
                     "minInitialBalance", 100000,
                     "totalCount", coins.size()
             ));
-            
+
         } catch (Exception e) {
             log.error("코인 목록 조회 실패: {}", e.getMessage());
-        
+
             // 실패 시 기본 목록 반환
             List<Map<String, String>> defaultCoins = List.of(
                     Map.of("symbol", "KRW-BTC", "name", "비트코인"),
@@ -152,7 +160,7 @@ public class BacktestController {
                     Map.of("symbol", "KRW-MATIC", "name", "폴리곤"),
                     Map.of("symbol", "KRW-LINK", "name", "체인링크")
             );
-        
+
             return ResponseEntity.ok(Map.of(
                     "coins", defaultCoins,
                     "maxPeriodDays", 365,

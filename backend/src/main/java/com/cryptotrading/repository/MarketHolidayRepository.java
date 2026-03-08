@@ -32,4 +32,17 @@ public interface MarketHolidayRepository extends JpaRepository<MarketHoliday, Lo
     @Query("SELECT h FROM MarketHoliday h WHERE h.holidayDate > :today AND h.market = :market " +
            "ORDER BY h.holidayDate ASC LIMIT 1")
     Optional<MarketHoliday> findNextHoliday(@Param("today") LocalDate today, @Param("market") String market);
+
+    // =====================================================
+    // ⭐ Day 54 추가: MarketHolidayService 용 메서드
+    // =====================================================
+
+    /** holidayDate 단독 존재 여부 (market 무관, isHoliday 판단용) */
+    boolean existsByHolidayDate(LocalDate holidayDate);
+
+    /** 기간 내 휴장일 목록 (market 무관, 달력 표시용) */
+    List<MarketHoliday> findByHolidayDateBetween(LocalDate from, LocalDate to);
+
+    /** 전체 목록 날짜 오름차순 (관리자 목록 조회용) */
+    List<MarketHoliday> findAllByOrderByHolidayDateAsc();
 }

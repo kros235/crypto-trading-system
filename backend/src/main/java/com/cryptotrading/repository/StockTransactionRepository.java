@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -47,4 +49,41 @@ public interface StockTransactionRepository extends JpaRepository<StockTransacti
            "AND t.status = 'SOLD' AND t.profitLoss < 0 AND t.soldAt >= :since ORDER BY t.soldAt DESC")
     long countConsecutiveStopLosses(@Param("userId") String userId, @Param("stockCode") String stockCode,
                                      @Param("since") LocalDateTime since);
+
+    
+    // =====================================================
+    // ⭐ Day 54 추가: StockRiskManagementService 용 쿼리
+    // =====================================================
+
+    /**
+     * 오늘 매수한 총 금액 (날짜 기준)
+     * 기존 sumTodayBuyAmount(String, LocalDateTime) 와 파라미터가 다르므로 메서드명 구분
+     */
+    @Query("SELECT COALESCE(SUM(t.totalAmount), 0) FROM StockTransaction t " +
+           "WHERE t.userId = :userId " +
+           "AND t.type = com.cryptotrading.entity.TransactionType.BUY " +
+           "AND CAST(t.createdAt AS date) = :today")
+    BigDecimal sumTodayBuyAmountByDate(@Param("userId") String userId,
+                                        @Param("today") LocalDate today);
+
+    /**
+     * 특정 종목 HOLDING 상태 총 투자금
+     */
+    @Query("SELECT COALESCE(SUM(t.totalAmount), 0) FROM StockTransaction t " +
+           "WHERE t.userId = :userId " +
+           "AND t.stockCode = :stockCode " +
+           "AND t.status = com.cryptotrading.entity.TransactionStatus.HOLDING")
+    BigDecimal sumHoldingInvestment(@Param("userId") String userId,
+                                     @Param("stockCode") String stockCode);
+
+    /**
+     * 누적 실현 손익 합계 (SOLD 상태)
+     */
+    @Query("SELECT COALESCE(SUM(t.profitLoss), 0) FROM StockTransaction t " +
+           "WHERE t.userId = :userId " +
+           "AND t.status = com.cryptotrading.entity.TransactionStatus.SOLD")
+    BigDecimal sumRealizedProfitLoss(@Param("userId") String userId);
+
+    // findByUserIdAndStatus(String userId, TransactionStatus status) 는 기존 메서드 그대로 재사용
+
 }

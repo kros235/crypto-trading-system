@@ -732,13 +732,17 @@ public class TradingBotService {
                     signal.getReason());
         }
 
-        // ⭐⭐⭐ [신규 추가] 매수 완료 후 당일 자산 스냅샷 즉시 갱신 ⭐⭐⭐
-        // 추가 이유: 기존에는 23:59 스케줄러에서만 스냅샷이 생성되어,
-        // 매수 직후 대시보드/자산변동 차트에 변동이 반영되지 않았음.
-        // 매수 완료 직후 스냅샷을 갱신하면 실시간 자산 추이 확인 가능.
+        // ⭐⭐⭐ [수정] 매수 완료 후 5초 딜레이 후 자산 스냅샷 갱신 ⭐⭐⭐
+        // 수정 이유: 매수 직후 업비트 API에서 코인 평가액이 즉시 반영되지 않아
+        // 총자산이 매수금액만큼 일시적으로 낮게 조회됨 (insufficient_funds와 유사한 지연).
+        // 5초 대기 후 갱신하여 API 반영 시간을 확보.
         try {
+            Thread.sleep(5000);
             dailyAssetSnapshotService.createDailySnapshot(userId);
-            log.info("📸 매수 후 자산 스냅샷 갱신 완료: userId={}", userId);
+            log.info("📸 매수 후 자산 스냅샷 갱신 완료 (5초 딜레이): userId={}", userId);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            log.warn("매수 후 스냅샷 딜레이 중단: {}", ie.getMessage());
         } catch (Exception e) {
             log.warn("매수 후 자산 스냅샷 갱신 실패 (매수는 정상 처리됨): {}", e.getMessage());
         }
@@ -762,6 +766,32 @@ public class TradingBotService {
             }
         } catch (Exception e) {
             log.warn("KRW 잔고 조회 실패: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * ⭐ [신규 추가] 업비트 특정 코인 실제 보유 수량 조회
+     * 매도 시 DB 추정 수량 대신 실제 잔고를 사용하기 위함
+     */
+    private BigDecimal getActualCoinBalance(String[] apiKeys, String coinSymbol) {
+        try {
+            // KRW-BTC → BTC 추출
+            String currency = coinSymbol.contains("-")
+                    ? coinSymbol.split("-")[1]
+                    : coinSymbol;
+
+            var accounts = upbitApiService.getAccounts(apiKeys[0], apiKeys[1]);
+            if (accounts != null) {
+                for (var account : accounts) {
+                    if (currency.equals(account.getCurrency())) {
+                        return account.getBalance();
+                    }
+                }
+            }
+            log.warn("업비트 잔고에서 {} 코인을 찾을 수 없음", coinSymbol);
+        } catch (Exception e) {
+            log.warn("코인 잔고 조회 실패: {} - {}", coinSymbol, e.getMessage());
         }
         return null;
     }
@@ -940,10 +970,30 @@ public class TradingBotService {
 
         // 실제 매도 실행
         try {
+            // ⭐⭐⭐ [수정] 업비트 실제 보유 수량 조회 후 매도 ⭐⭐⭐
+            // 수정 이유: 매수 체결 수량 조회 실패 시 추정값이 DB에 저장되는데,
+            // 추정값이 실제 수량보다 클 경우 insufficient_funds_ask 오류로
+            // 자동 매도가 영원히 실패하는 교착 상태가 발생함.
+            // 매도 직전 업비트 실제 잔고를 조회하여 실제 보유 수량으로 주문.
+            BigDecimal actualQuantity = getActualCoinBalance(apiKeys, holding.getCoinSymbol());
+            if (actualQuantity == null || actualQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+                log.warn("업비트 실제 보유 수량 조회 실패, DB 수량으로 매도 시도: {} - {}개",
+                        holding.getCoinSymbol(), holding.getQuantity());
+                actualQuantity = holding.getQuantity(); // 폴백: DB 수량 사용
+            } else {
+                log.info("업비트 실제 보유 수량 확인: {} - {}개 (DB: {}개)",
+                        holding.getCoinSymbol(), actualQuantity, holding.getQuantity());
+                // DB 수량과 다르면 DB 수량도 실제값으로 보정
+                if (actualQuantity.compareTo(holding.getQuantity()) != 0) {
+                    log.warn("수량 불일치 보정: {} DB={}개 → 실제={}개",
+                            holding.getCoinSymbol(), holding.getQuantity(), actualQuantity);
+                    holding.setQuantity(actualQuantity);
+                }
+            }
             UpbitOrderDTO order = upbitApiService.orderSell(
                     apiKeys[0], apiKeys[1],
                     holding.getCoinSymbol(),
-                    holding.getQuantity());
+                    actualQuantity);          // ← 실제 보유 수량 사용
 
             // 거래 내역 업데이트
             BigDecimal sellPrice = signal.getCurrentPrice();

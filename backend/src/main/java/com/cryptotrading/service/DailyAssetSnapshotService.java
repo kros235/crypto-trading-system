@@ -114,8 +114,12 @@ public class DailyAssetSnapshotService {
 
     /**
      * 모든 활성 사용자의 스냅샷 생성 (스케줄러에서 호출)
+     * ⭐⭐⭐ [수정] @Transactional 제거 ⭐⭐⭐
+     * 수정 이유: @Transactional이 걸린 상태에서 일부 사용자(API 키 없는 admin 등)에서
+     * 예외가 발생하면, 이미 정상 저장된 다른 사용자의 스냅샷까지 전부 롤백됨.
+     * 각 사용자의 createDailySnapshot()은 자체 @Transactional을 갖고 있으므로
+     * 상위 트랜잭션 없이 독립적으로 커밋/롤백 처리됨.
      */
-    @Transactional
     public void createAllUsersSnapshot() {
         List<User> activeUsers = userRepository.findByIsActive(true);
         log.info("=== 일별 자산 스냅샷 생성 시작: 활성 사용자 {}명 ===", activeUsers.size());

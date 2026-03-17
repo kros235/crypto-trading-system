@@ -24,6 +24,10 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+// ⭐⭐⭐ [추가] 수동 매도 시 알림 및 스냅샷 처리를 위한 import ⭐⭐⭐
+import com.cryptotrading.entity.User;
+import com.cryptotrading.repository.UserRepository;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -32,6 +36,14 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final TradingSettingRepository tradingSettingRepository;
     private final CoinInfoService coinInfoService;
+    
+    // ⭐⭐⭐ [추가] 수동 매도 시 알림 및 스냅샷 처리용 ⭐⭐⭐
+    // 추가 이유: 자동 매도(TradingBotService)와 동일하게
+    // 수동 매도 시에도 Discord DM, 이메일, 자산 스냅샷 갱신이 이루어져야 함.
+    private final UserRepository userRepository;
+    private final DiscordBotService discordBotService;
+    private final EmailService emailService;
+    private final DailyAssetSnapshotService dailyAssetSnapshotService;
 
     /**
      * 거래 내역 생성
@@ -168,7 +180,56 @@ public class TransactionService {
         
         log.info("매도 완료: transactionId={}, profit={}원 ({}%)", 
                 transactionId, profitLoss, profitLossPct);
-        
+
+        // ⭐⭐⭐ [추가] 수동 매도 시 알림 및 스냅샷 갱신 ⭐⭐⭐
+        // 추가 이유: 자동 매도(TradingBotService.processSellSignal)와 달리
+        // 수동 매도는 TransactionService를 통해 처리되는데,
+        // Discord DM, 이메일, 자산 스냅샷 갱신이 누락되어 있었음.
+        // 로그 분석 결과 19:29:57 수동 매도 후 어떤 알림도 발송되지 않음이 확인됨.
+        try {
+            User userEntity = userRepository.findById(userId).orElse(null);
+            String profitSign = profitLoss.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
+
+            // Discord DM 발송
+            if (userEntity != null && userEntity.getDiscordUserId() != null) {
+                discordBotService.sendSellNotification(
+                        userEntity.getDiscordUserId(),
+                        transaction.getCoinSymbol(),
+                        transaction.getQuantity().toPlainString(),
+                        String.format("%,.0f", soldPrice),
+                        profitSign + String.format("%,.0f", profitLoss),
+                        profitSign + profitLossPct.setScale(2, RoundingMode.HALF_UP).toPlainString(),
+                        "[수동매도] 사용자 직접 매도"
+                );
+                log.info("수동 매도 Discord 알림 발송: userId={}, coin={}", userId, transaction.getCoinSymbol());
+            }
+
+            // 이메일 발송
+            if (userEntity != null && userEntity.getEmail() != null && !userEntity.getEmail().isEmpty()) {
+                // ⭐⭐⭐ [수정] sellAmount 재선언 제거 - 메서드 상위 스코프의 동일 변수 재사용 ⭐⭐⭐
+                // 수정 이유: 이 메서드 내 상위에서 이미 선언된 sellAmount와 이름이 충돌하여 컴파일 에러 발생
+                emailService.sendTradeNotification(
+                        userEntity.getEmail(),
+                        "SELL",
+                        transaction.getCoinSymbol(),
+                        transaction.getQuantity(),
+                        soldPrice,
+                        sellAmount,
+                        "[수동매도] 사용자 직접 매도"
+                );
+                log.info("수동 매도 이메일 발송: userId={}, to={}", userId, userEntity.getEmail());
+            }
+
+            // 자산 스냅샷 갱신
+            dailyAssetSnapshotService.createDailySnapshot(userId);
+            log.info("📸 수동 매도 후 자산 스냅샷 갱신 완료: userId={}", userId);
+
+        } catch (Exception e) {
+            // 알림/스냅샷 실패는 매도 처리 결과에 영향 없음
+            log.warn("수동 매도 후 알림/스냅샷 처리 실패 (매도는 정상 완료됨): {}", e.getMessage());
+        }
+        // ⭐⭐⭐ [추가 끝] ⭐⭐⭐
+
         return TransactionDTO.fromEntity(updated);
     }
 

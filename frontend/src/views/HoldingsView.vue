@@ -168,13 +168,27 @@
                         <v-icon class="mr-2" size="20">mdi-chart-line</v-icon>
                         <span class="text-body-1">자산 변동 추이</span>
                         <v-spacer />
+                        <!-- ★ 수정: v-btn-toggle 제거 → 단독 버튼으로 변경
+                             이유: v-btn-toggle이 내부 버튼 배경색을 덮어써서 항상 투명으로 표시됨
+                             대시보드와 동일하게 variant=flat + color=grey-lighten-1 직접 지정 -->
+                        <v-btn
+                          variant="flat"
+                          color="grey-lighten-3"
+                          class="text-grey-darken-2 mr-2 snapshot-btn"
+                          :loading="snapshotRefreshing"
+                          @click="refreshSnapshot"
+                        >
+                          <v-icon size="16" class="mr-1">mdi-database-refresh</v-icon>
+                          스냅샷 갱신
+                        </v-btn>
                         <!-- 전체보기/스크롤보기 토글 -->
+                        <!-- ★ 수정: 스냅샷 갱신 버튼 그룹과의 간격을 위해 ml-2 추가 -->
                         <v-btn-toggle 
                           v-model="chartViewMode" 
                           mandatory 
                           density="compact"
                           variant="outlined"
-                          divided
+                          divided                          
                         >
                           <v-btn value="full" size="x-small">
                             <v-icon size="16" class="mr-1">mdi-fit-to-screen</v-icon>
@@ -858,6 +872,8 @@ const customEndDate = ref('')
 // 차트 관련
 const chartViewMode = ref<'full' | 'scroll'>('full')
 const assetHistory = ref<any[]>([])
+// ★ 추가: 스냅샷 갱신 로딩 상태
+const snapshotRefreshing = ref(false)
 const initialAsset = ref(1000000)
 const hoveredIndex = ref(-1)
 const tooltipX = ref(0)
@@ -1238,6 +1254,20 @@ const loadAssetHistoryByCustomPeriod = async (startDateStr: string, endDateStr: 
   } catch (error) {
     console.error('사용자 지정 기간 자산 이력 조회 실패:', error)
     assetHistory.value = []
+  }
+}
+
+// ★ 추가: 스냅샷 수동 갱신
+const refreshSnapshot = async () => {
+  snapshotRefreshing.value = true
+  try {
+    await profitApi.createSnapshot()
+    await loadAssetHistory()  // 기존 함수 재사용
+    showSnackbar('자산 스냅샷이 갱신되었습니다.', 'success')
+  } catch (error: any) {
+    showSnackbar(error.response?.data?.message || '스냅샷 갱신에 실패했습니다.', 'error')
+  } finally {
+    snapshotRefreshing.value = false
   }
 }
 
@@ -1797,5 +1827,14 @@ onMounted(() => {
 .card-no-top-radius {
   border-top-left-radius: 0 !important;
   border-top-right-radius: 0 !important;
+}
+
+/* ★ 추가: 스냅샷 갱신 버튼 높이를 전체보기/스크롤보기 btn-toggle과 통일 */
+.snapshot-btn {
+  height: 34px !important;
+  min-height: 34px !important;
+  font-size: 0.75rem !important;
+  border: 1px solid rgba(0, 0, 0, 0.38) !important;
+  border-radius: 4px !important;
 }
 </style>

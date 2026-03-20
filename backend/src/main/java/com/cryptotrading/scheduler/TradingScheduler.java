@@ -232,6 +232,129 @@ public class TradingScheduler {
         log.info("========== 일일 리포트 발송 완료 ==========");
     }
 
+    /**
+     * ★ 추가: 매주 일요일 23:50 주간 리포트 발송
+     */
+    @Scheduled(cron = "0 50 23 * * SUN", zone = "Asia/Seoul")
+    public void sendWeeklyReport() {
+        log.info("========== 주간 리포트 발송 시작 ==========");
+        try {
+            List<User> users = userRepository.findAll();
+            for (User user : users) {
+                try {
+                    DailyReportDTO report = dailyReportService.generateWeeklyReport(user.getUserId());
+
+                    // 이메일 (등록된 경우만)
+                    if (user.getEmail() != null && !user.getEmail().isEmpty()) {
+                        emailService.sendDailyReport(user.getEmail(), report);
+                    }
+                    // Discord DM (등록된 경우만)
+                    if (user.getDiscordUserId() != null && !user.getDiscordUserId().isEmpty()) {
+                        String profitSign = report.getTotalProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "";
+                        discordBotService.sendPeriodReportDM(
+                            user.getDiscordUserId(), "주간",
+                            report.getReportDate().toString(),
+                            profitSign + String.format("%,.0f", report.getRealizedProfit()),
+                            (report.getUnrealizedProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "")
+                                + String.format("%,.0f", report.getUnrealizedProfit()),
+                            profitSign + String.format("%,.0f", report.getTotalProfit()),
+                            profitSign + report.getProfitRate().setScale(2, RoundingMode.HALF_UP).toPlainString(),
+                            report.getHoldingCount(),
+                            String.format("%,.0f", report.getTotalHoldingValue())
+                        );
+                    }
+                    log.info("사용자 {} 주간 리포트 발송 완료", user.getUserId());
+                } catch (Exception e) {
+                    log.error("사용자 {} 주간 리포트 발송 실패: {}", user.getUserId(), e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.error("주간 리포트 발송 중 오류: {}", e.getMessage());
+        }
+        log.info("========== 주간 리포트 발송 완료 ==========");
+    }
+
+    /**
+     * ★ 추가: 매월 말일 23:50 월간 리포트 발송
+     * - 말일 여부: cron으로 말일 직접 지정 불가 → L(last) 사용
+     */
+    @Scheduled(cron = "0 50 23 L * *", zone = "Asia/Seoul")
+    public void sendMonthlyReport() {
+        log.info("========== 월간 리포트 발송 시작 ==========");
+        try {
+            List<User> users = userRepository.findAll();
+            for (User user : users) {
+                try {
+                    DailyReportDTO report = dailyReportService.generateMonthlyReport(user.getUserId());
+
+                    if (user.getEmail() != null && !user.getEmail().isEmpty()) {
+                        emailService.sendDailyReport(user.getEmail(), report);
+                    }
+                    if (user.getDiscordUserId() != null && !user.getDiscordUserId().isEmpty()) {
+                        String profitSign = report.getTotalProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "";
+                        discordBotService.sendPeriodReportDM(
+                            user.getDiscordUserId(), "월간",
+                            report.getReportDate().toString(),
+                            profitSign + String.format("%,.0f", report.getRealizedProfit()),
+                            (report.getUnrealizedProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "")
+                                + String.format("%,.0f", report.getUnrealizedProfit()),
+                            profitSign + String.format("%,.0f", report.getTotalProfit()),
+                            profitSign + report.getProfitRate().setScale(2, RoundingMode.HALF_UP).toPlainString(),
+                            report.getHoldingCount(),
+                            String.format("%,.0f", report.getTotalHoldingValue())
+                        );
+                    }
+                    log.info("사용자 {} 월간 리포트 발송 완료", user.getUserId());
+                } catch (Exception e) {
+                    log.error("사용자 {} 월간 리포트 발송 실패: {}", user.getUserId(), e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.error("월간 리포트 발송 중 오류: {}", e.getMessage());
+        }
+        log.info("========== 월간 리포트 발송 완료 ==========");
+    }
+
+    /**
+     * ★ 추가: 매년 12월 31일 23:50 연간 리포트 발송
+     */
+    @Scheduled(cron = "0 50 23 31 12 *", zone = "Asia/Seoul")
+    public void sendYearlyReport() {
+        log.info("========== 연간 리포트 발송 시작 ==========");
+        try {
+            List<User> users = userRepository.findAll();
+            for (User user : users) {
+                try {
+                    DailyReportDTO report = dailyReportService.generateYearlyReport(user.getUserId());
+
+                    if (user.getEmail() != null && !user.getEmail().isEmpty()) {
+                        emailService.sendDailyReport(user.getEmail(), report);
+                    }
+                    if (user.getDiscordUserId() != null && !user.getDiscordUserId().isEmpty()) {
+                        String profitSign = report.getTotalProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "";
+                        discordBotService.sendPeriodReportDM(
+                            user.getDiscordUserId(), "연간",
+                            report.getReportDate().toString(),
+                            profitSign + String.format("%,.0f", report.getRealizedProfit()),
+                            (report.getUnrealizedProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "")
+                                + String.format("%,.0f", report.getUnrealizedProfit()),
+                            profitSign + String.format("%,.0f", report.getTotalProfit()),
+                            profitSign + report.getProfitRate().setScale(2, RoundingMode.HALF_UP).toPlainString(),
+                            report.getHoldingCount(),
+                            String.format("%,.0f", report.getTotalHoldingValue())
+                        );
+                    }
+                    log.info("사용자 {} 연간 리포트 발송 완료", user.getUserId());
+                } catch (Exception e) {
+                    log.error("사용자 {} 연간 리포트 발송 실패: {}", user.getUserId(), e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.error("연간 리포트 발송 중 오류: {}", e.getMessage());
+        }
+        log.info("========== 연간 리포트 발송 완료 ==========");
+    }
+
      /**
      * ⭐⭐⭐ 신규: 자정에 어제 총자산 스냅샷 캐시 정리 (00:05 KST) ⭐⭐⭐
      */

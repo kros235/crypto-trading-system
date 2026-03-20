@@ -617,6 +617,18 @@
                   <v-icon size="14">mdi-help-circle-outline</v-icon>
                 </v-btn>
                 <v-spacer />
+                <!-- ★ 수정: 스크롤 보기 버튼과 동일한 스타일 (variant=flat, color=grey-lighten-1, size=x-small) -->
+                <v-btn
+                  size="x-small"
+                  variant="flat"
+                  color="grey-lighten-1"
+                  class="text-grey-darken-2 chart-view-btn mr-2"
+                  :loading="snapshotRefreshing"
+                  @click="refreshSnapshot"
+                >
+                  <v-icon size="14" class="mr-1">mdi-database-refresh</v-icon>
+                  스냅샷 갱신
+                </v-btn>
                 <!-- ★★★ 수정: 기간 버튼 대비 강화 + 사용자 지정 기간 추가 ★★★ -->
                 <v-btn-toggle v-model="chartPeriod" density="compact" mandatory variant="outlined" size="small" class="chart-period-toggle">
                   <v-btn value="7" size="x-small" :class="chartPeriod === '7' ? 'active-period' : ''">7일</v-btn>
@@ -1288,6 +1300,8 @@ const sidebarRef = ref()
 const loadingAccount = ref(false)
 const loadingIndicators = ref(false)
 const isRefreshing = ref(false)
+// ★ 추가: 스냅샷 갱신 로딩 상태
+const snapshotRefreshing = ref(false)
 const showAllIndicators = ref(false)
 
 // 카드 도움말 시스템
@@ -2559,6 +2573,7 @@ const fetchAssetHistory = async () => {
   }
 }
 const generateSystemAlerts = () => { const a: any[] = []; if (!authStore.user?.hasApiKey) a.push({ type: 'warning', message: 'API 키가 미등록 상태입니다' }); if (!tradingSettings.value) a.push({ type: 'warning', message: '거래 설정을 완료해주세요' }); const n = new Date(); if (n.getHours() === 9 && n.getMinutes() < 10) a.push({ type: 'info', message: '업비트 점검 시간 (09:00~09:10)' }); if (botStatus.value.emergencyStop) a.push({ type: 'error', message: '긴급 정지 발동됨' }); systemAlerts.value = a }
+
 const refreshAll = async () => { 
     isRefreshing.value = true; 
     try { 
@@ -2571,6 +2586,24 @@ const refreshAll = async () => {
     finally { 
         isRefreshing.value = false 
     } 
+}
+
+// ★ 추가: 스냅샷 수동 갱신
+// ★ 수정: createSnapshot 성공/실패를 독립 처리
+//   이유: fetchAssetHistory()가 업비트 API 키 없이 실패해도
+//         스냅샷 생성 성공 메시지가 표시되어야 함
+const refreshSnapshot = async () => {
+  snapshotRefreshing.value = true
+  try {
+    await profitApi.createSnapshot()
+    showSnackbar('자산 스냅샷이 갱신되었습니다.', 'success')
+    // 차트 리로드는 별도 처리 (실패해도 위 성공 메시지에 영향 없음)
+    fetchAssetHistory().catch(() => {})
+  } catch (error: any) {
+    showSnackbar(error.response?.data?.message || '스냅샷 갱신에 실패했습니다.', 'error')
+  } finally {
+    snapshotRefreshing.value = false
+  }
 }
 
 // ★★★ [추가] 기간 변경 시 자산 이력 다시 로드 ★★★

@@ -162,6 +162,12 @@ public class CoinInfoService {
     public void scheduledUpdate() {
         log.info("스케줄된 코인 정보 업데이트 실행");
         updateCoinInfo();
+         // ★ 추가: 코인 정보 갱신 후 시가총액 순위도 갱신
+         try {
+              updateMarketCapRanks();
+         } catch (Exception e) {
+                 log.warn("스케줄된 시가총액 순위 갱신 실패 (무시): {}", e.getMessage());
+         }
     }
 
     /**

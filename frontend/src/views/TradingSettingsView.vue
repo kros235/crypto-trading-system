@@ -2099,7 +2099,10 @@ const loadActiveCoins = async () => {
     const response = await coinApi.getActiveCoins()
     availableCoins.value = response.data.map((coin: CoinInfo) => ({
       ...coin,
-      displayName: `${coin.nameKr} (${coin.symbol})`
+      // ★ 순위가 있으면 "#1 " 접두사 추가, null이면 그냥 표시
+      displayName: coin.marketCapRank
+        ? `#${coin.marketCapRank} ${coin.nameKr} (${coin.symbol})`
+        : `${coin.nameKr} (${coin.symbol})`
     }))
   } catch (error: any) {
     message.value = error.response?.data?.message || '코인 목록을 불러오는데 실패했습니다'

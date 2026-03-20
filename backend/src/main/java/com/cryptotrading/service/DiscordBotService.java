@@ -346,4 +346,45 @@ public class DiscordBotService {
             log.error("일일 리포트 DM 발송 오류: {}", e.getMessage());
         }
     }
+
+    /**
+     * ★ 추가: 기간 리포트 DM (주간/월간/연간 공통)
+     * - 기존 sendDailyReportDM과 동일하나 periodLabel로 제목 구분
+     */
+    public void sendPeriodReportDM(String discordUserId, String periodLabel,
+                                    String reportDate, String realizedProfit,
+                                    String unrealizedProfit, String totalProfit,
+                                    String profitRate, int holdingCount,
+                                    String totalHoldingValue) {
+        if (!isEnabled() || discordUserId == null || discordUserId.isBlank()) {
+            return;
+        }
+        try {
+            User user = jda.retrieveUserById(discordUserId).complete();
+            if (user == null) return;
+
+            boolean isProfit = !totalProfit.startsWith("-");
+            Color color = isProfit ? Color.GREEN : Color.RED;
+
+            EmbedBuilder embed = new EmbedBuilder()
+                    .setTitle("📊 " + periodLabel + " 리포트 - " + reportDate)
+                    .setColor(color)
+                    .addField("💰 실현 손익", realizedProfit + "원", true)
+                    .addField("📈 평가 손익", unrealizedProfit + "원", true)
+                    .addField("📋 총 손익", totalProfit + "원 (" + profitRate + "%)", false)
+                    .addField("🪙 보유 종목", holdingCount + "개", true)
+                    .addField("💎 총 평가액", totalHoldingValue + "원", true)
+                    .setFooter("코인 자동매매 시스템", null)
+                    .setTimestamp(LocalDateTime.now().atZone(java.time.ZoneId.systemDefault()).toInstant());
+
+            user.openPrivateChannel()
+                    .flatMap(channel -> channel.sendMessageEmbeds(embed.build()))
+                    .queue(
+                        success -> log.info("{} 리포트 DM 발송 성공: {}", periodLabel, discordUserId),
+                        error -> log.error("{} 리포트 DM 발송 실패: {}", periodLabel, error.getMessage())
+                    );
+        } catch (Exception e) {
+            log.error("{} 리포트 DM 발송 오류: {}", periodLabel, e.getMessage());
+        }
+    }
 }

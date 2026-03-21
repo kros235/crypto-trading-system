@@ -38,11 +38,11 @@ public class StockRiskManagementService {
     private final MarketHolidayService marketHolidayService;
 
     // Redis 키 패턴
-    private static final String DAILY_BUY_AMOUNT_KEY = "stock:daily_buy:%d:%s";      // userId:date
-    private static final String DAILY_SELL_AMOUNT_KEY = "stock:daily_sell:%d:%s";    // userId:date
-    private static final String CONSEC_LOSS_KEY = "stock:consec_loss:%d:%s";          // userId:stockCode
-    private static final String EMERGENCY_STOP_KEY = "stock:emergency_stop:%d";       // userId
-    private static final String BOT_ENABLED_KEY = "stock:bot_enabled:%d";             // userId
+    private static final String DAILY_BUY_AMOUNT_KEY  = "stock:daily_buy:%s:%s";
+    private static final String DAILY_SELL_AMOUNT_KEY = "stock:daily_sell:%s:%s";
+    private static final String CONSEC_LOSS_KEY       = "stock:consec_loss:%s:%s";
+    private static final String EMERGENCY_STOP_KEY    = "stock:emergency_stop:%s";
+    private static final String BOT_ENABLED_KEY       = "stock:bot_enabled:%s";
 
     // 정규장 시간 (KST)
     private static final LocalTime MARKET_OPEN  = LocalTime.of(9, 0);

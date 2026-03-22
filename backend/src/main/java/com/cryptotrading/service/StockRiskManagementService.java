@@ -424,4 +424,93 @@ public class StockRiskManagementService {
         }
         return null; // 매수 가능
     }
+
+    // =========================================================
+    // ⭐ 9. 보유기간 경고 목록 조회 (스케줄러용)          [Day 57 추가]
+    // =========================================================
+
+    /**
+     * ⭐ [Day 57 추가] 스케줄러에서 사용하는 보유기간 경고 DTO 목록 반환
+     * - getWarnHoldings()  : 경고 대상 (15일 이상, 강제청산 미포함)
+     * - getExpiredHoldings(): 긴급 대상 (20일 이상, 강제청산 대상)
+     * - 두 목록을 합쳐 HoldingDaysWarning DTO로 변환
+     *
+     * 왜 별도 메서드인가:
+     * 기존 getWarnHoldings()/getExpiredHoldings()는 StockTransaction 엔티티를 반환
+     * 스케줄러는 알림 메시지 구성에 필요한 정보만 담은 DTO가 필요
+     */
+    public List<HoldingDaysWarning> getHoldingDaysWarnings(String userId,
+                                                            StockTradingSetting setting) {
+        List<StockTransaction> warnList    = getWarnHoldings(userId, setting);
+        List<StockTransaction> expiredList = getExpiredHoldings(userId, setting);
+
+        java.util.stream.Stream<HoldingDaysWarning> warnStream = warnList.stream()
+                .map(tx -> new HoldingDaysWarning(
+                        tx.getStockCode(),
+                        tx.getHoldingDays() != null ? tx.getHoldingDays() : 0,
+                        tx.getCreatedAt() != null ? tx.getCreatedAt().toLocalDate().toString() : "-",
+                        false));
+
+        java.util.stream.Stream<HoldingDaysWarning> urgentStream = expiredList.stream()
+                .map(tx -> new HoldingDaysWarning(
+                        tx.getStockCode(),
+                        tx.getHoldingDays() != null ? tx.getHoldingDays() : 0,
+                        tx.getCreatedAt() != null ? tx.getCreatedAt().toLocalDate().toString() : "-",
+                        true));
+
+        return java.util.stream.Stream.concat(urgentStream, warnStream)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    // =========================================================
+    // ⭐ 10. 일일 캐시 정리 (스케줄러용, 장 마감 15:35 호출)  [Day 57 추가]
+    // =========================================================
+
+    /**
+     * ⭐ [Day 57 추가] 주식 당일 거래 Redis 캐시 전체 정리
+     * - DAILY_BUY_AMOUNT_KEY  패턴 삭제 (stock:daily_buy:*)
+     * - DAILY_SELL_AMOUNT_KEY 패턴 삭제 (stock:daily_sell:*)
+     *
+     * 왜 별도 메서드인가:
+     * Phase 1 코인(자정 초기화)과 Phase 2 주식(장 마감 후 초기화)의
+     * 캐시 정리 사이클이 달라 독립적으로 호출 가능하도록 분리
+     */
+    public void clearStockDailyCache() {
+        try {
+            // stock:daily_buy:* 패턴 전체 삭제
+            java.util.Set<String> buyKeys = redisTemplate.keys("stock:daily_buy:*");
+            if (buyKeys != null && !buyKeys.isEmpty()) {
+                redisTemplate.delete(buyKeys);
+                log.info("[StockRiskMgmt] 일일 매수 캐시 정리 완료: {}건", buyKeys.size());
+            }
+
+            // stock:daily_sell:* 패턴 전체 삭제
+            java.util.Set<String> sellKeys = redisTemplate.keys("stock:daily_sell:*");
+            if (sellKeys != null && !sellKeys.isEmpty()) {
+                redisTemplate.delete(sellKeys);
+                log.info("[StockRiskMgmt] 일일 매도 캐시 정리 완료: {}건", sellKeys.size());
+            }
+        } catch (Exception e) {
+            log.error("[StockRiskMgmt] 일일 캐시 정리 실패: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    // =========================================================
+    // ⭐ Inner DTO: HoldingDaysWarning                    [Day 57 추가]
+    // =========================================================
+
+    /**
+     * ⭐ [Day 57 추가] 보유기간 경고 정보 전달용 내부 DTO
+     * - 스케줄러 → 알림 서비스 간 데이터 전달에 사용
+     * - StockTransaction 엔티티 의존성을 스케줄러에 노출하지 않기 위해 별도 DTO 사용
+     */
+    @lombok.Getter
+    @lombok.AllArgsConstructor
+    public static class HoldingDaysWarning {
+        private final String stockCode;   // 종목코드 (ex: 409820)
+        private final int holdingDays;    // 현재 보유 거래일 수
+        private final String buyDate;     // 매수일 (yyyy-MM-dd)
+        private final boolean urgent;     // true = 최대 보유기간 초과 (🚨), false = 경고 (⚠️)
+    }
 }

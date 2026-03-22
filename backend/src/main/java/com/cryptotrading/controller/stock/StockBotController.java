@@ -30,6 +30,7 @@ public class StockBotController {
 
     private final StockTradingBotService stockTradingBotService;
     private final StockRiskManagementService stockRiskManagementService;
+    private final com.cryptotrading.repository.StockTradingSettingRepository stockTradingSettingRepository; // ⭐ [Day 57 추가]
 
     /**
      * 수동으로 주식 자동매매 1회 실행
@@ -95,5 +96,50 @@ public class StockBotController {
         response.put("message", "주식 자동매매 봇이 중지되었습니다.");
         response.put("botEnabled", false);
         return ResponseEntity.ok(response);
+    }
+
+    // ⭐ [Day 57 추가] 테스트/운영 수동 트리거용 --------------------------
+
+    /**
+     * ⭐ [Day 57 추가] 일일 거래 캐시 수동 초기화
+     * - 스케줄러(15:35 KST)와 동일한 clearStockDailyCache() 호출
+     * - 테스트 환경에서 수동 트리거 및 긴급 초기화 용도
+     */
+    @PostMapping("/reset-daily-cache")
+    public ResponseEntity<Map<String, Object>> resetDailyCache(Authentication authentication) {
+        String userId = authentication.getName();
+        log.info("[주식봇 컨트롤러] 일일 캐시 수동 초기화 요청: {}", userId);
+        stockRiskManagementService.clearStockDailyCache();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "일일 거래 캐시가 초기화되었습니다.");
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * ⭐ [Day 57 추가] 보유기간 경고 대상 조회
+     * - 스케줄러(09:05 KST)의 경고 체크와 동일한 로직 수동 조회
+     * - 경고(15일 이상): urgent=false / 긴급(20일 이상): urgent=true
+     */
+    @GetMapping("/holding-warnings")
+    public ResponseEntity<?> getHoldingWarnings(Authentication authentication) {
+        String userId = authentication.getName();
+        log.info("[주식봇 컨트롤러] 보유기간 경고 조회 요청: {}", userId);
+
+        java.util.Optional<com.cryptotrading.entity.StockTradingSetting> settingOpt =
+                stockTradingSettingRepository.findByUserId(userId);
+
+        if (settingOpt.isEmpty()) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "주식 거래 설정이 없습니다.");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        java.util.List<StockRiskManagementService.HoldingDaysWarning> warnings =
+                stockRiskManagementService.getHoldingDaysWarnings(userId, settingOpt.get());
+
+        return ResponseEntity.ok(warnings);
     }
 }

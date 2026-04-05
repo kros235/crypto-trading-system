@@ -970,34 +970,47 @@ public class TradingBotService {
 
         // 실제 매도 실행
         try {
-            // ⭐⭐⭐ [수정] 업비트 실제 보유 수량 조회 후 매도 ⭐⭐⭐
-            // 수정 이유: 매수 체결 수량 조회 실패 시 추정값이 DB에 저장되는데,
-            // 추정값이 실제 수량보다 클 경우 insufficient_funds_ask 오류로
-            // 자동 매도가 영원히 실패하는 교착 상태가 발생함.
-            // 매도 직전 업비트 실제 잔고를 조회하여 실제 보유 수량으로 주문.
-            BigDecimal actualQuantity = getActualCoinBalance(apiKeys, holding.getCoinSymbol());
-            if (actualQuantity == null || actualQuantity.compareTo(BigDecimal.ZERO) <= 0) {
-                log.warn("업비트 실제 보유 수량 조회 실패, DB 수량으로 매도 시도: {} - {}개",
-                        holding.getCoinSymbol(), holding.getQuantity());
-                actualQuantity = holding.getQuantity(); // 폴백: DB 수량 사용
-            } else {
-                log.info("업비트 실제 보유 수량 확인: {} - {}개 (DB: {}개)",
-                        holding.getCoinSymbol(), actualQuantity, holding.getQuantity());
-                // DB 수량과 다르면 DB 수량도 실제값으로 보정
-                if (actualQuantity.compareTo(holding.getQuantity()) != 0) {
-                    log.warn("수량 불일치 보정: {} DB={}개 → 실제={}개",
-                            holding.getCoinSymbol(), holding.getQuantity(), actualQuantity);
-                    holding.setQuantity(actualQuantity);
+            // ⭐⭐⭐ [수정] 매도 수량 결정: 다중 보유 시 합산 오류 방지 ⭐⭐⭐
+            // 수정 이유: getActualCoinBalance()는 업비트에서 해당 코인의 전체 잔고를 반환하므로,
+            // 동일 코인을 여러 건 보유 중일 때 다른 거래건 수량까지 합산되어
+            // 한 번의 매도 주문으로 다른 거래건의 코인까지 함께 팔리는 버그 발생.
+            // → 동일 코인을 단독 보유 중일 때만 실제 잔고로 보정하고,
+            //    다중 보유 중일 때는 DB 수량을 그대로 사용한다.
+            BigDecimal sellQuantity = holding.getQuantity();
+
+            long otherHoldingCount = transactionRepository.countByUserIdAndCoinSymbolAndStatus(
+                    holding.getUserId(), holding.getCoinSymbol(), TransactionStatus.HOLDING) - 1;
+
+            if (otherHoldingCount <= 0) {
+                // 단독 보유: 업비트 실제 잔고로 검증/보정 가능
+                BigDecimal actualQuantity = getActualCoinBalance(apiKeys, holding.getCoinSymbol());
+                if (actualQuantity == null || actualQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+                    log.warn("업비트 실제 보유 수량 조회 실패, DB 수량으로 매도: {} - {}개",
+                            holding.getCoinSymbol(), holding.getQuantity());
+                } else {
+                    log.info("업비트 실제 보유 수량 확인 (단독 보유): {} - {}개 (DB: {}개)",
+                            holding.getCoinSymbol(), actualQuantity, holding.getQuantity());
+                    if (actualQuantity.compareTo(holding.getQuantity()) != 0) {
+                        log.warn("수량 불일치 보정 (단독 보유): {} DB={}개 → 실제={}개",
+                                holding.getCoinSymbol(), holding.getQuantity(), actualQuantity);
+                        sellQuantity = actualQuantity;
+                        holding.setQuantity(actualQuantity);
+                    }
                 }
+            } else {
+                // 다중 보유: DB 수량만 사용 (합산 오류 방지)
+                log.info("동일 코인 다중 보유 중 (추가 {}건), DB 수량으로 매도: {} - {}개",
+                        otherHoldingCount, holding.getCoinSymbol(), holding.getQuantity());
             }
+
             UpbitOrderDTO order = upbitApiService.orderSell(
                     apiKeys[0], apiKeys[1],
                     holding.getCoinSymbol(),
-                    actualQuantity);          // ← 실제 보유 수량 사용
+                    sellQuantity);            // ← 보정된 수량 사용
 
             // 거래 내역 업데이트
             BigDecimal sellPrice = signal.getCurrentPrice();
-            BigDecimal sellAmount = holding.getQuantity().multiply(sellPrice);
+            BigDecimal sellAmount = sellQuantity.multiply(sellPrice); // ← sellQuantity 사용
             BigDecimal fee = sellAmount.multiply(FEE_RATE);
             BigDecimal profitLoss = sellAmount.subtract(fee)
                     .subtract(holding.getTotalAmount());

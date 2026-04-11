@@ -88,10 +88,10 @@
           disabled
         />
         <v-list-item
-          prepend-icon="mdi-history"
-          title="주식 거래 내역"
-          disabled
-        />
+            prepend-icon="mdi-history"
+            title="주식 거래 내역"
+            to="/stock-transactions"
+          />
         <!-- ⭐⭐⭐ 변경: disabled 제거, @click 추가 ⭐⭐⭐ -->
         <v-list-item
           prepend-icon="mdi-cog-outline"

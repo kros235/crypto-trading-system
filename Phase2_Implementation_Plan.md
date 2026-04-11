@@ -46,7 +46,8 @@ crypto-trading-system/
 │       │   ├── UserController.java
 │       │   └── stock/                                       ⭐ (Day 51)
 │       │       ├── StockInfoController.java                 ⭐ (Day 51)
-│       │       └── StockSettingController.java              ⭐ (Day 51)
+│       │       ├── StockSettingController.java              ⭐ (Day 51)
+│       │       └── StockBotController.java                  ⭐ (Day 56, Day 57 엔드포인트 추가)
 │       ├── dto/                 (30+ DTO 클래스)
 │       │   ├── AuthResponse, DashboardStatsDTO, LoginRequest, SignupRequest
 │       │   ├── TradingSettingDTO, TransactionDTO, UserInfoDTO
@@ -74,13 +75,22 @@ crypto-trading-system/
 │       ├── exception/           (7개)
 │       ├── filter/              (3개: JWT, RateLimit, RequestLogging)
 │       ├── repository/          (15개)
-│       ├── scheduler/           (TradingScheduler.java)
-│       ├── service/             (25개 서비스)
+│       ├── scheduler/
+│       │   ├── TradingScheduler.java
+│       │   └── StockTradingScheduler.java              ⭐ (Day 57)
+│       ├── service/             (31개 서비스)
 │       │   ├── ... (기존 23개)
 │       │   ├── KisApiService.java                   (Day 50, Day 51 정리)
 │       │   ├── KisTokenService.java                 (Day 50)
 │       │   ├── StockInfoService.java                ⭐ (Day 51)
-│       │   └── StockSettingService.java             ⭐ (Day 51)
+│       │   ├── StockSettingService.java             ⭐ (Day 51)
+│       │   ├── StockTechnicalIndicatorService.java  ⭐ (Day 53)
+│       │   ├── StockSignalDetectorService.java      ⭐ (Day 53)
+│       │   ├── StockRiskManagementService.java      ⭐ (Day 54, Day 56 버그수정, Day 57 메서드 추가)
+│       │   ├── MarketHolidayService.java            ⭐ (Day 54)
+│       │   └── StockTradingBotService.java          ⭐ (Day 56)
+
+
 │       └── util/                (EncryptionUtil, JwtUtil)
 │
 ├── frontend/
@@ -826,19 +836,360 @@ KIS_BASE_URL=https://openapivts.koreainvestment.com:29443
 | **50** | ③ KIS API 연동 기반 (토큰 관리, WebClient 설정, 시세/잔고/주문 API) + KIS DTO 4개 + SecurityConfig 주식 API 권한 + Docker 환경변수 | KisApiConfig, KisApiService, KisTokenService, KisTokenDTO, KisQuoteDTO, KisAccountDTO, KisOrderDTO | ✅ 완료 |
 | **51** | ④ StockInfoService/Controller + StockSettingService/Controller + DTO 2개 + API 15개 (Postman 17건 테스트 통과) | StockInfoDTO, StockTradingSettingDTO, StockInfoService, StockSettingService, StockInfoController, StockSettingController + KisApiService/KisAccountDTO/StockInfoRepository/SecurityConfig/StockInfoService 수정 | ✅ 완료 |
 | **52** | ⑤ 주식 거래 설정 프론트엔드 + KIS API 키 등록 UI + 도움말 개선 | StockTradingSettingsView.vue, api/stock.ts, types/stock.ts, router, TheSidebar, ProfileView, HelpView, StockTradingSettingDTO | ✅ 완료 |
-| **53** | ⑥ StockTechnicalIndicatorService + StockSignalDetectorService | 기술지표/신호 감지 (Phase 1 재사용) | ⏳ 예정 |
-| **54** | ⑦ StockRiskManagementService + MarketHolidayService | 리스크관리, 휴장일 | ⏳ 예정 |
-| **55** | ⑧ StockTradingBotService (자동매매 핵심) | 매수/매도/라운드로빈 | ⏳ 예정 |
-| **56** | ⑨ StockTradingScheduler + 장 시작/마감 알림 | 스케줄러, 알림 | ⏳ 예정 |
-| **57** | ⑩ StockTransactionService + API + 프론트엔드 | 거래 내역 | ⏳ 예정 |
-| **58** | ⑪ StockDashboardView (주식 대시보드 프론트엔드) | 대시보드 | ⏳ 예정 |
-| **59** | ⑫ StockHoldingsView + StockListView | 보유자산, 종목목록 | ⏳ 예정 |
-| **60** | ⑬ StockBotMonitorView | 봇 모니터링 | ⏳ 예정 |
-| **61** | ⑭ StockBacktestService + StockBacktestView | 백테스팅 | ⏳ 예정 |
-| **62** | ⑮ StockProfitService + 수익분석 + 일일리포트 | 수익 분석 | ⏳ 예정 |
-| **63** | ⑯ AdminHolidayView + 관리자 통합 | 관리자 기능 | ⏳ 예정 |
-| **64** | ⑰ 사이드바 활성화 + SecurityConfig 업데이트 + 통합 테스트 | 통합 | ⏳ 예정 |
-| **65** | ⑱ 최종 테스트 + 문서화 + v2.0 릴리즈 + (v2.1 리팩토링 계획 수립: com.cryptotrading → com.investment 패키지 리네이밍, controller/service/entity 서브패키지 crypto/stock/common 분리) | 배포 + 리팩토링 계획서 | ⏳ 예정 |
+| **53** | ⑥ StockTechnicalIndicatorService + StockSignalDetectorService (KIS API 일봉 기반 기술지표 계산 + 매수/매도 신호 감지 + 레버리지 ETF 보유기간 강제 매도) | 기술지표/신호 감지 (Phase 1 재사용) | ✅ 완료 |
+| **54** | ⑦ StockRiskManagementService + MarketHolidayService (거래시간/한도/비중/긴급정지/연속손절/ETF보유기간 + 휴장일 CRUD/거래일계산/@Cacheable) | StockRiskManagementService, MarketHolidayService, StockTransactionRepository(+3), MarketHolidayRepository(+3) | ✅ 완료 |
+| **55** | ⑧ 주식 거래 설정 UI/백엔드 동기화 (useStopLoss/additionalDropPct/useAiAnalysis 추가, 이동평균선 Radio 통일, helpContents 16개 도움말, 빌드오류 2건 수정) | init.sql, StockTradingSetting, StockTradingSettingDTO, StockSettingService, StockTradingSettingsView.vue | ✅ 완료 |
+| **56** | ⑨ StockTradingBotService (자동매매 핵심) + StockBotController (봇 REST API 4개) + StockRiskManagementService Redis 키 %d→%s 버그수정 | StockTradingBotService, StockBotController, StockRiskManagementService | ✅ 완료 |
+| **57** | ⑩ StockTradingScheduler (3분 주기 자동매매 + 장시작/마감 알림 + 보유기간 경고 + 캐시정리) + StockRiskManagementService (getHoldingDaysWarnings/clearStockDailyCache/HoldingDaysWarning DTO 추가) + StockBotController (reset-daily-cache/holding-warnings 엔드포인트 추가) | StockTradingScheduler, StockRiskManagementService, StockBotController | ✅ 완료 |
+| **58** | ⑪ StockTransactionService + API + 프론트엔드 | 거래 내역 | ⏳ 예정 |
+| **59** | ⑫ StockDashboardView (주식 대시보드 프론트엔드) | 대시보드 | ⏳ 예정 |
+| **60** | ⑬ StockHoldingsView + StockListView | 보유자산, 종목목록 | ⏳ 예정 |
+| **61** | ⑭ StockBotMonitorView | 봇 모니터링 | ⏳ 예정 |
+| **62** | ⑮ StockBacktestService + StockBacktestView | 백테스팅 | ⏳ 예정 |
+| **63** | ⑯ StockProfitService + 수익분석 + 일일리포트 | 수익 분석 | ⏳ 예정 |
+| **64** | ⑰ AdminHolidayView + 관리자 통합 | 관리자 기능 | ⏳ 예정 |
+| **65** | ⑱ 사이드바 활성화 + SecurityConfig 업데이트 + 통합 테스트 | 통합 | ⏳ 예정 |
+| **66** | ⑲ 최종 테스트 + 문서화 + v2.0 릴리즈 + (v2.1 리팩토링 계획 수립: com.cryptotrading → com.investment 패키지 리네이밍, controller/service/entity 서브패키지 crypto/stock/common 분리) | 배포 + 리팩토링 계획서 | ⏳ 예정 |
+
+---
+
+# 🔮 3.5부: v2.0 완료 이후 미래 예정 작업
+
+> **전제 조건**: Day 66 (v2.0 릴리즈) 완료 후 진행
+> **목적**: Phase별 Backend 컨테이너 분리 + 패키지 구조 정리 + Phase 3 확장 기반 마련
+> **원칙**: 기존 기능 동작에 영향 없는 순차적 리팩토링
+
+---
+
+## 📌 배경 및 필요성
+
+현재(v2.0) 구조는 코인/주식 자동매매 로직이 단일 Spring Boot 애플리케이션(`crypto-backend`)에 공존한다.
+Phase 3(달러 거래 등) 추가 시 단일 컨테이너에 계속 누적되면 다음 문제가 발생한다.
+
+- 코인 봇 장애가 주식 봇에 영향 (JVM 공유)
+- Phase별 독립 배포/재시작 불가
+- 패키지 `com.cryptotrading`가 주식/달러 거래까지 포함하는 혼용 구조
+- API 경로 `/api/coins`, `/api/stocks` 혼재 → Nginx 라우팅 분리 기반 없음
+
+---
+
+## 🗂 v2.1: 패키지 구조 리팩토링 (분리 전 전처리)
+
+> **소요 예상**: 2~3일  
+> **핵심 원칙**: 기능 변경 없이 파일 이동/이름 변경만 수행
+
+### v2.1 작업 목록
+
+| # | 작업 | 변경 전 | 변경 후 |
+|---|------|---------|---------|
+| 1 | 패키지 루트 리네이밍 | `com.cryptotrading` | `com.investment` |
+| 2 | 서비스 서브패키지 분리 | `service/*.java` (36개 혼재) | `service/crypto/`, `service/stock/`, `service/common/` |
+| 3 | 컨트롤러 서브패키지 분리 | `controller/*.java` (이미 `controller/stock/` 존재) | `controller/crypto/`, `controller/stock/`, `controller/common/` |
+| 4 | Entity 서브패키지 분리 | `entity/*.java` (18개 혼재) | `entity/crypto/`, `entity/stock/`, `entity/common/` |
+| 5 | DTO 서브패키지 정리 | `dto/kis/` → 이동 | `dto/stock/kis/` |
+
+### v2.1 서비스 분류 기준 (GitHub 코드베이스 기준)
+
+**`service/crypto/` (코인 전용)**
+```
+TradingBotService.java          ← Phase 1 핵심
+TradingSettingService.java
+SignalDetectorService.java
+TechnicalIndicatorService.java  ← 수학 로직, crypto용 파라미터
+RiskManagementService.java
+BacktestService.java            ← UpbitApiService 의존
+UpbitApiService.java
+CoinInfoService.java
+TransactionService.java
+NewsCollectorService.java
+NewsAnalysisService.java
+GeminiApiService.java
+```
+
+**`service/stock/` (주식 전용)**
+```
+StockTradingBotService.java     ← Phase 2 핵심 (Day 56 완료)
+StockSettingService.java
+StockSignalDetectorService.java ← Phase 1 SignalDetectorService 재사용 구조
+StockTechnicalIndicatorService.java
+StockRiskManagementService.java
+StockInfoService.java
+KisApiService.java
+KisTokenService.java
+MarketHolidayService.java
+```
+
+**`service/common/` (코인/주식 공통)**
+```
+AuthService.java
+UserService.java
+AdminService.java
+NotificationService.java        ← Discord/Email 공통 발송
+EmailService.java
+DiscordBotService.java
+ProfitService.java              ← v2.1에서 StockProfitService 분리 후 공통 인터페이스화
+DailyAssetSnapshotService.java
+DailyReportService.java
+ReleaseNoteService.java
+CacheService.java
+LoginAttemptService.java
+TotpService.java
+MonitoringService.java
+MonitoringAlertService.java
+AdminAlertNotificationService.java
+```
+
+### v2.1 주의사항
+
+- IntelliJ `Refactor → Rename` 기능 사용 시 import 자동 수정됨 (수동 편집 불필요)
+- `@SpringBootTest` 기반 통합 테스트 클래스의 패키지 선언도 함께 수정 필요
+- `docker-compose.yml`의 빌드 경로는 상대경로(`./backend`) 사용 중이므로 변경 불필요
+- `init.sql`은 Java 패키지와 무관하므로 변경 불필요
+
+---
+
+## 🏗 v3.0: Phase별 Backend 컨테이너 분리
+
+> **전제**: v2.1 패키지 리팩토링 완료 후 진행  
+> **소요 예상**: 3~4일  
+> **목표**: `coin-backend`(8080) / `stock-backend`(8081) 독립 컨테이너
+
+### v3.0 목표 아키텍처
+
+```
+[Frontend - Vue 3 · Nginx · host mode]
+        ↓ /api/coin/** → :8080
+        ↓ /api/stock/** → :8081
+        ↓ /api/auth/** → :8080 (Auth 마스터)
+
+[coin-backend :8080]          [stock-backend :8081]
+  crypto 패키지 전체             stock 패키지 전체
+  common 패키지 포함             common 패키지 복사 or 공유
+  Auth/User/Admin 마스터          JWT 검증만 (공유 Secret)
+  업비트 API 연동                KIS API 연동
+        ↓                              ↓
+[MySQL 8.0 · 공유]            [Redis 7.x · 공유]
+  스키마는 이미 Phase별 분리       키 prefix: coin: / stock:
+```
+
+### v3.0 작업 목록
+
+#### ① Nginx 라우팅 분리 (`nginx.conf` / `nginx.ssl.conf` 수정)
+
+**수정 위치**: `frontend/nginx.conf` 및 `frontend/nginx.ssl.conf`
+
+**변경 이유**: 현재 `/api` 전체를 단일 백엔드로 프록시 중. 컨테이너 분리 후 경로별 라우팅 필요.
+
+```nginx
+# 변경 전 (현재)
+location /api/ {
+    proxy_pass http://backend:8080/api/;
+}
+
+# 변경 후 (coin-backend / stock-backend 분리)
+location /api/coin/ {
+    proxy_pass http://coin-backend:8080/api/coin/;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+
+location /api/stock/ {
+    proxy_pass http://stock-backend:8081/api/stock/;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+
+# Auth/User/Admin/공통은 coin-backend 마스터
+location /api/ {
+    proxy_pass http://coin-backend:8080/api/;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+```
+
+> **운영 환경(`nginx.ssl.conf`)**: `proxy_pass`의 `http://backend:8080` → `http://127.0.0.1:8080` / `http://127.0.0.1:8081` 으로 변경 (host 네트워크 모드 유지)
+
+#### ② Docker Compose 분리
+
+**수정 위치**: `docker-compose.yml` / `docker-compose.prod.yml`
+
+**변경 이유**: `crypto-backend` 단일 서비스를 `coin-backend` + `stock-backend` 두 서비스로 분리.
+
+```yaml
+# 변경 전 (현재 docker-compose.yml)
+services:
+  backend:
+    build: ./backend
+    container_name: crypto-backend
+    ports:
+      - "8080:8080"
+
+# 변경 후
+services:
+  coin-backend:
+    build:
+      context: ./backend
+      args:
+        MODULE: coin          # Dockerfile에서 활성화할 모듈 선택
+    container_name: coin-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=coin
+    env_file:
+      - .env.development
+
+  stock-backend:
+    build:
+      context: ./backend
+      args:
+        MODULE: stock
+    container_name: stock-backend
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=stock
+      - SERVER_PORT=8081
+    env_file:
+      - .env.development
+    depends_on:
+      - mysql
+      - redis
+```
+
+> **절대경로 사용 금지**: `context: ./backend` 처럼 항상 상대경로 사용 (현재 규칙 유지)
+
+#### ③ Spring Profile 분리 (`application-coin.yml` / `application-stock.yml`)
+
+**신규 생성 위치**: `backend/src/main/resources/`
+
+```
+backend/src/main/resources/
+├── application.yml           (공통 설정 - 현재 파일 유지)
+├── application-coin.yml      ← 신규: 코인봇 전용 스케줄러/설정 활성화
+└── application-stock.yml     ← 신규: 주식봇 전용 스케줄러/설정 활성화
+```
+
+```yaml
+# application-coin.yml
+spring:
+  application:
+    name: coin-trading-backend
+scheduling:
+  enabled: true
+  stock-scheduler: false   # 주식 스케줄러 비활성화
+  coin-scheduler: true
+
+# application-stock.yml
+spring:
+  application:
+    name: stock-trading-backend
+server:
+  port: 8081
+scheduling:
+  enabled: true
+  coin-scheduler: false    # 코인 스케줄러 비활성화
+  stock-scheduler: true
+```
+
+#### ④ JWT Secret 공유 설정
+
+**변경 이유**: stock-backend에서도 coin-backend가 발급한 JWT를 검증해야 하므로 동일한 Secret 사용.
+
+```yaml
+# application.yml (공통, 변경 없음)
+jwt:
+  secret: ${JWT_SECRET}    # 환경변수로 두 컨테이너에 동일 값 주입
+  expiration: 1800000
+```
+
+```env
+# .env.development / .env.production (기존 파일에 항목 추가)
+JWT_SECRET=기존값_그대로_유지
+```
+
+> coin-backend와 stock-backend의 `.env` 파일에 동일한 `JWT_SECRET`이 주입되므로 단일 로그인으로 양쪽 접근 가능.
+
+#### ⑤ Redis 키 prefix 컨벤션 정리
+
+**변경 이유**: 공유 Redis에서 코인/주식 캐시 키 충돌 방지.
+
+| 현재 키 패턴 | 변경 후 키 패턴 | 적용 서비스 |
+|------------|--------------|-----------|
+| `bot:enabled:{userId}` | `coin:bot:enabled:{userId}` | RiskManagementService |
+| `daily:limit:{userId}` | `coin:daily:limit:{userId}` | RiskManagementService |
+| `stock:bot:enabled:{userId}` | 변경 없음 (이미 prefix 있음) | StockRiskManagementService |
+| `stock:daily:{userId}` | 변경 없음 (이미 prefix 있음) | StockRiskManagementService |
+
+> **참고**: GitHub 코드 확인 결과 `StockRiskManagementService`는 이미 `stock:` prefix를 사용 중. 코인 쪽(`RiskManagementService`)만 prefix 추가 필요.
+
+#### ⑥ init.sql 이관 호환성 확인
+
+**변경 없음** - 현재 `docker/mysql/init.sql`은 이미 다음 조건을 만족하므로 신규 서버 이관 시 그대로 사용 가능:
+
+- `CREATE TABLE IF NOT EXISTS` 사용 (멱등성 보장)
+- 절대경로 미사용
+- Phase 1(코인) + Phase 2(주식) 테이블 모두 포함
+- `FOREIGN KEY` 선언 순서 올바름 (참조 대상 테이블이 먼저 생성됨)
+
+> **Phase 3 추가 시**: `init.sql` 하단에 `-- Phase 3: 달러 거래 테이블` 섹션 추가하는 방식으로 확장.
+
+---
+
+## 🌐 Phase 3: 달러(외환) 거래 확장 준비 사항
+
+> **시작 조건**: v3.0 컨테이너 분리 완료 후  
+> **목표**: `dollar-backend`(:8082) 컨테이너 추가만으로 Phase 3 온보딩 가능한 구조
+
+### Phase 3 추가 시 작업 범위 (예상)
+
+| 항목 | 내용 | 재사용 가능 여부 |
+|------|------|----------------|
+| DB 테이블 | `dollar_transactions`, `dollar_trading_settings`, `fx_price_history` | init.sql 하단 추가 |
+| Backend | `dollar-backend` 컨테이너 신규 추가 | `stock-backend` 구조 복사 후 FX API 교체 |
+| 스케줄러 | 외환시장 거래 시간 기반 (24시간 단, 주말 휴장) | `StockTradingScheduler` 참고 |
+| 신호 감지 | MA/RSI/BB 동일 지표 사용 | `StockSignalDetectorService` 재사용 |
+| 프론트엔드 | `DollarDashboardView`, `DollarBotMonitorView` 등 | `Stock*View.vue` 복사 후 레이블 수정 |
+| Nginx | `/api/dollar/**` → `dollar-backend:8082` 라우팅 추가 | nginx.conf 1개 블록 추가 |
+| Docker | `docker-compose.yml`에 `dollar-backend` 서비스 추가 | coin-backend 블록 복사 후 포트 변경 |
+| 외환 API 후보 | OANDA API, 한국투자증권 해외주식 API | 별도 검토 필요 |
+
+### Phase 3 신규 생성 예정 파일 목록
+
+```
+backend/src/main/resources/application-dollar.yml   ← 신규
+backend/src/main/java/com/investment/
+└── service/dollar/
+    ├── DollarTradingBotService.java    ← StockTradingBotService 구조 재사용
+    ├── DollarSignalDetectorService.java
+    ├── DollarRiskManagementService.java
+    └── FxApiService.java               ← 외환 API 연동 (신규)
+frontend/src/views/
+    ├── DollarDashboardView.vue         ← StockDashboardView.vue 복사 후 수정
+    └── DollarBotMonitorView.vue        ← StockBotMonitorView.vue 복사 후 수정
+```
+
+---
+
+## 📋 v2.1 / v3.0 마이그레이션 체크리스트
+
+신규 서버 이관 시 사용하는 체크리스트 (절대경로 없음 보장).
+
+```
+[ ] 1. git clone https://github.com/kros235/crypto-trading-system.git
+[ ] 2. .env.development / .env.production 파일 환경변수 설정
+        (JWT_SECRET, DB_PASSWORD, KIS_APP_KEY 등)
+[ ] 3. docker compose -f docker-compose.prod.yml up -d mysql redis
+        → MySQL 초기화: docker/mysql/init.sql 자동 실행 확인
+[ ] 4. docker compose -f docker-compose.prod.yml up -d coin-backend
+[ ] 5. docker compose -f docker-compose.prod.yml up -d stock-backend  (v3.0 이후)
+[ ] 6. docker compose -f docker-compose.prod.yml up -d frontend
+[ ] 7. DuckDNS IP 업데이트 + Let's Encrypt SSL 재발급
+        (scripts/ 내 ssl 관련 스크립트 활용)
+[ ] 8. /api/health 헬스체크 확인
+[ ] 9. Postman으로 로그인 → 코인봇/주식봇 API 동작 확인
+[ ] 10. 관리자 계정으로 휴장일 데이터 초기 등록 (stock_holidays)
+```
 
 ---
 
@@ -847,8 +1198,11 @@ KIS_BASE_URL=https://openapivts.koreainvestment.com:29443
 | 구분 | 상태 | 진행률 |
 |------|------|--------|
 | Phase 1 (암호화폐) | ✅ 완료 | 100% |
-| Phase 2-1 (기반 구축) | 🔄 진행 중 | ~60% (Day 48 카테고리 + Day 49 DB/Entity/Repository + Day 50 KIS API 연동 + Day 51 종목/설정 CRUD API + Day 52 주식 거래 설정 프론트엔드 완료) |
-| Phase 2-2 (핵심 기능) | ⏳ 예정 | 0% |
+| Phase 2-1 (기반 구축) | ✅ 완료 | ~100% (Day 48~55 완료, 기반 구축 단계 마무리) |
+| Phase 2-2 (핵심 기능) | 🔄 진행 중 | ~65% (Day 53 기술지표/신호감지 + Day 54 리스크관리/휴장일 + Day 55 설정UI + Day 56 자동매매봇 + Day 57 스케줄러/알림 완료) |
 | Phase 2-3 (고도화) | ⏳ 예정 | 0% |
 | Phase 2-4 (안정화) | ⏳ 예정 | 0% |
-| **전체 프로젝트** | - | **~63%** (Phase 1 완료, Phase 2 Day 52 완료) |
+| **전체 프로젝트** | - | **~72%** (Phase 1 완료, Phase 2 Day 57 완료) |
+| v2.1 패키지 리팩토링 | ⏳ 예정 (Day 66 이후) | 0% |
+| v3.0 Backend 컨테이너 분리 | ⏳ 예정 (v2.1 완료 이후) | 0% |
+| Phase 3 달러 거래 | ⏳ 미정 (v3.0 완료 이후) | 0% |

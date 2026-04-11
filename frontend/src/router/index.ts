@@ -111,7 +111,14 @@ const router = createRouter({
       name: 'stock-settings',
       component: () => import('../views/StockTradingSettingsView.vue'),
       meta: { requiresAuth: true }
-    }
+    },
+    // ⭐ [Day 58 추가] 아래 라우트 추가
+      {
+        path: '/stock-transactions',
+        name: 'stock-transactions',
+        component: () => import('../views/StockTransactionHistoryView.vue'),
+        meta: { requiresAuth: true }
+      },
   ]
 })
 

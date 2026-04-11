@@ -60,3 +60,36 @@ export const stockSettingApi = {
   hasKisApiKey: () =>
     api.get<boolean>('/stock/settings/kis-api-key/status'),
 }
+
+// ⭐ [Day 58 추가] 주식 거래 내역 API
+export const stockTransactionApi = {
+  // 전체 조회 (페이징)
+  getAll: (page = 0, size = 20) =>
+    api.get('/stock/transactions', { params: { page, size } }),
+
+  // 복합 조건 검색
+  search: (params: {
+    stockCode?: string
+    status?: string
+    startDate?: string
+    endDate?: string
+    page?: number
+    size?: number
+  }) => api.get('/stock/transactions/search', { params }),
+
+  // 보유 중인 주식
+  getHoldings: () =>
+    api.get('/stock/transactions/holdings'),
+
+  // 상세 조회
+  getOne: (transactionId: number) =>
+    api.get(`/stock/transactions/${transactionId}`),
+
+  // 메모 수정
+  update: (transactionId: number, data: { note: string }) =>
+    api.put(`/stock/transactions/${transactionId}`, data),
+
+  // 수동 매도
+  sell: (transactionId: number, soldPrice: number) =>
+    api.post(`/stock/transactions/${transactionId}/sell`, { soldPrice }),
+}

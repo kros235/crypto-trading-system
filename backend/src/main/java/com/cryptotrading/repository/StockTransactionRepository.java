@@ -86,4 +86,46 @@ public interface StockTransactionRepository extends JpaRepository<StockTransacti
 
     // findByUserIdAndStatus(String userId, TransactionStatus status) 는 기존 메서드 그대로 재사용
 
+    // =====================================================
+    // ⭐ Day 58 추가: StockTransactionService 용 쿼리
+    // =====================================================
+
+    /**
+     * 복합 조건 검색 (종목코드 + 상태 + 날짜)
+     * Phase 1 TransactionRepository.searchTransactions 패턴 재사용
+     */
+    @Query("SELECT t FROM StockTransaction t WHERE t.userId = :userId " +
+           "AND (:stockCode IS NULL OR t.stockCode = :stockCode) " +
+           "AND (:status IS NULL OR t.status = :status) " +
+           "AND (:startDate IS NULL OR t.createdAt >= :startDate) " +
+           "AND (:endDate IS NULL OR t.createdAt < :endDate) " +
+           "ORDER BY t.createdAt DESC")
+    Page<StockTransaction> searchTransactions(
+            @Param("userId") String userId,
+            @Param("stockCode") String stockCode,
+            @Param("status") TransactionStatus status,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            Pageable pageable);
+
+    /**
+     * 사용자별 실현 손익 합계
+     * Phase 1 sumTotalProfitLoss 패턴 재사용
+     */
+    @Query("SELECT COALESCE(SUM(t.profitLoss), 0) FROM StockTransaction t " +
+           "WHERE t.userId = :userId AND t.status = com.cryptotrading.entity.TransactionStatus.SOLD")
+    BigDecimal sumTotalProfitLoss(@Param("userId") String userId);
+
+    /**
+     * 사용자별 매수 건수 합계
+     */
+    @Query("SELECT COUNT(t) FROM StockTransaction t WHERE t.userId = :userId AND t.type = com.cryptotrading.entity.TransactionType.BUY")
+    long countBuyTransactions(@Param("userId") String userId);
+
+    /**
+     * 사용자별 매도 건수 합계
+     */
+    @Query("SELECT COUNT(t) FROM StockTransaction t WHERE t.userId = :userId AND t.type = com.cryptotrading.entity.TransactionType.SELL")
+    long countSellTransactions(@Param("userId") String userId);
+
 }

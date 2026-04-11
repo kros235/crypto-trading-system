@@ -51,7 +51,7 @@
         />
         <v-list-item
           prepend-icon="mdi-chart-timeline-variant"
-          title="코인 거래 백테스팅"
+          title="백테스팅"
           @click="$router.push('/backtest')"
         />
         <v-list-item

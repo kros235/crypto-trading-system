@@ -8,7 +8,7 @@
         <!-- 페이지 제목 -->
         <v-row class="mb-4">
           <v-col>
-            <h1 class="text-h4">📊 일일 거래 리포트</h1>
+            <h1 class="text-h4">📊 코인 거래 일일 거래 리포트</h1>
             <p class="text-subtitle-1 text-grey">오늘의 거래 현황과 수익률을 확인하세요</p>
           </v-col>
         </v-row>

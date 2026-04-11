@@ -9,7 +9,7 @@
           <v-col>
             <h1 class="text-h4">
               <v-icon class="mr-2">mdi-chart-timeline-variant</v-icon>
-              백테스팅
+              코인 거래 백테스팅
             </h1>
             <p class="text-subtitle-1 text-grey">과거 데이터로 거래 전략의 수익률을 시뮬레이션하세요</p>
           </v-col>

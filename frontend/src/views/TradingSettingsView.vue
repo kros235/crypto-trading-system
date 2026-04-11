@@ -9,7 +9,7 @@
           <v-col>
             <h1 class="text-h4">
               <v-icon class="mr-2">mdi-cog-outline</v-icon>
-              거래 설정
+              코인 거래 설정
             </h1>
             <p class="text-subtitle-1 text-grey">자동매매 전략 및 거래 조건을 설정하세요</p>
           </v-col>

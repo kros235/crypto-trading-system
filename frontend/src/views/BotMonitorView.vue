@@ -8,7 +8,7 @@
         <!-- 페이지 제목 -->
         <v-row class="mb-4">
           <v-col>
-            <h1 class="text-h4">🤖 자동매매 봇 모니터링</h1>
+            <h1 class="text-h4">🤖 코인 자동매매 봇 모니터링</h1>
             <p class="text-subtitle-1 text-grey">실시간 봇 상태 및 기술적 지표 모니터링</p>
           </v-col>
         </v-row>

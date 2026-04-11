@@ -83,7 +83,7 @@
           disabled
         />
         <v-list-item
-          prepend-icon="mdi-format-list-bulleted"
+          prepend-icon="mdi-chart-line"
           title="주식 종목 목록"
           disabled
         />

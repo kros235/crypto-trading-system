@@ -47,7 +47,8 @@ crypto-trading-system/
 │       │   └── stock/                                       ⭐ (Day 51)
 │       │       ├── StockInfoController.java                 ⭐ (Day 51)
 │       │       ├── StockSettingController.java              ⭐ (Day 51)
-│       │       └── StockBotController.java                  ⭐ (Day 56, Day 57 엔드포인트 추가)
+│       │       ├── StockBotController.java                  ⭐ (Day 56, Day 57 엔드포인트 추가)
+│       │       └── StockTransactionController.java          ⭐ (Day 58)
 │       ├── dto/                 (30+ DTO 클래스)
 │       │   ├── AuthResponse, DashboardStatsDTO, LoginRequest, SignupRequest
 │       │   ├── TradingSettingDTO, TransactionDTO, UserInfoDTO
@@ -57,7 +58,7 @@ crypto-trading-system/
 │       │   ├── common/          (ApiResponse, PageResponse)
 │       │   ├── indicator/       (IndicatorResultDTO)
 │       │   ├── ⭐ kis/           (KisTokenDTO, KisQuoteDTO, KisAccountDTO, KisOrderDTO) (Day 50)
-│       │   ├── ⭐ stock/         (StockInfoDTO, StockTradingSettingDTO) (Day 51, Day 52 BigDecimal 타입 수정)
+│       │   ├── ⭐ stock/         (StockInfoDTO, StockTradingSettingDTO, StockTransactionDTO) (Day 51, Day 52 BigDecimal 타입 수정, Day 58 StockTransactionDTO 추가)
 │       │   ├── news/            (CoinNewsAnalysisDTO, CoinNewsDTO, GeminiRequestDTO 등)
 │       │   ├── notification/    (DailyReportDTO, EmailNotificationDTO, NotificationDTO)
 │       │   ├── profit/          (CoinProfitDTO, DailyAssetSnapshotDTO, PeriodProfitDTO 등)
@@ -74,7 +75,7 @@ crypto-trading-system/
 │       │   ├── ⭐ StockPriceHistory, StockDailySummary, MarketHoliday (Day 49)
 │       ├── exception/           (7개)
 │       ├── filter/              (3개: JWT, RateLimit, RequestLogging)
-│       ├── repository/          (15개)
+│       ├── repository/          (15개, Day 58 StockTransactionRepository 쿼리 4개 추가)
 │       ├── scheduler/
 │       │   ├── TradingScheduler.java
 │       │   └── StockTradingScheduler.java              ⭐ (Day 57)
@@ -88,7 +89,8 @@ crypto-trading-system/
 │       │   ├── StockSignalDetectorService.java      ⭐ (Day 53)
 │       │   ├── StockRiskManagementService.java      ⭐ (Day 54, Day 56 버그수정, Day 57 메서드 추가)
 │       │   ├── MarketHolidayService.java            ⭐ (Day 54)
-│       │   └── StockTradingBotService.java          ⭐ (Day 56)
+│       │   ├── StockTradingBotService.java          ⭐ (Day 56)
+│       │   └── StockTransactionService.java         ⭐ (Day 58)
 
 
 │       └── util/                (EncryptionUtil, JwtUtil)
@@ -102,7 +104,7 @@ crypto-trading-system/
 │       ├── ⭐ api/stock.ts                    (Day 52, 주식 전용 API 모듈)
 │       ├── components/          (GlobalSnackbar, HelpButton, OnboardingGuide, TheHeader, TheSidebar)
 │       ├── composables/         (useErrorHandler, useSnackbar)
-│       ├── router/index.ts                     (Day 52 /stock-settings 라우트 추가)
+│       ├── router/index.ts                     (Day 52 /stock-settings 라우트 추가, Day 58 /stock-transactions 라우트 추가)
 │       ├── stores/              (auth, coin, trading)
 │       ├── types/               (backtest, bot, error, index, profit)
 │       ├── ⭐ types/stock.ts                   (Day 52, StockInfo/StockTradingSettings 타입)
@@ -114,15 +116,16 @@ crypto-trading-system/
 │           ├── CoinListView.vue
 │           ├── DailyReportView.vue
 │           ├── DashboardView.vue        (3105줄 - 가장 큰 파일)
-│           ├── HelpView.vue                    (Day 52 Phase 2 FAQ 추가)
+│           ├── HelpView.vue                    (Day 52 Phase 2 FAQ 추가, Day 58 주식 거래 내역 FAQ 3개 추가)
 │           ├── HoldingsView.vue
 │           ├── LoginView.vue
 │           ├── NewsView.vue
 │           ├── ProfileView.vue                 (Day 52 KIS API 키 등록 UI 추가)
 │           ├── ReleaseNotesView.vue
 │           ├── SignupView.vue
-│           ├── ⭐ StockTradingSettingsView.vue  (Day 52 신규, 주식 거래 설정)
-│           ├── TradingSettingsView.vue
+│           ├── ⭐ StockTradingSettingsView.vue        (Day 52 신규, 주식 거래 설정)
+│           ├── ⭐ StockTransactionHistoryView.vue     (Day 58 신규, 주식 거래 내역)
+│           ├── TradingSettingsView.vue               (Day 58 제목 '거래 내역' → '코인 거래 내역' 수정)
 │           └── TransactionHistoryView.vue
 │
 ├── docker/mysql/
@@ -172,6 +175,10 @@ crypto-trading-system/
 | 알림 | NotificationController | /api/notifications/** |
 | 리스크 | RiskManagementController | /api/risk/** |
 | 2FA | TwoFactorController | /api/2fa/** |
+| ⭐ 주식정보 | StockInfoController | /api/stock/info/** (Day 51) |
+| ⭐ 주식설정 | StockSettingController | /api/stock/settings/** (Day 51) |
+| ⭐ 주식봇 | StockBotController | /api/stock/bot/execute, /api/stock/bot/status, /api/stock/bot/start, /api/stock/bot/stop, /api/stock/bot/reset-daily-cache, /api/stock/bot/holding-warnings (Day 56~57) |
+| ⭐ 주식거래내역 | StockTransactionController | /api/stock/transactions/** (Day 58) |
 | 건강체크 | HealthController | /api/health |
 | 업비트 | UpbitTestController | /api/upbit/test/** |
 
@@ -196,6 +203,7 @@ crypto-trading-system/
 | /login | LoginView | 게스트 | 로그인 |
 | /signup | SignupView | 게스트 | 회원가입 |
 | /stock-settings | StockTradingSettingsView | ✅ | ⭐ 주식 거래 설정 (Day 52) |
+| /stock-transactions | StockTransactionHistoryView | ✅ | ⭐ 주식 거래 내역 (Day 58) |
 
 ## 1.5 사이드바 메뉴 현황
 
@@ -211,12 +219,12 @@ crypto-trading-system/
 ├── 코인 거래 백테스팅
 └── 코인 뉴스
 
-주식 거래 (공사중) (v-list-group "stock", 전부 disabled)
-├── 대시보드
-├── 보유 주식 자산
-├── 주식 종목 목록
-├── 주식 거래 내역
-└── 주식 거래 설정
+주식 거래 (공사중) (v-list-group "stock")
+├── 대시보드          (disabled)
+├── 보유 주식 자산    (disabled)
+├── 주식 종목 목록    (disabled)
+├── 주식 거래 내역    ✅ 활성화 (Day 58, /stock-transactions)
+└── 주식 거래 설정    ✅ 활성화 (Day 52, /stock-settings)
 
 프로필 설정
 계정 보안
@@ -841,7 +849,7 @@ KIS_BASE_URL=https://openapivts.koreainvestment.com:29443
 | **55** | ⑧ 주식 거래 설정 UI/백엔드 동기화 (useStopLoss/additionalDropPct/useAiAnalysis 추가, 이동평균선 Radio 통일, helpContents 16개 도움말, 빌드오류 2건 수정) | init.sql, StockTradingSetting, StockTradingSettingDTO, StockSettingService, StockTradingSettingsView.vue | ✅ 완료 |
 | **56** | ⑨ StockTradingBotService (자동매매 핵심) + StockBotController (봇 REST API 4개) + StockRiskManagementService Redis 키 %d→%s 버그수정 | StockTradingBotService, StockBotController, StockRiskManagementService | ✅ 완료 |
 | **57** | ⑩ StockTradingScheduler (3분 주기 자동매매 + 장시작/마감 알림 + 보유기간 경고 + 캐시정리) + StockRiskManagementService (getHoldingDaysWarnings/clearStockDailyCache/HoldingDaysWarning DTO 추가) + StockBotController (reset-daily-cache/holding-warnings 엔드포인트 추가) | StockTradingScheduler, StockRiskManagementService, StockBotController | ✅ 완료 |
-| **58** | ⑪ StockTransactionService + API + 프론트엔드 | 거래 내역 | ⏳ 예정 |
+| **58** | ⑪ StockTransactionDTO + StockTransactionService + StockTransactionController + StockTransactionHistoryView.vue (거래 내역 조회/검색/수동매도/메모수정 + 보유일 경고 색상 + HelpButton + Phase 1 스타일 통일 + 종목드롭다운 bugfix) | 거래 내역 | ✅ 완료 |
 | **59** | ⑫ StockDashboardView (주식 대시보드 프론트엔드) | 대시보드 | ⏳ 예정 |
 | **60** | ⑬ StockHoldingsView + StockListView | 보유자산, 종목목록 | ⏳ 예정 |
 | **61** | ⑭ StockBotMonitorView | 봇 모니터링 | ⏳ 예정 |
@@ -1199,10 +1207,10 @@ frontend/src/views/
 |------|------|--------|
 | Phase 1 (암호화폐) | ✅ 완료 | 100% |
 | Phase 2-1 (기반 구축) | ✅ 완료 | ~100% (Day 48~55 완료, 기반 구축 단계 마무리) |
-| Phase 2-2 (핵심 기능) | 🔄 진행 중 | ~65% (Day 53 기술지표/신호감지 + Day 54 리스크관리/휴장일 + Day 55 설정UI + Day 56 자동매매봇 + Day 57 스케줄러/알림 완료) |
+| Phase 2-2 (핵심 기능) | 🔄 진행 중 | ~75% (Day 53 기술지표/신호감지 + Day 54 리스크관리/휴장일 + Day 55 설정UI/백엔드동기화 + Day 56 자동매매봇/StockBotController + Day 57 스케줄러/알림/보유기간경고 + Day 58 거래내역API/UI 완료) |
 | Phase 2-3 (고도화) | ⏳ 예정 | 0% |
 | Phase 2-4 (안정화) | ⏳ 예정 | 0% |
-| **전체 프로젝트** | - | **~72%** (Phase 1 완료, Phase 2 Day 57 완료) |
+| **전체 프로젝트** | - | **~73%** (Phase 1 완료, Phase 2 Day 58 완료) |
 | v2.1 패키지 리팩토링 | ⏳ 예정 (Day 66 이후) | 0% |
 | v3.0 Backend 컨테이너 분리 | ⏳ 예정 (v2.1 완료 이후) | 0% |
 | Phase 3 달러 거래 | ⏳ 미정 (v3.0 완료 이후) | 0% |

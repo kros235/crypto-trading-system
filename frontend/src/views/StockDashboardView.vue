@@ -778,9 +778,10 @@
         <v-row class="mt-3" dense>
           <v-col cols="12">
             <v-card elevation="2">
-              <!-- ⭐ [수정 6] Phase 1 자산 변동 추이 헤더 옵션 완전 동일 적용 -->
-              <!-- ⭐ [수정 7] flex-wrap 제거 + overflow-x: auto로 좁은 화면에서 가로 스크롤 -->
-              <v-card-title class="py-2 px-4 bg-indigo-darken-2 text-white d-flex align-center" style="gap:4px; overflow-x:auto; flex-wrap: nowrap; min-height: 52px;">
+              <!-- ⭐ 코인 대시보드 DashboardView.vue와 100% 동일: style 속성 없음 -->
+              <!-- 이유: overflow-x:auto가 BFC를 생성하여 자식 요소(.chart-container)의 
+                  높이 계산을 왜곡시킴. 개발자 도구 OFF 시 라벨 위치 어긋남의 근본 원인. -->
+              <v-card-title class="py-2 px-4 bg-indigo-darken-2 text-white d-flex align-center">
                 <v-icon class="mr-2" size="20">mdi-chart-line</v-icon>
                 <span class="text-body-1">자산 변동 추이</span>
                 <v-btn icon size="x-small" variant="text" color="white" @click.stop="openHelp('assetChart')" class="ml-1">
@@ -1457,7 +1458,7 @@ const chartCustomEnd = ref('')
 const latestReleaseNote = ref<any>(null)
 
 // ⭐ [수정 3] 코인 대시보드 자산 변동 추이 완전 동일 구현
-const chartPeriod = ref('all')  // 기본값 'all' (코인과 동일)
+const chartPeriod = ref('7')  
 const hoveredIndex = ref(-1)
 const tooltipX = ref(0)
 const tooltipY = ref(0)
@@ -1494,10 +1495,8 @@ const maxBalanceBacktest = computed(() => {
   const maxDeposit = Math.max(...assetHistory.value.map((d: any) => d.depositAmount || initialAsset.value))
   return Math.max(maxEval, maxDeposit)
 })
+// 코인 대시보드 DashboardView.vue와 100% 동일
 const minBalanceBacktest = computed(() => {
-  // ⭐ [수정 Q2] 코인 대시보드와 완전 동일한 계산식으로 통일
-  // 이유: 0.90 배율이 너무 낮아 차트 하단 여백이 과도하게 생김
-  // 코인 대시보드: Math.floor(min(minEval, minDeposit) * 0.98) → 2% 하단 여백
   if (!assetHistory.value.length) return 0
   const minEval = Math.min(...assetHistory.value.map((d: any) => d.evaluationAmount || d.balance || 0))
   const minDeposit = Math.min(...assetHistory.value.map((d: any) => d.depositAmount || initialAsset.value))
@@ -1666,20 +1665,27 @@ const getLabelPositionBacktest = (balance: number) => {
   const usableHeight = 100 - paddingPercent * 2
   return paddingPercent + ((max - balance) / range) * usableHeight
 }
+// 코인 대시보드 DashboardView.vue와 100% 동일 - 라벨 겹침 방지 (최소 간격 4%)
 const getAdjustedLabelPosition = (type: string) => {
   const positions = [
-    { type: 'max', raw: getLabelPositionBacktest(maxEvaluation.value) },
-    { type: 'evaluation', raw: getLabelPositionBacktest(latestEvaluationAmount.value) },
-    { type: 'deposit', raw: getLabelPositionBacktest(latestDepositAmount.value) },
-    { type: 'min', raw: getLabelPositionBacktest(minEvaluation.value) },
-    { type: 'floor', raw: getLabelPositionBacktest(minBalanceBacktest.value) },
-  ].sort((a, b) => a.raw - b.raw)
+    { type: 'max', value: maxEvaluation.value, raw: getLabelPositionBacktest(maxEvaluation.value) },
+    { type: 'evaluation', value: latestEvaluationAmount.value, raw: getLabelPositionBacktest(latestEvaluationAmount.value) },
+    { type: 'deposit', value: latestDepositAmount.value, raw: getLabelPositionBacktest(latestDepositAmount.value) },
+    { type: 'min', value: minEvaluation.value, raw: getLabelPositionBacktest(minEvaluation.value) },
+    { type: 'floor', value: minBalanceBacktest.value, raw: getLabelPositionBacktest(minBalanceBacktest.value) }
+  ]
+
+  positions.sort((a, b) => a.raw - b.raw)
+
   const minGap = 4
   for (let i = 1; i < positions.length; i++) {
-    if (positions[i].raw - positions[i - 1].raw < minGap)
+    if (positions[i].raw - positions[i - 1].raw < minGap) {
       positions[i].raw = positions[i - 1].raw + minGap
+    }
   }
-  return positions.find(p => p.type === type)?.raw || 0
+
+  const found = positions.find(p => p.type === type)
+  return found ? found.raw : 0
 }
 const getPointColorBacktest = (evaluationAmount: number) => {
   const deposit = latestDepositAmount.value
@@ -2736,22 +2742,30 @@ onUnmounted(() => {
   margin-top: 8px;
 }
 
-/* ⭐ [수정 5/6] 자산 변동 차트 + 파이차트 */
-.chart-container { position: relative; width: 100%; }
-.chart-wrapper-stock { position: relative; width: 100%; height: 200px; }
-.chart-wrapper-stock svg { width: 100%; height: 100%; }
-.stock-chart-tooltip {
-  position: absolute;
-  background: rgba(38,50,56,0.92);
-  color: white;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  pointer-events: none;
-  z-index: 10;
-  white-space: nowrap;
-  transform: translateX(-50%);
+/* ⭐ 코인 대시보드 DashboardView.vue와 실제 동일 CSS */
+/* 이유: 측정 결과 코인 대시보드의 .chart-container는 브라우저에서 
+   position: relative로 렌더링됨 (HoldingsView에서 상속된 전역 스타일로 보임).
+   주식 대시보드는 이 스타일이 없어 position: static → SVG가 viewBox 
+   비율로 부모 대신 자체 높이를 계산 (770/800 × 350 = 336.875px).
+   개발자 도구 OFF 시 뷰포트가 더 넓어져 SVG가 528.5px까지 확장되며
+   라벨 컨테이너(350px 고정)와 어긋남.
+   position: relative + width: 100%로 SVG가 부모 높이(350px)를 정확히 상속하도록 함. */
+.chart-container {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
+
+/* ⭐ SVG 명시적 크기 지정: preserveAspectRatio="none"과 결합되어
+   부모 컨테이너 크기를 100% 따라가도록 보장.
+   viewBox 비율로 자체 계산하지 않고 CSS 높이를 따름. */
+.chart-wrapper-backtest .custom-chart {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+/* 미사용 CSS (.stock-chart-tooltip, .chart-wrapper-stock) 완전 제거 */
 .legend-dot {
   width: 10px; height: 10px;
   border-radius: 50%;
@@ -2813,10 +2827,14 @@ onUnmounted(() => {
   height: 350px;
 }
 .chart-wrapper-backtest.scroll-mode { min-width: 100%; }
-/* ⭐ [수정 Q1] height: 100% → 350px 고정 (SVG viewBox 높이와 정확히 일치시켜 좌표 오차 제거) */
-/* 이유: height: 100%는 부모 컨테이너 높이(350px와 다를 수 있음) 기준이라 CSS %와 SVG 좌표계 불일치 발생 */
+/* ⭐ [수정 Q2-FIX] height: 350px 고정 → 100%로 복원 (코인 대시보드 DashboardView.vue와 동일) */
+/* 이유: SVG는 preserveAspectRatio="none"으로 부모 높이에 맞춰 늘어나지만
+   chart-labels-backtest가 350px로 고정되어 있으면 개발자 도구 OFF 시
+   실제 SVG 렌더링 높이와 라벨 컨테이너 높이가 불일치하여 라벨이 어긋남.
+   부모(.chart-wrapper-backtest)가 이미 height: 350px로 고정되어 있으므로
+   자식은 100%를 쓰면 부모 크기 변화에 자동 대응. */
 .chart-labels-backtest {
-  position: absolute; top: 0; right: 0; height: 350px;
+  position: absolute; top: 0; right: 0; height: 100%;
   pointer-events: none; z-index: 5;
 }
 .chart-label {

@@ -810,7 +810,7 @@
                         <!-- 영역 채우기 (평가금액 - 연한 파란색) -->
                         <path :d="areaPathBacktest" fill="url(#dashboardAreaGradient)" />
 
-	          <!-- 불입금액 막대그래프 (주황색) -->
+	                      <!-- 불입금액 막대그래프 (주황색) -->
                         <rect
                           v-for="(point, index) in chartPointsBacktest"
                           :key="'bar-' + index"
@@ -834,6 +834,17 @@
                           :x1="svgPadding" :y1="getYPositionBacktest(minEvaluation)"
                           :x2="effectiveWidth - (dashboardChartViewMode === 'scroll' ? scrollPaddingRight : svgPaddingRight)" :y2="getYPositionBacktest(minEvaluation)"
                           stroke="#F44336" stroke-width="2" stroke-dasharray="6,4"
+                        />
+                        <!-- ⭐ [추가] 차트 바닥 회색 파선 (minBalanceBacktest 위치) -->
+                        <!-- 이유: '차트 바닥' 라벨은 우측에 표시되나 SVG line 요소가 누락되어
+                             실제 파선이 차트에 그려지지 않는 문제 해결.
+                             주식 대시보드(StockDashboardView)와 동일하게 추가. -->
+                        <line
+                          :x1="svgPadding"
+                          :y1="getYPositionBacktest(minBalanceBacktest)"
+                          :x2="effectiveWidth - (dashboardChartViewMode === 'scroll' ? scrollPaddingRight : svgPaddingRight)"
+                          :y2="getYPositionBacktest(minBalanceBacktest)"
+                          stroke="#9E9E9E" stroke-width="1.5" stroke-dasharray="4,4" opacity="0.6"
                         />
 
                         <!-- 불입금액 추세선 (주황 파선) -->
@@ -1601,7 +1612,7 @@ const profitSummary = ref({ unrealizedProfit: 0, unrealizedProfitPct: 0, realize
 const todayProfit = ref(0)
 const todayProfitPct = ref(0)
 const systemAlerts = ref<any[]>([])
-const chartPeriod = ref('all') 
+const chartPeriod = ref('7') 
 const assetHistory = ref<any[]>([])
 const hoveredIndex = ref(-1)
 const tooltipX = ref(0)

@@ -353,7 +353,7 @@ public class StockDashboardController {
     }
 
     // ⭐ [수정 Q6] 주식 자산 스냅샷 조회 API (코인의 /profit/snapshots 와 동일 패턴)
-    @GetMapping("/stock/profit/snapshots")
+    @GetMapping("/profit/snapshots")
     public ResponseEntity<?> getStockSnapshots(
             @RequestParam(defaultValue = "all") String period,
             Authentication authentication) {
@@ -372,7 +372,7 @@ public class StockDashboardController {
     }
 
     // ⭐ [수정 Q6] 주식 자산 스냅샷 수동 갱신 API (스냅샷 갱신 버튼용)
-    @PostMapping("/stock/profit/snapshot")
+    @PostMapping("/profit/snapshot")
     public ResponseEntity<?> createStockSnapshot(Authentication authentication) {
         String userId = authentication.getName();
         stockAssetSnapshotService.createOrUpdateSnapshot(userId);

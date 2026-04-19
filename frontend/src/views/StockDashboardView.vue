@@ -1769,9 +1769,9 @@ async function fetchAssetHistory() {
     try {
       let snapshotRes
       if (chartPeriod.value === 'custom' && chartCustomStart.value && chartCustomEnd.value) {
-        snapshotRes = await api.get(`/stock/profit/snapshots?period=custom&start=${chartCustomStart.value}&end=${chartCustomEnd.value}`)
+        snapshotRes = await api.get(`/stock/dashboard/profit/snapshots?period=custom&start=${chartCustomStart.value}&end=${chartCustomEnd.value}`)
       } else {
-        snapshotRes = await api.get(`/stock/profit/snapshots?period=${chartPeriod.value}`)
+        snapshotRes = await api.get(`/stock/dashboard/profit/snapshots?period=${chartPeriod.value}`)
       }
       const snapshots = snapshotRes.data?.data ?? snapshotRes.data ?? []
       if (Array.isArray(snapshots) && snapshots.length > 0) {
@@ -2217,7 +2217,7 @@ async function refreshStockChart() {
   // ⭐ [수정 Q6] 스냅샷 갱신 버튼: 백엔드 스냅샷 생성 후 차트 리로드
   // 이유: 코인 대시보드의 refreshSnapshot과 동일한 패턴
   try {
-    await api.post('/stock/profit/snapshot')
+    await api.post('/stock/dashboard/profit/snapshot')
   } catch (e) {
     console.warn('[주식 차트] 스냅샷 갱신 실패, 거래 기반으로 계속:', e)
   }

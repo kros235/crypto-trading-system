@@ -863,7 +863,7 @@ KIS_BASE_URL=https://openapivts.koreainvestment.com:29443
 | **56** | ⑨ StockTradingBotService (자동매매 핵심) + StockBotController (봇 REST API 4개) + StockRiskManagementService Redis 키 %d→%s 버그수정 | StockTradingBotService, StockBotController, StockRiskManagementService | ✅ 완료 |
 | **57** | ⑩ StockTradingScheduler (3분 주기 자동매매 + 장시작/마감 알림 + 보유기간 경고 + 캐시정리) + StockRiskManagementService (getHoldingDaysWarnings/clearStockDailyCache/HoldingDaysWarning DTO 추가) + StockBotController (reset-daily-cache/holding-warnings 엔드포인트 추가) | StockTradingScheduler, StockRiskManagementService, StockBotController | ✅ 완료 |
 | **58** | ⑪ StockTransactionDTO + StockTransactionService + StockTransactionController + StockTransactionHistoryView.vue (거래 내역 조회/검색/수동매도/메모수정 + 보유일 경고 색상 + HelpButton + Phase 1 스타일 통일 + 종목드롭다운 bugfix) | 거래 내역 | ✅ 완료 |
-| **59** | ⑫ StockDashboardView (주식 대시보드 프론트엔드) + StockAssetSnapshot Entity/Repository/Service + StockDashboardController (통계/환율/스냅샷 API) + 스냅샷 자동화 (23:59 스케줄 / 거래 즉시 갱신 / 수동 갱신) + 스냅샷 API 경로 오류 수정 (클래스 레벨 prefix 중복 해결) | 대시보드 + 스냅샷 시스템 | ✅ 완료 |
+| **59** | ⑫ StockDashboardView (주식 대시보드 프론트엔드) + StockAssetSnapshot Entity/Repository/Service + StockDashboardController (통계/환율/스냅샷 API) + 스냅샷 자동화 (23:59 스케줄 / 거래 즉시 갱신 / 수동 갱신) + 스냅샷 API 경로 오류 수정 (클래스 레벨 prefix 중복 해결) **+ [후속] 차트 레이아웃 버그 수정 (.chart-container position:relative/width:100% + SVG 명시적 크기 지정, 개발자 도구 OFF 상태 SVG 늘어남 문제 해결) + 코인 대시보드 차트 바닥 회색 파선 누락 버그 수정 + 두 대시보드 chartPeriod 기본값 'all'→'7' 변경** | 대시보드 + 스냅샷 시스템 | ✅ 완료 |
 | **60** | ⑬ StockHoldingsView + StockListView | 보유자산, 종목목록 | ⏳ 예정 |
 | **61** | ⑭ StockBotMonitorView | 봇 모니터링 | ⏳ 예정 |
 | **62** | ⑮ StockBacktestService + StockBacktestView | 백테스팅 | ⏳ 예정 |
@@ -1220,10 +1220,10 @@ frontend/src/views/
 |------|------|--------|
 | Phase 1 (암호화폐) | ✅ 완료 | 100% |
 | Phase 2-1 (기반 구축) | ✅ 완료 | ~100% (Day 48~55 완료, 기반 구축 단계 마무리) |
-| Phase 2-2 (핵심 기능) | 🔄 진행 중 | ~85% (Day 53~59 완료) |
+| Phase 2-2 (핵심 기능) | 🔄 진행 중 | ~85% (Day 53~59 완료 **+ Day 59 후속 UX/버그 수정**) |
 | Phase 2-3 (고도화) | ⏳ 예정 | 0% |
 | Phase 2-4 (안정화) | ⏳ 예정 | 0% |
-| **전체 프로젝트** | - | **~78%** (Phase 1 완료, Phase 2 Day 59 완료) |
+| **전체 프로젝트** | - | **~78%** (Phase 1 완료, Phase 2 Day 59 완료 **+ 후속 개선**) |
 | v2.1 패키지 리팩토링 | ⏳ 예정 (Day 66 이후) | 0% |
 | v3.0 Backend 컨테이너 분리 | ⏳ 예정 (v2.1 완료 이후) | 0% |
 | Phase 3 달러 거래 | ⏳ 미정 (v3.0 완료 이후) | 0% |

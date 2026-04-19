@@ -365,6 +365,103 @@
                     {{ tradingSettings.useAiAnalysis ? '사용' : '미사용' }}
                   </v-chip>
                 </div>
+                <!-- ⭐ [수정 Q6] 코인 거래설정 누락 항목 추가 -->
+                <div v-if="tradingSettings.useTrailingStop != null" class="mb-2">
+                  <span class="text-caption text-grey-darken-1">트레일링 스톱</span>
+                  <div class="d-flex align-center">
+                    <v-chip :color="tradingSettings.useTrailingStop ? 'teal' : 'grey'" size="x-small" variant="flat" class="mr-1">
+                      {{ tradingSettings.useTrailingStop ? 'ON' : 'OFF' }}
+                    </v-chip>
+                    <span v-if="tradingSettings.useTrailingStop" class="text-body-2 text-grey-darken-4 font-weight-medium">
+                      최고가 대비 {{ tradingSettings.trailingStopPct }}% 하락 시 매도
+                    </span>
+                  </div>
+                </div>
+                <div v-if="tradingSettings.rsiBuyThreshold != null" class="mb-2">
+                  <span class="text-caption text-grey-darken-1">RSI 매수/매도 신호</span>
+                  <div class="text-body-2 text-grey-darken-4 font-weight-medium">
+                    매수 {{ tradingSettings.rsiBuyThreshold || 32 }} 이하
+                    <span class="mx-1">/</span>
+                    매도 {{ tradingSettings.rsiSellThreshold || 68 }} 이상
+                  </div>
+                </div>
+                <div v-if="tradingSettings.volumeThreshold != null" class="mb-2">
+                  <span class="text-caption text-grey-darken-1">거래량 기준</span>
+                  <div class="text-body-2 text-grey-darken-4 font-weight-medium">
+                    평균 대비 {{ tradingSettings.volumeThreshold || 140 }}% 이상
+                  </div>
+                </div>
+                <div v-if="tradingSettings.maxPositionPct != null" class="mb-2">
+                  <span class="text-caption text-grey-darken-1">종목별 최대 비중</span>
+                  <div class="text-body-2 text-grey-darken-4 font-weight-medium">
+                    총 투자금 대비 {{ tradingSettings.maxPositionPct || 25 }}%
+                  </div>
+                </div>
+                <div v-if="tradingSettings.useMarketTrendFilter != null" class="mb-2">
+                  <span class="text-caption text-grey-darken-1">시장 추세 필터</span>
+                  <div class="d-flex align-center">
+                    <v-chip :color="tradingSettings.useMarketTrendFilter ? 'indigo' : 'grey'" size="x-small" variant="flat" class="mr-1">
+                      {{ tradingSettings.useMarketTrendFilter ? 'ON' : 'OFF' }}
+                    </v-chip>
+                    <span v-if="tradingSettings.useMarketTrendFilter" class="text-caption text-grey-darken-1">BTC MA20 하회 시 매수 중단</span>
+                  </div>
+                </div>
+                <div v-if="tradingSettings.cumulativeLossLimitPct != null" class="mb-2">
+                  <span class="text-caption text-grey-darken-1">누적 손실 긴급정지</span>
+                  <div class="text-body-2 text-red-darken-2 font-weight-medium">
+                    {{ tradingSettings.cumulativeLossLimitPct }}% 도달 시 거래 중단
+                  </div>
+                </div>
+                <div v-if="tradingSettings.consecutiveStopLossLimit != null" class="mb-2">
+                  <span class="text-caption text-grey-darken-1">연속 손절 제한</span>
+                  <div class="text-body-2 text-grey-darken-4 font-weight-medium">
+                    동일 코인 {{ tradingSettings.consecutiveStopLossLimit }}회 연속 손절 시 매수 금지
+                  </div>
+                </div>
+                <div v-if="tradingSettings.useRoundRobin != null" class="mb-2">
+                  <span class="text-caption text-grey-darken-1">라운드로빈 방식</span>
+                  <v-chip :color="tradingSettings.useRoundRobin ? 'teal' : 'grey'" size="x-small" variant="flat" class="ml-1">
+                    {{ tradingSettings.useRoundRobin ? '사용' : '미사용' }}
+                  </v-chip>
+                </div>
+                <!-- ⭐ [수정 Q5] 코인 거래설정 누락 항목 추가 -->
+                <!-- 이유: TradingSetting 엔티티의 useStopLoss, additionalDropPct,
+                           bbPeriod/bbMultiplier, fixedBuyAmount, useDailyLimitRecovery 미표시 -->
+                <div v-if="tradingSettings.bbPeriod != null" class="mb-2">
+                  <span class="text-caption text-grey-darken-1">볼린저밴드</span>
+                  <div class="text-body-2 text-grey-darken-4 font-weight-medium">
+                    {{ tradingSettings.bbPeriod || 20 }}일 / {{ tradingSettings.bbMultiplier || 2 }}σ
+                  </div>
+                </div>
+                <div v-if="tradingSettings.useStopLoss != null" class="mb-2">
+                  <span class="text-caption text-grey-darken-1">손절매</span>
+                  <div class="d-flex align-center">
+                    <v-chip :color="tradingSettings.useStopLoss ? 'red-darken-1' : 'grey'" size="x-small" variant="flat" class="mr-1">
+                      {{ tradingSettings.useStopLoss ? 'ON' : 'OFF' }}
+                    </v-chip>
+                    <span v-if="tradingSettings.useStopLoss" class="text-body-2 text-grey-darken-4 font-weight-medium">
+                      {{ tradingSettings.stopLossPct }}% 도달 시 강제 매도
+                    </span>
+                  </div>
+                </div>
+                <div v-if="tradingSettings.additionalDropPct != null" class="mb-2">
+                  <span class="text-caption text-grey-darken-1">추가 하락 조건</span>
+                  <div class="text-body-2 text-grey-darken-4 font-weight-medium">
+                    {{ tradingSettings.additionalDropPct }}% 추가 하락 시 분할 매수
+                  </div>
+                </div>
+                <div v-if="tradingSettings.fixedBuyAmount != null && tradingSettings.fixedBuyAmount > 0" class="mb-2">
+                  <span class="text-caption text-grey-darken-1">고정 매수 금액</span>
+                  <div class="text-body-2 text-grey-darken-4 font-weight-medium">
+                    {{ formatCurrency(tradingSettings.fixedBuyAmount) }}
+                  </div>
+                </div>
+                <div v-if="tradingSettings.useDailyLimitRecovery != null" class="mb-2">
+                  <span class="text-caption text-grey-darken-1">일일 한도 복구</span>
+                  <v-chip :color="tradingSettings.useDailyLimitRecovery ? 'teal' : 'grey'" size="x-small" variant="flat" class="ml-1">
+                    {{ tradingSettings.useDailyLimitRecovery ? 'ON' : 'OFF' }}
+                  </v-chip>
+                </div>
                 <v-btn size="small" color="indigo" variant="text" class="mt-1 px-0" @click="$router.push('/trading-settings')">설정 변경 →</v-btn>
               </v-card-text>
               <v-card-text v-else class="pa-0 fill-height">
@@ -618,13 +715,13 @@
                 </v-btn>
                 <v-spacer />
                 <!-- ★ 수정: 스크롤 보기 버튼과 동일한 스타일 (variant=flat, color=grey-lighten-1, size=x-small) -->
+                <!-- ⭐ [수정 5] 스냅샷 갱신: grey-lighten-1 → amber (전체 보기 활성 색상과 동일) -->
                 <v-btn
                   size="x-small"
                   variant="flat"
-                  color="grey-lighten-1"
-                  class="text-grey-darken-2 chart-view-btn mr-2"
-                  :loading="snapshotRefreshing"
-                  @click="refreshSnapshot"
+                  color="amber"
+                  class="text-grey-darken-4 chart-view-btn mr-2"
+                  @click="refreshStockChart"
                 >
                   <v-icon size="14" class="mr-1">mdi-database-refresh</v-icon>
                   스냅샷 갱신
@@ -2677,6 +2774,42 @@ const cardHelps = {
         <span class="help-desc">이동평균선(MA) 대비 하락률과 목표 수익률 설정입니다.</span></p>
       <p class="help-item"><span class="help-bullet">•</span> <strong>매도 조건</strong><br/>
         <span class="help-desc">목표 수익률 도달 시 자동 매도, 손절매 기준입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>트레일링 스톱</strong><br/>
+        <span class="help-desc">보유 기간 중 최고가 대비 설정 % 하락 시 자동 매도하여 수익을 보전합니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>시장 추세 필터</strong><br/>
+        <span class="help-desc">ON 시 BTC 20일선 하회 구간에서는 전체 매수를 중단합니다. 급락장 보호 기능입니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>누적 손실 긴급정지</strong><br/>
+        <span class="help-desc">초기 자본 대비 누적 손실이 설정값에 도달하면 자동으로 모든 거래를 중단합니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>연속 손절 제한</strong><br/>
+        <span class="help-desc">동일 코인에서 연속으로 손절이 발생하면 해당 코인의 추가 매수를 일시 중단합니다.</span></p>
+      <!-- ⭐ [수정 Q6] 누락 도움말 항목 추가 -->
+      <p class="help-item"><span class="help-bullet">•</span> <strong>트레일링 스톱</strong><br/>
+        <span class="help-desc">보유 기간 중 최고가 대비 설정 % 하락 시 자동 매도하여 수익을 보전합니다. 기본 -4%.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>RSI 매수/매도 신호</strong><br/>
+        <span class="help-desc">RSI 지표가 매수 임계값 이하면 과매도, 매도 임계값 이상이면 과매수로 판단합니다. 기본: 매수 32 / 매도 68.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>거래량 기준</strong><br/>
+        <span class="help-desc">평균 거래량 대비 설정 % 이상일 때만 매수 신호를 활성화합니다. 기본 140%.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>종목별 최대 비중</strong><br/>
+        <span class="help-desc">총 투자금 대비 단일 코인의 최대 투자 비중을 제한합니다. 기본 25%.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>시장 추세 필터</strong><br/>
+        <span class="help-desc">ON 시 BTC 20일선 하회 구간에서는 전체 매수를 중단합니다. 급락장 보호 기능.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>누적 손실 긴급정지</strong><br/>
+        <span class="help-desc">초기 자본 대비 누적 손실이 설정값(기본 -10%)에 도달하면 모든 거래를 자동 중단합니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>연속 손절 제한</strong><br/>
+        <span class="help-desc">동일 코인에서 연속 손절이 발생하면 해당 코인의 추가 매수를 일시 중단합니다. 기본 3회.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>라운드로빈 방식</strong><br/>
+        <span class="help-desc">여러 코인에 매수 신호 동시 발생 시 균등 분배하여 분산 투자합니다.</span></p>
+      <!-- ⭐ [수정 Q5] 누락 도움말 추가 -->
+      <p class="help-item"><span class="help-bullet">•</span> <strong>볼린저밴드</strong><br/>
+        <span class="help-desc">N일 이동평균 ± Kσ 범위 계산. 하단 접촉 시 매수 신호 강화. 기본: 20일/2σ.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>손절매</strong><br/>
+        <span class="help-desc">ON 시 손실률이 설정값에 도달하면 강제 매도합니다. OFF 시 트레일링 스톱만 작동합니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>추가 하락 조건</strong><br/>
+        <span class="help-desc">최초 매수 후 추가로 설정 % 하락 시 분할 매수합니다. 코인당 최대 보유 건수 내에서 작동합니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>고정 매수 금액</strong><br/>
+        <span class="help-desc">매수 시 고정 금액으로 매수합니다. 0이면 일일 한도 배분 방식을 사용합니다.</span></p>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>일일 한도 복구</strong><br/>
+        <span class="help-desc">ON 시 매도 완료된 금액을 당일 한도에 복구하여 재투자를 허용합니다.</span></p>
       <p class="help-note">설정이 없으면 [설정하기] 버튼을 눌러 거래 조건을 설정해주세요.</p>
     `
   },

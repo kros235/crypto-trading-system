@@ -63,6 +63,26 @@ public class StockBotController {
         status.put("emergencyStop", emergencyStop);
         status.put("tomorrowHoliday", stockRiskManagementService.isTomorrowHoliday());
 
+        // ⭐ [Day 59 추가] 코인 대시보드와 동일: 마지막/다음 실행시간 + 카운트다운
+        // 주식 봇은 3분(180초) 주기 실행 (cron: "0 */3 * * * *")
+        java.time.LocalDateTime now = java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Seoul"));
+        // 다음 3분 경계 계산
+        int currentMinute = now.getMinute();
+        int nextMinuteBase = (currentMinute / 3 + 1) * 3;
+        java.time.LocalDateTime nextExecution = now
+                .withMinute(nextMinuteBase % 60)
+                .withSecond(0)
+                .withNano(0);
+        if (nextMinuteBase >= 60) {
+            nextExecution = nextExecution.plusHours(1);
+        }
+        long secondsUntilNext = java.time.Duration.between(now, nextExecution).getSeconds();
+
+        status.put("lastExecutionTime", now.minusMinutes(currentMinute % 3)
+                .withSecond(0).withNano(0).toString());
+        status.put("nextExecutionTime", nextExecution.toString());
+        status.put("secondsUntilNextExecution", secondsUntilNext);
+
         return ResponseEntity.ok(status);
     }
 

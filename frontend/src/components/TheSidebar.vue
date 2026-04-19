@@ -75,7 +75,7 @@
         <v-list-item
           prepend-icon="mdi-view-dashboard-outline"
           title="대시보드"
-          disabled
+          @click="$router.push('/stock-dashboard')"
         />
         <v-list-item
           prepend-icon="mdi-briefcase-outline"

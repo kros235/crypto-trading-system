@@ -16,6 +16,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.cryptotrading.service.StockAssetSnapshotService;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -46,6 +47,7 @@ public class StockTradingBotService {
     private final StockSignalDetectorService signalDetectorService;
     private final StockRiskManagementService riskManagementService;
     private final KisApiService kisApiService;
+    private final StockAssetSnapshotService stockAssetSnapshotService;
     private final UserRepository userRepository;
     private final StockTransactionRepository stockTransactionRepository;
     private final StockTradingSettingRepository stockTradingSettingRepository;
@@ -393,6 +395,10 @@ public class StockTradingBotService {
 
         log.info("[주식봇] 매수 완료: 총 {}원 사용 (한도 {}원)",
                 usedAmount.setScale(0, RoundingMode.DOWN), availableAmount.setScale(0, RoundingMode.DOWN));
+
+        // ⭐ [수정 Q6] 거래 완료 시 즉시 스냅샷 갱신
+        // 이유: 차트가 거래 직후 즉시 업데이트되어야 함
+        stockAssetSnapshotService.createOrUpdateSnapshot(userId);
     }
 
     // =========================================================
@@ -618,6 +624,9 @@ public class StockTradingBotService {
                 holding.getStockCode(), quantity, formatPrice(currentPrice),
                 String.format("%,.0f", sellAmount),
                 String.format("%,.0f", profitLoss), orderNo);
+        // ⭐ [수정 Q6] 거래 완료 시 즉시 스냅샷 갱신
+        // 이유: 차트가 거래 직후 즉시 업데이트되어야 함
+        stockAssetSnapshotService.createOrUpdateSnapshot(userId);
     }
 
     // =========================================================

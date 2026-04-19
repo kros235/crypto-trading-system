@@ -113,12 +113,19 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     // ⭐ [Day 58 추가] 아래 라우트 추가
-      {
-        path: '/stock-transactions',
-        name: 'stock-transactions',
-        component: () => import('../views/StockTransactionHistoryView.vue'),
-        meta: { requiresAuth: true }
-      },
+    {
+      path: '/stock-transactions',
+      name: 'stock-transactions',
+      component: () => import('../views/StockTransactionHistoryView.vue'),
+      meta: { requiresAuth: true }
+    },
+    // ⭐ [Day 59 추가] 주식 대시보드 라우트
+    {
+      path: '/stock-dashboard',
+      name: 'stock-dashboard',
+      component: () => import('../views/StockDashboardView.vue'),
+      meta: { requiresAuth: true }
+    },
   ]
 })
 

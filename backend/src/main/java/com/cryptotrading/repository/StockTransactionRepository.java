@@ -128,4 +128,38 @@ public interface StockTransactionRepository extends JpaRepository<StockTransacti
     @Query("SELECT COUNT(t) FROM StockTransaction t WHERE t.userId = :userId AND t.type = com.cryptotrading.entity.TransactionType.SELL")
     long countSellTransactions(@Param("userId") String userId);
 
+    // =====================================================
+    // ⭐ Day 59 추가: StockDashboardController 용 쿼리
+    // =====================================================
+
+    /**
+     * 오늘 매도 완료된 거래 목록 (soldAt 기준)
+     */
+    List<StockTransaction> findByUserIdAndStatusAndSoldAtAfter(
+            String userId, TransactionStatus status, LocalDateTime since);
+
+    /**
+     * 오늘 매수된 거래 목록 (createdAt 기준)
+     * - BUY 타입만 필터링
+     */
+    @Query("SELECT t FROM StockTransaction t WHERE t.userId = :userId " +
+           "AND t.type = com.cryptotrading.entity.TransactionType.BUY " +
+           "AND t.createdAt >= :since ORDER BY t.createdAt DESC")
+    List<StockTransaction> findByUserIdAndCreatedAtAfter(
+            @Param("userId") String userId,
+            @Param("since") LocalDateTime since);
+
+    /**
+     * 사용자별 전체 거래 건수 (매수 + 매도 합산)
+     */
+    long countByUserId(String userId);
+
+    /**
+     * 사용자별 상태별 거래 건수
+     */
+    long countByUserIdAndStatus(String userId, TransactionStatus status);
+
+    // ⭐ [수정 Q6] 활성 사용자 ID 목록 조회 (스냅샷 일괄 생성용)
+    @Query("SELECT DISTINCT t.userId FROM StockTransaction t")
+    List<String> findDistinctUserIds();
 }

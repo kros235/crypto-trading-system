@@ -10,10 +10,12 @@ import com.cryptotrading.entity.StockTradingSetting;
 import com.cryptotrading.entity.User;
 import com.cryptotrading.repository.UserRepository;
 import com.cryptotrading.repository.StockTradingSettingRepository;
+import com.cryptotrading.repository.StockTransactionRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
+import com.cryptotrading.service.StockAssetSnapshotService;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -42,6 +44,9 @@ import java.util.Optional;
 public class StockTradingScheduler {
 
     private final StockTradingBotService stockTradingBotService;
+    // ⭐ [수정 Q6] 스냅샷 서비스 추가
+    private final StockAssetSnapshotService stockAssetSnapshotService;
+    private final StockTransactionRepository stockTransactionRepository;
     private final MarketHolidayService marketHolidayService;
     private final StockRiskManagementService stockRiskManagementService;
     private final DiscordBotService discordBotService;
@@ -355,5 +360,21 @@ public class StockTradingScheduler {
                 warning.getHoldingDays(),
                 maxHoldingDays,
                 warning.getBuyDate());
+    }
+
+    // ⭐ [수정 Q6] 23:59 주식 자산 스냅샷 자동 갱신
+    // 이유: 코인 대시보드의 23:59 스냅샷과 동일한 주기로 주식 스냅샷을 자동 저장
+    @Scheduled(cron = "0 59 23 * * MON-FRI")
+    public void scheduleStockSnapshot() {
+        log.info("[StockScheduler] 주식 자산 스냅샷 자동 갱신 시작");
+        try {
+            // 모든 활성 사용자에 대해 스냅샷 생성
+            List<String> userIds = stockTransactionRepository.findDistinctUserIds();
+            for (String userId : userIds) {
+                stockAssetSnapshotService.createOrUpdateSnapshot(userId);
+            }
+        } catch (Exception e) {
+            log.error("[StockScheduler] 스냅샷 자동 갱신 실패", e);
+        }
     }
 }

@@ -444,3 +444,19 @@ CREATE TABLE IF NOT EXISTS stock_daily_summary (
     UNIQUE KEY unique_stock_user_date (user_id, date),
     INDEX idx_stock_summary_user_date (user_id, date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ⭐ [수정 Q6] 주식 자산 스냅샷 테이블 추가
+-- 이유: 코인 대시보드의 asset_snapshots와 동일한 구조로 주식 차트 스냅샷 저장
+CREATE TABLE IF NOT EXISTS stock_asset_snapshots (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(50) NOT NULL,
+    date DATE NOT NULL,
+    evaluation_amount DECIMAL(20,2) NOT NULL DEFAULT 0,
+    deposit_amount DECIMAL(20,2) NOT NULL DEFAULT 0,
+    profit_amount DECIMAL(20,2) NOT NULL DEFAULT 0,
+    profit_rate DECIMAL(10,4) NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_stock_snapshot_user_date (user_id, date),
+    INDEX idx_stock_snapshot_user_date (user_id, date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

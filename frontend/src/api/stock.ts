@@ -93,3 +93,13 @@ export const stockTransactionApi = {
   sell: (transactionId: number, soldPrice: number) =>
     api.post(`/stock/transactions/${transactionId}/sell`, { soldPrice }),
 }
+
+export const stockDashboardApi = {
+  getStats: () =>
+    api.get('/stock/dashboard/stats'),
+  getExchangeRate: () =>
+    api.get('/stock/dashboard/exchange-rate'),
+  // ⭐ [추가] KIS 계좌 실제 잔고 (KRW잔고, 주식평가액, 총자산)
+  getAccount: () =>
+    api.get('/stock/dashboard/account'),
+}

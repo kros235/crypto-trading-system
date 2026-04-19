@@ -29,7 +29,8 @@ public class StockSettingService {
      * 사용자의 주식 거래 설정 조회
      */
     public StockTradingSettingDTO getSettings(String userId) {
-        Optional<StockTradingSetting> setting = settingRepository.findByUserId(userId);
+        // ⭐ [수정] 중복 데이터 방어: 여러 건 존재 시 최신 1건만 사용
+        Optional<StockTradingSetting> setting = settingRepository.findFirstByUserIdOrderByCreatedAtDesc(userId);
         if (setting.isEmpty()) {
             return null;
         }
@@ -41,8 +42,8 @@ public class StockSettingService {
      */
     @Transactional
     public StockTradingSettingDTO createSettings(String userId, StockTradingSettingDTO dto) {
-        // 이미 설정이 있는지 확인
-        if (settingRepository.findByUserId(userId).isPresent()) {
+        // ⭐ [수정] findByUserId → countByUserId (중복 데이터 존재 시 NonUniqueResultException 방지)
+        if (settingRepository.countByUserId(userId) > 0) {
             throw new RuntimeException("이미 주식 거래 설정이 존재합니다. 수정을 이용해주세요.");
         }
 
@@ -63,7 +64,8 @@ public class StockSettingService {
      */
     @Transactional
     public StockTradingSettingDTO updateSettings(String userId, StockTradingSettingDTO dto) {
-        StockTradingSetting setting = settingRepository.findByUserId(userId)
+        // ⭐ [수정] 중복 방어: 최신 1건 조회
+        StockTradingSetting setting = settingRepository.findFirstByUserIdOrderByCreatedAtDesc(userId)
                 .orElseThrow(() -> new RuntimeException("주식 거래 설정을 찾을 수 없습니다."));
 
         applyDTOToEntity(dto, setting);
@@ -83,17 +85,19 @@ public class StockSettingService {
      */
     @Transactional
     public void deleteSettings(String userId) {
-        StockTradingSetting setting = settingRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("주식 거래 설정을 찾을 수 없습니다."));
-        settingRepository.delete(setting);
-        log.info("주식 거래 설정 삭제 - userId: {}", userId);
+        // ⭐ [수정] 중복 데이터가 있을 경우 모두 삭제
+        long count = settingRepository.countByUserId(userId);
+        if (count == 0) throw new RuntimeException("주식 거래 설정을 찾을 수 없습니다.");
+        settingRepository.deleteAllByUserId(userId);
+        log.info("주식 거래 설정 삭제 - userId: {}, 삭제건수: {}", userId, count);
     }
 
     /**
      * KIS API 키 등록 여부 확인
      */
     public boolean hasKisApiKey(String userId) {
-        Optional<StockTradingSetting> setting = settingRepository.findByUserId(userId);
+        // ⭐ [수정] 중복 방어
+        Optional<StockTradingSetting> setting = settingRepository.findFirstByUserIdOrderByCreatedAtDesc(userId);
         return setting.isPresent() && 
                setting.get().getKisAppKeyEncrypted() != null && 
                !setting.get().getKisAppKeyEncrypted().isBlank();
@@ -105,8 +109,8 @@ public class StockSettingService {
      */
     @Transactional
     public void updateKisApiKeys(String userId, String appKey, String appSecret, String accountNo) {
-        // ⭐ 변경: orElseThrow → orElseGet (설정 없으면 기본값으로 자동 생성)
-        StockTradingSetting setting = settingRepository.findByUserId(userId)
+        // ⭐ [추가수정] findByUserId → findFirstByUserIdOrderByCreatedAtDesc (중복 방어)
+        StockTradingSetting setting = settingRepository.findFirstByUserIdOrderByCreatedAtDesc(userId)
                 .orElseGet(() -> {
                     log.info("주식 거래 설정이 없어 기본값으로 자동 생성 - userId: {}", userId);
                     StockTradingSetting newSetting = new StockTradingSetting();
@@ -151,7 +155,8 @@ public class StockSettingService {
      */
     @Transactional
     public void deleteKisApiKeys(String userId) {
-        Optional<StockTradingSetting> optSetting = settingRepository.findByUserId(userId);
+        // ⭐ [추가수정] findByUserId → findFirstByUserIdOrderByCreatedAtDesc (중복 방어)
+        Optional<StockTradingSetting> optSetting = settingRepository.findFirstByUserIdOrderByCreatedAtDesc(userId);
         if (optSetting.isEmpty()) {
             log.info("KIS API 키 삭제 요청 - 설정 없음 (이미 삭제됨) - userId: {}", userId);
             return;

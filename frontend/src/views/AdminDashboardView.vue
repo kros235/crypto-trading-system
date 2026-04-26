@@ -384,15 +384,46 @@
 
             <!-- 액션 -->
             <template v-slot:item.actions="{ item }">
-              <v-btn
-                icon
-                size="small"
-                :color="item.isActive ? 'warning' : 'success'"
-                @click="toggleUserActive(item)"
-                :disabled="item.role === 'ADMIN'"
-              >
-                <v-icon>{{ item.isActive ? 'mdi-account-off' : 'mdi-account-check' }}</v-icon>
-              </v-btn>
+              <div class="d-flex align-center" style="gap: 4px;">
+                <!-- 기존: 활성/비활성 토글 -->
+                <v-btn
+                  icon
+                  size="small"
+                  variant="text"
+                  :color="item.isActive ? 'warning' : 'success'"
+                  @click="toggleUserActive(item)"
+                  :disabled="item.role === 'ADMIN'"
+                  :title="item.isActive ? '비활성화' : '활성화'"
+                >
+                  <v-icon>{{ item.isActive ? 'mdi-account-off' : 'mdi-account-check' }}</v-icon>
+                </v-btn>
+
+                <!-- ⭐⭐⭐ [추가] 비밀번호 초기화 버튼 ⭐⭐⭐ -->
+                <v-btn
+                  icon
+                  size="small"
+                  variant="text"
+                  color="info"
+                  :disabled="item.role === 'ADMIN'"
+                  title="비밀번호 초기화"
+                  @click="confirmResetPassword(item)"
+                >
+                  <v-icon>mdi-lock-reset</v-icon>
+                </v-btn>
+
+                <!-- ⭐⭐⭐ [추가] 사용자 삭제 버튼 ⭐⭐⭐ -->
+                <v-btn
+                  icon
+                  size="small"
+                  variant="text"
+                  color="error"
+                  :disabled="item.role === 'ADMIN'"
+                  title="사용자 삭제"
+                  @click="confirmDeleteUser(item)"
+                >
+                  <v-icon>mdi-delete</v-icon>
+                </v-btn>
+              </div>
             </template>
           </v-data-table>
         </v-card>
@@ -529,6 +560,132 @@
         </v-card-text>
       </v-card>
     </v-dialog>
+
+    <!-- ⭐⭐⭐ [추가] 비밀번호 초기화 확인 다이얼로그 ⭐⭐⭐ -->
+    <!-- ⭐⭐⭐ [수정] max-width 500 → 600: 주의사항 한 줄 표시 ⭐⭐⭐ -->
+    <v-dialog v-model="showResetPasswordDialog" max-width="600" persistent>
+      <v-card>
+        <v-card-title class="bg-info text-white d-flex align-center">
+          <v-icon class="mr-2">mdi-lock-reset</v-icon>
+          비밀번호 초기화
+        </v-card-title>
+        <v-card-text class="pt-4">
+          <!-- ⭐⭐⭐ [수정] 가독성 개선: 노란색 → 검정색 인라인 스타일 ⭐⭐⭐ -->
+          <v-alert type="warning" variant="tonal" class="mb-3">
+            <span style="color: #000;"><strong>주의:</strong> 사용자의 비밀번호가 임시 비밀번호로 변경됩니다.</span>
+          </v-alert>
+          <p class="mb-2">
+            <strong>{{ targetUser?.userId }}</strong>
+            ({{ targetUser?.email }})
+          </p>
+          <p class="text-body-2 text-grey">
+            확인을 누르면 임시 비밀번호가 즉시 발급되며, 사용자에게 전달해야 합니다.<br>
+            사용자에게는 이메일로 초기화 알림이 발송됩니다.
+          </p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            variant="text"
+            @click="showResetPasswordDialog = false"
+            :disabled="actionLoading"
+          >취소</v-btn>
+          <v-btn
+            color="info"
+            variant="elevated"
+            @click="executeResetPassword"
+            :loading="actionLoading"
+          >확인</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- ⭐⭐⭐ [추가] 임시 비밀번호 표시 다이얼로그 ⭐⭐⭐ -->
+    <v-dialog v-model="showTempPasswordDialog" max-width="500" persistent>
+      <v-card>
+        <v-card-title class="bg-success text-white d-flex align-center">
+          <v-icon class="mr-2">mdi-shield-key</v-icon>
+          임시 비밀번호 발급 완료
+        </v-card-title>
+        <v-card-text class="pt-4">
+          <v-alert type="info" variant="tonal" class="mb-3">
+            <strong>이 화면을 닫으면 임시 비밀번호를 다시 확인할 수 없습니다.</strong><br>
+            반드시 사용자에게 안전하게 전달하세요.
+          </v-alert>
+          <p class="mb-2 text-body-2">
+            대상 사용자: <strong>{{ tempPasswordUserId }}</strong>
+          </p>
+          <div
+            class="pa-4 mb-3"
+            style="background: #f5f5f5; border: 2px dashed #1976d2; border-radius: 8px; text-align: center;"
+          >
+            <p class="text-caption text-grey mb-1">임시 비밀번호</p>
+            <p
+              class="text-h5 font-weight-bold mb-0"
+              style="font-family: 'Consolas', 'Monaco', monospace; letter-spacing: 2px; color: #1976d2;"
+            >{{ tempPassword }}</p>
+          </div>
+          <v-btn
+            block
+            color="primary"
+            variant="outlined"
+            prepend-icon="mdi-content-copy"
+            @click="copyTempPassword"
+          >클립보드에 복사</v-btn>
+          <p class="text-caption text-grey mt-3">
+            ※ 사용자에게 전달 후 본인이 원하는 비밀번호로 즉시 변경하도록 안내해주세요.
+          </p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            color="success"
+            variant="elevated"
+            @click="closeTempPasswordDialog"
+          >확인 (전달 완료)</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- ⭐⭐⭐ [추가] 사용자 삭제 확인 다이얼로그 ⭐⭐⭐ -->
+    <v-dialog v-model="showDeleteUserDialog" max-width="500" persistent>
+      <v-card>
+        <v-card-title class="bg-error text-white d-flex align-center">
+          <v-icon class="mr-2">mdi-alert</v-icon>
+          사용자 삭제
+        </v-card-title>
+        <v-card-text class="pt-4">
+          <v-alert type="error" variant="tonal" class="mb-3">
+            <strong>경고:</strong> 이 작업은 되돌릴 수 없습니다.
+          </v-alert>
+          <p class="mb-2">
+            정말로 다음 사용자를 <strong>영구 삭제</strong>하시겠습니까?
+          </p>
+          <p class="mb-2">
+            <strong>{{ targetUser?.userId }}</strong>
+            ({{ targetUser?.email }})
+          </p>
+          <p class="text-body-2 text-grey">
+            사용자의 모든 거래 내역, 설정, 보유 자산 정보가 함께 삭제됩니다.
+          </p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            variant="text"
+            @click="showDeleteUserDialog = false"
+            :disabled="actionLoading"
+          >취소</v-btn>
+          <v-btn
+            color="error"
+            variant="elevated"
+            @click="executeDeleteUser"
+            :loading="actionLoading"
+          >삭제</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
   </v-app>
 </template>
 
@@ -761,6 +918,101 @@ const toggleUserActive = async (user: AdminUser) => {
     console.error('사용자 상태 변경 실패:', error)
   }
 }
+
+// ⭐⭐⭐ [추가] 비밀번호 초기화 + 사용자 삭제 관련 상태/함수 ⭐⭐⭐
+
+// 다이얼로그 제어 변수
+const showResetPasswordDialog = ref(false)
+const showTempPasswordDialog = ref(false)
+const showDeleteUserDialog = ref(false)
+const targetUser = ref<AdminUser | null>(null)
+const tempPassword = ref('')
+const tempPasswordUserId = ref('')
+const actionLoading = ref(false)
+
+// 비밀번호 초기화: 1단계 - 확인 다이얼로그 열기
+const confirmResetPassword = (user: AdminUser) => {
+  targetUser.value = user
+  showResetPasswordDialog.value = true
+}
+
+// 비밀번호 초기화: 2단계 - API 호출
+const executeResetPassword = async () => {
+  if (!targetUser.value) return
+  actionLoading.value = true
+  try {
+    const response = await adminApi.resetUserPassword(targetUser.value.userId)
+    if (response.data.success && response.data.tempPassword) {
+      tempPassword.value = response.data.tempPassword
+      tempPasswordUserId.value = response.data.userId || targetUser.value.userId
+      showResetPasswordDialog.value = false
+      showTempPasswordDialog.value = true
+    } else {
+      alert(response.data.message || '비밀번호 초기화에 실패했습니다.')
+    }
+  } catch (error: any) {
+    console.error('비밀번호 초기화 실패:', error)
+    const msg = error?.response?.data?.message
+      || error?.message
+      || '비밀번호 초기화에 실패했습니다.'
+    alert(msg)
+  } finally {
+    actionLoading.value = false
+  }
+}
+
+// 임시 비밀번호 클립보드 복사
+const copyTempPassword = async () => {
+  try {
+    await navigator.clipboard.writeText(tempPassword.value)
+    alert('임시 비밀번호가 클립보드에 복사되었습니다.')
+  } catch (e) {
+    // 폴백: 일부 브라우저(http 환경)에서 clipboard API 미지원
+    console.error('클립보드 복사 실패:', e)
+    alert('자동 복사에 실패했습니다. 임시 비밀번호를 직접 선택해 복사해주세요.')
+  }
+}
+
+// 임시 비밀번호 다이얼로그 닫기 (값 초기화)
+const closeTempPasswordDialog = () => {
+  showTempPasswordDialog.value = false
+  tempPassword.value = ''
+  tempPasswordUserId.value = ''
+  targetUser.value = null
+}
+
+// 사용자 삭제: 1단계 - 확인 다이얼로그 열기
+const confirmDeleteUser = (user: AdminUser) => {
+  targetUser.value = user
+  showDeleteUserDialog.value = true
+}
+
+// 사용자 삭제: 2단계 - API 호출
+const executeDeleteUser = async () => {
+  if (!targetUser.value) return
+  actionLoading.value = true
+  try {
+    const response = await adminApi.deleteUser(targetUser.value.userId)
+    if (response.data.success) {
+      alert(response.data.message || '사용자가 삭제되었습니다.')
+      showDeleteUserDialog.value = false
+      targetUser.value = null
+      // 사용자 목록 + 통계 새로고침
+      await Promise.all([fetchUsers(), fetchStats()])
+    } else {
+      alert(response.data.message || '사용자 삭제에 실패했습니다.')
+    }
+  } catch (error: any) {
+    console.error('사용자 삭제 실패:', error)
+    const msg = error?.response?.data?.message
+      || error?.message
+      || '사용자 삭제에 실패했습니다.'
+    alert(msg)
+  } finally {
+    actionLoading.value = false
+  }
+}
+
 
 // ★★★ 추가: fetchStats 함수 ★★★
 const fetchStats = async () => {

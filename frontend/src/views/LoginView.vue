@@ -78,6 +78,16 @@
           <v-divider />
 
           <v-card-actions>
+            <!-- ⭐⭐⭐ [추가] 비밀번호 찾기 링크 ⭐⭐⭐ -->
+            <v-btn
+              variant="text"
+              size="small"
+              color="grey-darken-1"
+              @click="$router.push('/forgot-password')"
+            >
+              <v-icon start size="16">mdi-lock-question</v-icon>
+              비밀번호 찾기
+            </v-btn>
             <v-spacer />
             <v-btn
               text

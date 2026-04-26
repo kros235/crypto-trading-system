@@ -7,6 +7,8 @@ import com.cryptotrading.dto.common.ApiResponse;
 import com.cryptotrading.dto.common.ApiResponse.ErrorResponse;  
 import com.cryptotrading.exception.ErrorCode;  
 import com.cryptotrading.service.AuthService;
+// ⭐ [추가] 비밀번호 재설정 서비스
+import com.cryptotrading.service.PasswordResetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +33,8 @@ import jakarta.servlet.http.HttpServletRequest;
 public class AuthController {
 
     private final AuthService authService;
+    // ⭐⭐⭐ [추가] 비밀번호 재설정 서비스 의존성 ⭐⭐⭐
+    private final PasswordResetService passwordResetService;
 
     // === 메서드에 어노테이션 추가 예시 ===
     @Operation(summary = "회원가입", description = "새로운 사용자를 등록합니다")
@@ -140,6 +144,82 @@ public class AuthController {
         }
 
         return request.getRemoteAddr();
+    }
+
+    // ====================================================================
+    // ⭐⭐⭐ [추가] 비밀번호 재설정 (OTP 인증) 엔드포인트 ⭐⭐⭐
+    // ====================================================================
+
+    /**
+     * [1단계] OTP 발송 요청
+     * - 이메일 입력 → OTP 6자리 코드를 이메일로 발송
+     * - 응답에는 마스킹된 이메일만 반환 (보안: 등록 여부 확인 우회 방지)
+     */
+    @Operation(summary = "비밀번호 재설정 OTP 발송", 
+               description = "이메일로 6자리 인증 코드를 발송합니다 (3분 유효)")
+    @PostMapping("/password-reset/request-otp")
+    public ResponseEntity<Map<String, Object>> requestPasswordResetOtp(
+            @RequestBody Map<String, String> request) {
+
+        Map<String, Object> response = new HashMap<>();
+        try {
+            String email = request.get("email");
+            if (email == null || email.isBlank()) {
+                response.put("success", false);
+                response.put("message", "이메일을 입력해주세요.");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            String maskedEmail = passwordResetService.requestOtp(email);
+
+            response.put("success", true);
+            response.put("message", "인증 코드가 이메일로 발송되었습니다.");
+            response.put("maskedEmail", maskedEmail);
+            response.put("expiryMinutes", 3);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            log.warn("OTP 발송 실패: {}", e.getMessage());
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * [2단계] OTP 검증 + 임시 비밀번호 발급
+     * - 이메일 + 6자리 OTP 코드로 검증
+     * - 검증 성공 시 신규 임시 비밀번호 평문을 1회 응답으로 반환
+     * - 응답 후 사용자는 즉시 로그인 후 본인이 원하는 비밀번호로 변경해야 함
+     */
+    @Operation(summary = "비밀번호 재설정 OTP 검증", 
+               description = "OTP 검증 후 임시 비밀번호를 발급합니다")
+    @PostMapping("/password-reset/verify-otp")
+    public ResponseEntity<Map<String, Object>> verifyPasswordResetOtp(
+            @RequestBody Map<String, String> request) {
+
+        Map<String, Object> response = new HashMap<>();
+        try {
+            String email = request.get("email");
+            String otp = request.get("otp");
+
+            if (email == null || email.isBlank() || otp == null || otp.isBlank()) {
+                response.put("success", false);
+                response.put("message", "이메일과 인증 코드를 모두 입력해주세요.");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            String tempPassword = passwordResetService.verifyOtpAndReset(email, otp);
+
+            response.put("success", true);
+            response.put("message", "임시 비밀번호가 발급되었습니다. 로그인 후 즉시 비밀번호를 변경해주세요.");
+            response.put("tempPassword", tempPassword);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            log.warn("OTP 검증 실패: {}", e.getMessage());
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
     }
 
 }

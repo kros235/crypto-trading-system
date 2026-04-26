@@ -128,9 +128,27 @@ export const authApi = {
 
   // 토큰 검증
   validateToken: () =>
-    api.get('/auth/validate')
-}
+    api.get('/auth/validate'),
 
+  // ⭐⭐⭐ [추가] 비밀번호 재설정 OTP 발송 ⭐⭐⭐
+  // 응답: { success, message, maskedEmail, expiryMinutes }
+  requestPasswordResetOtp: (email: string) =>
+    api.post<{
+      success: boolean
+      message: string
+      maskedEmail?: string
+      expiryMinutes?: number
+    }>('/auth/password-reset/request-otp', { email }),
+
+  // ⭐⭐⭐ [추가] 비밀번호 재설정 OTP 검증 + 임시 비밀번호 발급 ⭐⭐⭐
+  // 응답: { success, message, tempPassword }
+  verifyPasswordResetOtp: (email: string, otp: string) =>
+    api.post<{
+      success: boolean
+      message: string
+      tempPassword?: string
+    }>('/auth/password-reset/verify-otp', { email, otp })
+}
 export const userApi = {
   getProfile: () =>
     api.get<User>('/user/profile'),
@@ -339,6 +357,26 @@ export const adminApi = {
     api.put(`/admin/users/${userId}/role`, { role }),
   forceLogout: (userId: string) => 
     api.post(`/admin/users/${userId}/logout`),
+
+  // ⭐⭐⭐ [추가] 사용자 비밀번호 초기화 (관리자) ⭐⭐⭐
+  // 응답: { success, message, tempPassword, userId }
+  resetUserPassword: (userId: string) =>
+    api.put<{
+      success: boolean
+      message: string
+      tempPassword?: string
+      userId?: string
+    }>(`/admin/users/${userId}/reset-password`),
+
+  // ⭐⭐⭐ [추가] 사용자 삭제 (관리자) ⭐⭐⭐
+  // 응답: { success, message, userId }
+  deleteUser: (userId: string) =>
+    api.delete<{
+      success: boolean
+      message: string
+      userId?: string
+    }>(`/admin/users/${userId}`),
+
   getMonitoring: () => api.get('/admin/monitoring'),
   getSlowQueries: () => api.get('/admin/monitoring/slow-queries'),
 }

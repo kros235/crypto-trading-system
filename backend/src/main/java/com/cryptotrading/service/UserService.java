@@ -141,6 +141,30 @@ public class UserService {
         log.info("비밀번호 변경 완료: {}", userId);
     }
 
+
+    // ⭐⭐⭐ [추가] 비밀번호 강제 재설정 (관리자/OTP 인증용) ⭐⭐⭐
+    /**
+     * 현재 비밀번호 검증 없이 새 비밀번호로 강제 재설정
+     * - 관리자 비밀번호 초기화
+     * - OTP 인증 후 비밀번호 재설정
+     * 두 경우 모두 사용
+     *
+     * @param userId      대상 사용자 ID
+     * @param newPassword 새 비밀번호 (평문, BCrypt로 해싱하여 저장)
+     */
+    @Transactional
+    public void resetPasswordToTemp(String userId, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userId));
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        log.info("비밀번호 강제 재설정 완료: userId={}", userId);
+    }
+
+
+
     // IP 화이트리스트 관리 메서드 추가
 
     /**

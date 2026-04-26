@@ -9,7 +9,7 @@ const router = createRouter({
       name: 'home',
       redirect: '/dashboard'
     },
-    {
+   {
       path: '/login',
       name: 'login',
       component: () => import('../views/LoginView.vue'),
@@ -19,6 +19,13 @@ const router = createRouter({
       path: '/signup',
       name: 'signup',
       component: () => import('../views/SignupView.vue'),
+      meta: { requiresGuest: true }
+    },
+    // ⭐⭐⭐ [추가] 비밀번호 찾기 라우트 ⭐⭐⭐
+    {
+      path: '/forgot-password',
+      name: 'forgot-password',
+      component: () => import('../views/ForgotPasswordView.vue'),
       meta: { requiresGuest: true }
     },
     {

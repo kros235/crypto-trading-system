@@ -9,6 +9,8 @@ import com.cryptotrading.entity.User;
 import com.cryptotrading.entity.UserRole;
 import com.cryptotrading.repository.TransactionRepository;
 import com.cryptotrading.repository.UserRepository;
+// ⭐ [추가] 비밀번호 토큰 리포지토리
+import com.cryptotrading.repository.PasswordResetTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -33,6 +35,10 @@ public class AdminService {
     private final TransactionRepository transactionRepository;
     private final NotificationConfig notificationConfig;
     private final EmailConfig emailConfig;
+    
+    // ⭐⭐⭐ [추가] 비밀번호 초기화 + 사용자 삭제 시 토큰 정리용 ⭐⭐⭐
+    private final PasswordResetService passwordResetService;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     
     private LocalDateTime lastBotExecution = null;
     private boolean botRunning = false;
@@ -88,6 +94,84 @@ public class AdminService {
         log.info("사용자 {} 역할 변경: {}", odId, newRole);
         return convertToAdminUserDTO(user);
     }
+
+
+    // ⭐⭐⭐ [추가] 사용자 비밀번호 초기화 (관리자) ⭐⭐⭐
+    /**
+     * 관리자가 사용자 비밀번호를 임시 비밀번호로 초기화한다.
+     * - 임시 비밀번호는 응답으로 1회 평문 반환 (관리자 화면에서 표시)
+     * - 사용자 이메일이 등록되어 있으면 알림 메일 발송
+     * - 해당 사용자의 미사용 OTP는 모두 무효화
+     *
+     * @param targetUserId 대상 사용자 ID
+     * @param adminUserId  요청한 관리자 ID (감사 로그용)
+     * @return 신규 임시 비밀번호 (평문)
+     */
+    @Transactional
+    public String resetUserPassword(String targetUserId, String adminUserId) {
+        // 자기 자신은 이 기능으로 초기화 불가 (관리자는 본인 프로필에서 변경)
+        if (targetUserId.equals(adminUserId)) {
+            throw new RuntimeException("본인의 비밀번호는 프로필 설정에서 변경해주세요.");
+        }
+
+        // 사용자 존재 검증
+        User user = userRepository.findByUserId(targetUserId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + targetUserId));
+
+        // 다른 ADMIN 계정 보호 (다른 관리자의 비번을 임의로 초기화하지 못하도록)
+        if (UserRole.ADMIN.equals(user.getRole())) {
+            throw new RuntimeException("다른 관리자 계정의 비밀번호는 초기화할 수 없습니다.");
+        }
+
+        // 임시 비밀번호 발급 (PasswordResetService에서 BCrypt 해싱 + DB 저장 + 메일 발송)
+        String tempPassword = passwordResetService.generateTempPasswordForAdmin(targetUserId);
+
+        log.info("[관리자] 비밀번호 초기화: admin={}, target={}", adminUserId, targetUserId);
+        return tempPassword;
+    }
+
+    // ⭐⭐⭐ [추가] 사용자 삭제 (관리자) ⭐⭐⭐
+    /**
+     * 관리자가 사용자를 삭제한다.
+     * - 본인/다른 관리자 삭제 방지
+     * - 비밀번호 재설정 토큰 cascade 삭제
+     * - 그 외 연관 데이터(transactions 등)는 DB의 ON DELETE CASCADE 설정에 위임
+     *
+     * @param targetUserId 대상 사용자 ID
+     * @param adminUserId  요청한 관리자 ID (감사 로그용)
+     */
+    @Transactional
+    public void deleteUser(String targetUserId, String adminUserId) {
+        // 자기 자신 삭제 방지
+        if (targetUserId.equals(adminUserId)) {
+            throw new RuntimeException("본인 계정은 삭제할 수 없습니다.");
+        }
+
+        // 사용자 존재 검증
+        User user = userRepository.findByUserId(targetUserId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + targetUserId));
+
+        // 다른 ADMIN 계정 삭제 방지 (관리자 계정 보호)
+        if (UserRole.ADMIN.equals(user.getRole())) {
+            throw new RuntimeException("관리자 계정은 삭제할 수 없습니다.");
+        }
+
+        // 비밀번호 재설정 토큰 사전 정리 (FK 제약은 NO_CONSTRAINT지만, 잔여 데이터 정리 차원)
+        try {
+            passwordResetTokenRepository.deleteByUserId(targetUserId);
+        } catch (Exception e) {
+            log.warn("비밀번호 재설정 토큰 정리 실패 (계속 진행): {}", e.getMessage());
+        }
+
+        // 사용자 삭제
+        // - users 테이블의 user_id를 FK로 참조하는 테이블들은 init.sql에서 ON DELETE CASCADE 설정됨
+        //   (예: trading_settings, transactions, coin_news_analysis, password_reset_tokens 등)
+        userRepository.delete(user);
+
+        log.info("[관리자] 사용자 삭제 완료: admin={}, target={}", adminUserId, targetUserId);
+    }
+
+
     
     /**
      * 시스템 통계 조회

@@ -12,7 +12,7 @@ public class EmailConfig {
     @Value("${app.email.from:noreply@cryptobot.com}")
     private String fromAddress;
     
-    @Value("${app.email.from-name:코인 자동매매 시스템}")
+    @Value("${app.email.from-name:코인 & 주식 자동매매 시스템}")
     private String fromName;
     
     public boolean isEnabled() {

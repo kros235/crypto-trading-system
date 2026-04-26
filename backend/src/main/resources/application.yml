@@ -134,7 +134,8 @@ app:
   email:
     enabled: ${EMAIL_ENABLED:false}
     from: ${SMTP_USERNAME:noreply@cryptobot.com}
-    from-name: 코인 자동매매 시스템
+    # ⭐ 변경: 코인 자동매매 시스템 → 코인 & 주식 자동매매 시스템 (Phase 2 주식 거래 통합)
+    from-name: 코인 & 주식 자동매매 시스템
 
 springdoc:
   api-docs:

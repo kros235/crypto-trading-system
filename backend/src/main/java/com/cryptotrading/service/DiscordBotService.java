@@ -93,9 +93,9 @@ public class DiscordBotService {
 
             EmbedBuilder embed = new EmbedBuilder()
                     .setTitle("🔔 연동 테스트 성공!")
-                    .setDescription("코인 자동매매 시스템과 Discord 연동이 완료되었습니다.\n\n이제부터 매수/매도 알림과 일일 리포트를 DM으로 받으실 수 있습니다.")
+                    .setDescription("코인 & 주식 자동매매 시스템과 Discord 연동이 완료되었습니다.\n\n이제부터 코인/주식 매수/매도 알림과 일일 리포트를 DM으로 받으실 수 있습니다.")
                     .setColor(Color.GREEN)
-                    .setFooter("코인 자동매매 시스템", null)
+                    .setFooter("코인 & 주식 자동매매 시스템", null)
                     .setTimestamp(LocalDateTime.now().atZone(java.time.ZoneId.systemDefault()).toInstant());
 
             user.openPrivateChannel()
@@ -140,7 +140,7 @@ public class DiscordBotService {
                     .setTitle(subject)
                     .setDescription(formattedMessage)
                     .setColor(color)
-                    .setFooter("코인 자동매매 시스템 - 관리자 알림", null)
+                    .setFooter("코인 & 주식 자동매매 시스템 - 관리자 알림", null)
                     .setTimestamp(LocalDateTime.now().atZone(KST).toInstant());
 
             user.openPrivateChannel()
@@ -205,12 +205,12 @@ public class DiscordBotService {
             EmbedBuilder embed = new EmbedBuilder()
                     .setTitle("📈 매수 체결")
                     .setColor(Color.BLUE)
-                    .addField("코인", coinSymbol, true)
+                    .addField("종목", coinSymbol, true)
                     .addField("수량", quantity, true)
                     .addField("매수가", price + "원", true)
                     .addField("총 금액", totalAmount + "원", false)
                     .addField("📌 매수 사유", reasonText, false)  // ⭐⭐⭐ [추가] 매수 사유 필드 ⭐⭐⭐
-                    .setFooter("코인 자동매매 시스템", null)
+                    .setFooter("코인 & 주식 자동매매 시스템", null)
                     .setTimestamp(LocalDateTime.now().atZone(java.time.ZoneId.systemDefault()).toInstant());
 
             user.openPrivateChannel()
@@ -250,12 +250,12 @@ public class DiscordBotService {
             EmbedBuilder embed = new EmbedBuilder()
                     .setTitle("📉 매도 체결")
                     .setColor(color)
-                    .addField("코인", coinSymbol, true)
+                    .addField("종목", coinSymbol, true)
                     .addField("수량", quantity, true)
                     .addField("매도가", sellPrice + "원", true)
                     .addField(emoji + " 손익", profitLoss + "원 (" + profitRate + "%)", false)
                     .addField("📌 매도 사유", reasonText, false)  // ⭐⭐⭐ [추가] 매도 사유 필드 ⭐⭐⭐
-                    .setFooter("코인 자동매매 시스템", null)
+                    .setFooter("코인 & 주식 자동매매 시스템", null)
                     .setTimestamp(LocalDateTime.now().atZone(java.time.ZoneId.systemDefault()).toInstant());
 
             user.openPrivateChannel()
@@ -289,11 +289,11 @@ public class DiscordBotService {
                     .setTitle("🚨 손절매 실행")
                     .setColor(Color.RED)
                     .setDescription("설정한 손절 기준에 도달하여 자동 매도되었습니다.")
-                    .addField("코인", coinSymbol, true)
+                    .addField("종목", coinSymbol, true)
                     .addField("수량", quantity, true)
                     .addField("매도가", sellPrice + "원", true)
                     .addField("🔴 손실", lossAmount + "원 (" + lossRate + "%)", false)
-                    .setFooter("코인 자동매매 시스템", null)
+                    .setFooter("코인 & 주식 자동매매 시스템", null)
                     .setTimestamp(LocalDateTime.now().atZone(java.time.ZoneId.systemDefault()).toInstant());
 
             user.openPrivateChannel()
@@ -332,7 +332,7 @@ public class DiscordBotService {
                     .addField("📋 총 손익", totalProfit + "원 (" + profitRate + "%)", false)
                     .addField("🪙 보유 종목", holdingCount + "개", true)
                     .addField("💎 총 평가액", totalHoldingValue + "원", true)
-                    .setFooter("코인 자동매매 시스템", null)
+                    .setFooter("코인 & 주식 자동매매 시스템", null)
                     .setTimestamp(LocalDateTime.now().atZone(java.time.ZoneId.systemDefault()).toInstant());
 
             user.openPrivateChannel()
@@ -374,7 +374,7 @@ public class DiscordBotService {
                     .addField("📋 총 손익", totalProfit + "원 (" + profitRate + "%)", false)
                     .addField("🪙 보유 종목", holdingCount + "개", true)
                     .addField("💎 총 평가액", totalHoldingValue + "원", true)
-                    .setFooter("코인 자동매매 시스템", null)
+                    .setFooter("코인 & 주식 자동매매 시스템", null)
                     .setTimestamp(LocalDateTime.now().atZone(java.time.ZoneId.systemDefault()).toInstant());
 
             user.openPrivateChannel()

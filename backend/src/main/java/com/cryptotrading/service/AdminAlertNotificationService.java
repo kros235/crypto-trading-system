@@ -156,7 +156,7 @@ public class AdminAlertNotificationService {
                     %s
                 </div>
                 <div style="margin-top: 10px; font-size: 12px; color: #888;">
-                    코인 자동매매 시스템 - 관리자 알림
+                    코인 & 주식 자동매매 시스템 - 관리자 알림
                 </div>
             </div>
             """, html);

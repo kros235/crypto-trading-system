@@ -137,7 +137,7 @@ public class EmailService {
             <body style="font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 20px; background: #f5f5f5;">
                 <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
                     <div style="background: %s; color: white; padding: 20px;">
-                        <h1 style="margin: 0; font-size: 18px;">🤖 코인 자동매매 시스템 - 관리자 알림</h1>
+                        <h1 style="margin: 0; font-size: 18px;">🤖 코인 & 주식 자동매매 시스템 - 관리자 알림</h1>
                     </div>
                     <div style="padding: 20px;">%s</div>
                     <div style="padding: 15px 20px; background: #fafafa; border-top: 1px solid #eee; font-size: 12px; color: #888;">
@@ -288,7 +288,7 @@ public class EmailService {
             
             String htmlContent = """
                 <div style="font-family: 'Malgun Gothic', sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2 style="color: #1976d2;">🤖 코인 자동매매 시스템</h2>
+                    <h2 style="color: #1976d2;">🤖 코인 & 주식 자동매매 시스템</h2>
                     <p>이메일 알림이 정상적으로 설정되었습니다.</p>
                     <p style="color: #666; font-size: 12px;">발송 시간: %s</p>
                 </div>

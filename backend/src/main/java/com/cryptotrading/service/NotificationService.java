@@ -148,7 +148,7 @@ public class NotificationService {
         return String.format("""
             💰 **매수 체결 알림**
             
-            📊 **코인**: %s
+            📊 **종목**: %s
             💵 **매수가**: %s 원
             📦 **수량**: %s
             💳 **총액**: %s 원
@@ -179,7 +179,7 @@ public class NotificationService {
         return String.format("""
             💸 **매도 체결 알림**
             
-            📊 **코인**: %s
+            📊 **종목**: %s
             💵 **매도가**: %s 원
             📦 **수량**: %s
             💳 **총액**: %s 원
@@ -206,7 +206,7 @@ public class NotificationService {
         return String.format("""
             🚨 **손절매 실행 알림**
             
-            📊 **코인**: %s
+            📊 **종목**: %s
             💵 **매도가**: %s 원
             📉 **손실**: %s 원 (%s%%)
             
@@ -245,7 +245,7 @@ public class NotificationService {
             • **총 손익**: %s%s원 (%s%s%%)
             
             📦 **보유 현황**
-            • 보유 코인: %d종목
+            • 보유 종목: %d종목
             • 총 평가액: %s원
             • 투자 원금: %s원
             
@@ -266,7 +266,7 @@ public class NotificationService {
         
         // 코인별 상세 (있는 경우)
         if (report.getCoinSummaries() != null && !report.getCoinSummaries().isEmpty()) {
-            sb.append("📋 **코인별 현황**\n");
+            sb.append("📋 **종목별 현황**\n");
             for (DailyReportDTO.CoinSummary coin : report.getCoinSummaries()) {
                 String coinProfitSign = coin.getProfitLoss().compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
                 sb.append(String.format("• %s: %s%s원 (%s%s%%)\n",

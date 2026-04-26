@@ -15,6 +15,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+// ⭐⭐⭐ [추가] Authentication import - 현재 로그인한 관리자 ID 추출용 ⭐⭐⭐
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,7 +24,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 @Slf4j
 @RestController
 @RequestMapping("/api/admin")
@@ -99,7 +100,67 @@ public class AdminController {
         response.put("success", true);
         response.put("message", "사용자 " + userId + "의 세션이 무효화되었습니다.");
         return ResponseEntity.ok(response);
-    } 
+    }
+
+    // ⭐⭐⭐ [추가] 사용자 비밀번호 초기화 (관리자) ⭐⭐⭐
+    /**
+     * 관리자가 특정 사용자의 비밀번호를 임시 비밀번호로 초기화한다.
+     * - 응답에 임시 비밀번호 평문이 1회 포함됨 (관리자 화면에서 표시 후 즉시 폐기)
+     * - 사용자 이메일이 등록되어 있으면 알림 메일 발송
+     * - 본인 / 다른 ADMIN 계정은 초기화 불가
+     */
+    @Operation(summary = "사용자 비밀번호 초기화", description = "임시 비밀번호로 강제 재설정합니다 (관리자 전용)")
+    @PutMapping("/users/{userId}/reset-password")
+    public ResponseEntity<Map<String, Object>> resetUserPassword(
+            @PathVariable String userId,
+            Authentication authentication) {
+
+        Map<String, Object> response = new HashMap<>();
+        try {
+            String adminUserId = authentication.getName();
+            String tempPassword = adminService.resetUserPassword(userId, adminUserId);
+
+            response.put("success", true);
+            response.put("message", "비밀번호가 초기화되었습니다.");
+            response.put("tempPassword", tempPassword);
+            response.put("userId", userId);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            log.error("비밀번호 초기화 실패: userId={}, error={}", userId, e.getMessage());
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    // ⭐⭐⭐ [추가] 사용자 삭제 (관리자) ⭐⭐⭐
+    /**
+     * 관리자가 사용자를 영구 삭제한다.
+     * - 본인 / 다른 ADMIN 계정은 삭제 불가
+     * - DB의 ON DELETE CASCADE 정책에 따라 연관 데이터 자동 삭제
+     */
+    @Operation(summary = "사용자 삭제", description = "사용자 계정을 영구 삭제합니다 (관리자 전용)")
+    @DeleteMapping("/users/{userId}")
+    public ResponseEntity<Map<String, Object>> deleteUser(
+            @PathVariable String userId,
+            Authentication authentication) {
+
+        Map<String, Object> response = new HashMap<>();
+        try {
+            String adminUserId = authentication.getName();
+            adminService.deleteUser(userId, adminUserId);
+
+            response.put("success", true);
+            response.put("message", "사용자가 삭제되었습니다.");
+            response.put("userId", userId);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            log.error("사용자 삭제 실패: userId={}, error={}", userId, e.getMessage());
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
 
     /**
      * 캐시 통계 조회

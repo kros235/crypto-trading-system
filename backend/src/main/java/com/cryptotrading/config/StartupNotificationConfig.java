@@ -36,7 +36,7 @@ public class StartupNotificationConfig {
                     "✅ **서버 시작 완료**\n" +
                     "━━━━━━━━━━━━━━━━━━━━\n" +
                     "🕐 시간: %s\n" +
-                    "🖥️ 서비스: 코인 자동매매 시스템\n" +
+                    "🖥️ 서비스: 코인 & 주식 자동매매 시스템\n" +
                     "📊 상태: 정상 운영 중",
                     LocalDateTime.now(KST).format(formatter)
                 );
@@ -67,7 +67,7 @@ public class StartupNotificationConfig {
                 "🛑 **서버 종료**\n" +
                 "━━━━━━━━━━━━━━━━━━━━\n" +
                 "🕐 시간: %s\n" +
-                "🖥️ 서비스: 코인 자동매매 시스템\n" +
+                "🖥️ 서비스: 코인 & 주식 자동매매 시스템\n" +
                 "⚠️ 서버가 종료되었습니다.",
                 LocalDateTime.now(KST).format(formatter)
             );

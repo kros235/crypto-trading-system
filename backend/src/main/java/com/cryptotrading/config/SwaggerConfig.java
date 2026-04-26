@@ -22,8 +22,8 @@ public class SwaggerConfig {
         
         return new OpenAPI()
                 .info(new Info()
-                        .title("코인 자동매매 시스템 API")
-                        .description("업비트 API를 활용한 개인용 자동매매 시스템")
+                        .title("코인 & 주식 자동매매 시스템 API")
+                        .description("업비트, 한국투자증권 API를 활용한 개인용 자동매매 시스템")
                         .version("v1.0.0")
                         .contact(new Contact()
                                 .name("개발자")

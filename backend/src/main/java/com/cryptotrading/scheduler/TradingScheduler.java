@@ -183,18 +183,20 @@ public class TradingScheduler {
     /**
      * 매일 23:50에 일일 리포트 발송
      */
-    @Scheduled(cron = "0 50 23 * * *", zone = "Asia/Seoul")  // 매일 23:50 KST
+    @Scheduled(cron = "0 50 23 * * *", zone = "Asia/Seoul")
     public void sendDailyReport() {
         log.info("========== 일일 리포트 발송 시작 ==========");
-   
+
         try {
-            List<User> users = userRepository.findAll();
+            // ⭐⭐⭐ [수정] 비활성 사용자 제외 - findAll() → findByIsActive(true) ⭐⭐⭐
+            // 사유: findAll()은 비활성 사용자도 포함하여 메일/Discord DM/Webhook 모두 발송됨
+            //       사용자별 루프 안에서 NotificationService.sendDailyReport()(Webhook)도 호출되므로
+            //       이 한 줄 변경으로 3채널 모두 자동 차단됨
+            List<User> users = userRepository.findByIsActive(true);
        
             for (User user : users) {
                 try {
                     DailyReportDTO report = dailyReportService.generateDailyReport(user.getUserId());
-               
-                    // Discord 알림 (기존 로직)
                     notificationService.sendDailyReport(report);
                
                     // 이메일 알림
@@ -239,7 +241,8 @@ public class TradingScheduler {
     public void sendWeeklyReport() {
         log.info("========== 주간 리포트 발송 시작 ==========");
         try {
-            List<User> users = userRepository.findAll();
+            // ⭐⭐⭐ [수정] 비활성 사용자 제외 ⭐⭐⭐
+            List<User> users = userRepository.findByIsActive(true);
             for (User user : users) {
                 try {
                     DailyReportDTO report = dailyReportService.generateWeeklyReport(user.getUserId());
@@ -282,7 +285,8 @@ public class TradingScheduler {
     public void sendMonthlyReport() {
         log.info("========== 월간 리포트 발송 시작 ==========");
         try {
-            List<User> users = userRepository.findAll();
+            // ⭐⭐⭐ [수정] 비활성 사용자 제외 ⭐⭐⭐
+            List<User> users = userRepository.findByIsActive(true);
             for (User user : users) {
                 try {
                     DailyReportDTO report = dailyReportService.generateMonthlyReport(user.getUserId());
@@ -322,7 +326,8 @@ public class TradingScheduler {
     public void sendYearlyReport() {
         log.info("========== 연간 리포트 발송 시작 ==========");
         try {
-            List<User> users = userRepository.findAll();
+            // ⭐⭐⭐ [수정] 비활성 사용자 제외 ⭐⭐⭐
+            List<User> users = userRepository.findByIsActive(true);
             for (User user : users) {
                 try {
                     DailyReportDTO report = dailyReportService.generateYearlyReport(user.getUserId());

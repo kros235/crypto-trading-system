@@ -102,6 +102,19 @@ public class NotificationController {
         String userId = authentication.getName();
         
         try {
+            // ⭐⭐⭐ [추가] 비활성 사용자 차단 (방어적 코딩) ⭐⭐⭐
+            // 사유: JWT 토큰 유효 기간 동안 사용자가 비활성화될 수 있으므로
+            //       서비스 레이어 진입 전 명시적으로 차단
+            User user = userRepository.findByUserId(userId)
+                    .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+            if (!Boolean.TRUE.equals(user.getIsActive())) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "비활성화된 계정입니다. 관리자에게 문의하세요.");
+                return ResponseEntity.status(403).body(response);
+            }
+            // ⭐⭐⭐ [추가 끝] ⭐⭐⭐
+            
             DailyReportDTO report = dailyReportService.generateDailyReport(userId);
             notificationService.sendDailyReport(report);
             

@@ -128,7 +128,10 @@ crypto-trading-system/
 │           ├── SignupView.vue
 │           ├── ⭐ StockTradingSettingsView.vue        (Day 52 신규, 주식 거래 설정)
 │           ├── ⭐ StockTransactionHistoryView.vue     (Day 58 신규, 주식 거래 내역)
-│           └── ⭐ StockDashboardView.vue              (Day 59 신규, 주식 대시보드)
+│           ├── ⭐ StockDashboardView.vue              (Day 59 신규, 주식 대시보드)
+│           ├── ⭐ StockHoldingsView.vue               (Day 60 신규, 보유 주식 자산 - 코인 페이지와 UI 통일)
+│           ├── ⭐ StockListView.vue                   (Day 60 신규, 주식 종목 목록)
+│           └── HoldingsView.vue                      (Day 60 매도/상세 다이얼로그 디자인 통일)
 │           ├── TradingSettingsView.vue               (Day 58 제목 '거래 내역' → '코인 거래 내역' 수정)
 │           └── TransactionHistoryView.vue
 │
@@ -186,7 +189,7 @@ crypto-trading-system/
 | 알림 | NotificationController | /api/notifications/** |
 | 리스크 | RiskManagementController | /api/risk/** |
 | 2FA | TwoFactorController | /api/2fa/** |
-| ⭐ 주식정보 | StockInfoController | /api/stock/info/** (Day 51) |
+| ⭐ 주식정보 | StockInfoController | /api/stock/info/**, /api/stock/info/prices (Day 51, Day 60 다중 종목 가격 일괄 조회) |
 | ⭐ 주식설정 | StockSettingController | /api/stock/settings/** (Day 51) |
 | ⭐ 주식봇 | StockBotController | /api/stock/bot/execute, /api/stock/bot/status, /api/stock/bot/start, /api/stock/bot/stop, /api/stock/bot/reset-daily-cache, /api/stock/bot/holding-warnings (Day 56~57) |
 | ⭐ 주식거래내역 | StockTransactionController | /api/stock/transactions/** (Day 58) |
@@ -217,6 +220,8 @@ crypto-trading-system/
 | /stock-settings | StockTradingSettingsView | ✅ | ⭐ 주식 거래 설정 (Day 52) |
 | /stock-transactions | StockTransactionHistoryView | ✅ | ⭐ 주식 거래 내역 (Day 58) |
 | /stock-dashboard | StockDashboardView | ✅ | ⭐ 주식 대시보드 (Day 59) |
+| /stock-list | StockListView | ✅ | ⭐ 주식 종목 목록 (Day 60) |
+| /stock-holdings | StockHoldingsView | ✅ | ⭐ 보유 주식 자산 (Day 60) |
 
 ## 1.5 사이드바 메뉴 현황
 
@@ -234,8 +239,8 @@ crypto-trading-system/
 
 주식 거래 (공사중) (v-list-group "stock")
 ├── 대시보드          ✅ 활성화 (Day 59, /stock-dashboard)
-├── 보유 주식 자산    (disabled)
-├── 주식 종목 목록    (disabled)
+├── 보유 주식 자산    ✅ 활성화 (Day 60, /stock-holdings)
+├── 주식 종목 목록    ✅ 활성화 (Day 60, /stock-list)
 ├── 주식 거래 내역    ✅ 활성화 (Day 58, /stock-transactions)
 └── 주식 거래 설정    ✅ 활성화 (Day 52, /stock-settings)
 
@@ -864,13 +869,48 @@ KIS_BASE_URL=https://openapivts.koreainvestment.com:29443
 | **57** | ⑩ StockTradingScheduler (3분 주기 자동매매 + 장시작/마감 알림 + 보유기간 경고 + 캐시정리) + StockRiskManagementService (getHoldingDaysWarnings/clearStockDailyCache/HoldingDaysWarning DTO 추가) + StockBotController (reset-daily-cache/holding-warnings 엔드포인트 추가) | StockTradingScheduler, StockRiskManagementService, StockBotController | ✅ 완료 |
 | **58** | ⑪ StockTransactionDTO + StockTransactionService + StockTransactionController + StockTransactionHistoryView.vue (거래 내역 조회/검색/수동매도/메모수정 + 보유일 경고 색상 + HelpButton + Phase 1 스타일 통일 + 종목드롭다운 bugfix) | 거래 내역 | ✅ 완료 |
 | **59** | ⑫ StockDashboardView (주식 대시보드 프론트엔드) + StockAssetSnapshot Entity/Repository/Service + StockDashboardController (통계/환율/스냅샷 API) + 스냅샷 자동화 (23:59 스케줄 / 거래 즉시 갱신 / 수동 갱신) + 스냅샷 API 경로 오류 수정 (클래스 레벨 prefix 중복 해결) **+ [후속] 차트 레이아웃 버그 수정 (.chart-container position:relative/width:100% + SVG 명시적 크기 지정, 개발자 도구 OFF 상태 SVG 늘어남 문제 해결) + 코인 대시보드 차트 바닥 회색 파선 누락 버그 수정 + 두 대시보드 chartPeriod 기본값 'all'→'7' 변경** | 대시보드 + 스냅샷 시스템 | ✅ 완료 |
-| **60** | ⑬ StockHoldingsView + StockListView | 보유자산, 종목목록 | ⏳ 예정 |
+| **60** | ⑬ StockHoldingsView + StockListView 신규 작성 + 백엔드 다중 종목 가격 일괄 조회 API + 프론트엔드 API 모듈 확장 + 라우터/사이드바 연결 + **코인 보유 자산 페이지와 UI 100% 통일 (탭/요약카드/highlight-card/매도다이얼로그/상세다이얼로그 디자인 시스템 통일)** | StockPriceDTO, StockInfoService(getPricesForStocks), StockInfoController, api/stock.ts(StockPrice/getPrices), StockHoldingsView.vue, StockListView.vue, router/index.ts, TheSidebar.vue, **HoldingsView.vue (매도/상세 다이얼로그 디자인 통일)** | ✅ 완료 |
 | **61** | ⑭ StockBotMonitorView | 봇 모니터링 | ⏳ 예정 |
 | **62** | ⑮ StockBacktestService + StockBacktestView | 백테스팅 | ⏳ 예정 |
-| **63** | ⑯ StockProfitService + 수익분석 + 일일리포트 | 수익 분석 | ⏳ 예정 |
+| **63** | ⑯ StockProfitService + 수익분석 + 일일리포트 + **StockHoldingsView 수익분석 영역 활성화** ⭐ | 수익 분석 | ⏳ 예정 |
 | **64** | ⑰ AdminHolidayView + 관리자 통합 | 관리자 기능 | ⏳ 예정 |
 | **65** | ⑱ 사이드바 활성화 + SecurityConfig 업데이트 + 통합 테스트 | 통합 | ⏳ 예정 |
 | **66** | ⑲ 최종 테스트 + 문서화 + v2.0 릴리즈 + (v2.1 리팩토링 계획 수립: com.cryptotrading → com.investment 패키지 리네이밍, controller/service/entity 서브패키지 crypto/stock/common 분리) | 배포 + 리팩토링 계획서 | ⏳ 예정 |
+
+---
+
+---
+
+## 📌 Day 63 상세 작업 내역 (Day 60에서 보류된 항목 포함)
+
+> **Day 60 작업 시 보류된 사항**: StockHoldingsView의 "기간별/주식별 수익 분석" 영역이 Day 63에서 완성됩니다.
+
+### 백엔드 작업
+- [ ] `StockProfitService.java` 신규 작성 (Phase 1 ProfitService 패턴 재사용)
+  - [ ] `getStockPeriodStats(userId, period)` — 기간별 수익 분석
+  - [ ] `getStockStats(userId)` — 종목별 수익 분석
+  - [ ] `getStockAssetSnapshots(userId, period)` — 자산 변동 추이 데이터
+- [ ] `StockProfitController.java` 신규 작성
+  - [ ] `GET /api/stock/profit/period-stats?period=...`
+  - [ ] `GET /api/stock/profit/stock-stats`
+  - [ ] `GET /api/stock/profit/asset-snapshots`
+- [ ] `StockDailyReportService.java` 신규 작성 (일일 리포트 주식 통합)
+  - [ ] 23:50 일일 리포트에 주식 거래 요약 포함
+  - [ ] 코인 + 주식 통합 리포트 (Discord/이메일)
+
+### 프론트엔드 작업
+- [ ] `frontend/src/views/StockHoldingsView.vue` 수정
+  - [ ] **현재 placeholder 영역을 실제 기능으로 교체** ⭐
+  - [ ] "기간별 수익" 탭 활성화: 오늘/이번달/올해/1년/누적 + 자산 변동 차트
+  - [ ] "주식별 수익" 탭 활성화: 종목별 수익 리스트 + 수익률
+  - [ ] Phase 1 `HoldingsView.vue` 코드 패턴 차용 (구조 동일)
+- [ ] `frontend/src/api/stock.ts` 확장
+  - [ ] `stockProfitApi.getPeriodStats()`, `getStockStats()`, `getAssetSnapshots()` 메서드 추가
+
+### 주의사항
+- 코인 보유 자산 페이지(`HoldingsView.vue`)와 100% 동일한 UI 구조 유지
+- Phase 1 코드 재사용률 80% 이상 목표 (수익률 계산 로직, 차트 컴포넌트, 기간 필터 등)
+- 일일 리포트는 코인+주식 통합 형태로 발송 (별도 발송 X)
 
 ---
 
@@ -1220,10 +1260,10 @@ frontend/src/views/
 |------|------|--------|
 | Phase 1 (암호화폐) | ✅ 완료 | 100% |
 | Phase 2-1 (기반 구축) | ✅ 완료 | ~100% (Day 48~55 완료, 기반 구축 단계 마무리) |
-| Phase 2-2 (핵심 기능) | 🔄 진행 중 | ~85% (Day 53~59 완료 **+ Day 59 후속 UX/버그 수정**) |
+| Phase 2-2 (핵심 기능) | 🔄 진행 중 | ~88% (Day 53~60 완료 **+ Day 60 디자인 시스템 통일**) |
 | Phase 2-3 (고도화) | ⏳ 예정 | 0% |
 | Phase 2-4 (안정화) | ⏳ 예정 | 0% |
-| **전체 프로젝트** | - | **~78%** (Phase 1 완료, Phase 2 Day 59 완료 **+ 후속 개선**) |
+| **전체 프로젝트** | - | **~80%** (Phase 1 완료, Phase 2 Day 60 완료) |
 | v2.1 패키지 리팩토링 | ⏳ 예정 (Day 66 이후) | 0% |
 | v3.0 Backend 컨테이너 분리 | ⏳ 예정 (v2.1 완료 이후) | 0% |
 | Phase 3 달러 거래 | ⏳ 미정 (v3.0 완료 이후) | 0% |

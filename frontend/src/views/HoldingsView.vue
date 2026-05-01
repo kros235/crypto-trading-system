@@ -229,7 +229,7 @@
                               <!-- 영역 채우기 (평가금액 - 연한 파란색) -->
                               <path :d="areaPath" fill="url(#profitAreaGradient)" />
 
-		  <!-- ⭐⭐⭐ [변경] 자산 변동 추이 차트 재구성 ⭐⭐⭐ -->
+      <!-- ⭐⭐⭐ [변경] 자산 변동 추이 차트 재구성 ⭐⭐⭐ -->
                               <!-- 불입금액 막대그래프 (주황색) -->
                               <!-- ⭐⭐⭐ [변경] 막대: 불입금액 위치 위로 고정 높이 표시 ⭐⭐⭐ -->
                               <rect
@@ -566,91 +566,136 @@
       </v-container>
     </v-main>
 
-    <!-- 매도 다이얼로그 -->
-    <v-dialog v-model="sellDialog" max-width="500">
+    <!-- ⭐⭐⭐ [Day 60 동기화] 매도 다이얼로그 - 주식 페이지와 디자인 통일 ⭐⭐⭐ -->
+    <v-dialog v-model="sellDialog" max-width="600">
       <v-card>
-        <v-card-title>매도 처리</v-card-title>
-        <v-card-text>
+        <v-card-title class="bg-orange-darken-2 text-white py-3 px-4 d-flex align-center">
+          <v-icon class="mr-2">mdi-cash-multiple</v-icon>
+          <span>매도 처리</span>
+        </v-card-title>
+        <v-card-text class="pa-4">
           <div v-if="selectedHolding">
-            <p><strong>코인:</strong> {{ selectedHolding.coinSymbol }}</p>
-            <p><strong>보유 수량:</strong> {{ formatNumber(selectedHolding.quantity, 8) }}</p>
-            <p><strong>매수 평균가:</strong> {{ formatCurrency(selectedHolding.price) }}</p>
-            <p v-if="selectedHolding.currentPrice">
+            <p class="mb-2"><strong>코인:</strong> {{ selectedHolding.coinSymbol }}</p>
+            <p class="mb-2"><strong>보유 수량:</strong> {{ formatNumber(selectedHolding.quantity, 8) }}</p>
+            <p class="mb-2"><strong>매수 평균가:</strong> {{ formatCurrency(selectedHolding.price) }}</p>
+            <p class="mb-2"><strong>투자 금액:</strong> {{ formatCurrency(selectedHolding.totalAmount) }}</p>
+            <p v-if="selectedHolding.currentPrice" class="mb-2">
               <strong>현재가:</strong> {{ formatCurrency(selectedHolding.currentPrice) }}
             </p>
-            <p v-if="selectedHolding.currentProfitLoss !== null">
+            <p v-if="selectedHolding.currentProfitLoss !== null" class="mb-2">
               <strong>예상 손익:</strong>
-              <span :class="selectedHolding.currentProfitLoss >= 0 ? 'text-teal' : 'text-red'">
+              <span :class="selectedHolding.currentProfitLoss >= 0 ? 'text-teal-darken-2' : 'text-red-darken-2'" class="ml-2 font-weight-medium">
                 {{ formatCurrency(selectedHolding.currentProfitLoss) }}
                 ({{ selectedHolding.currentProfitLossPct?.toFixed(2) }}%)
               </span>
+            </p>
+            <p v-if="selectedHolding.targetSellPrice" class="mb-2">
+              <strong>목표 매도가:</strong>
+              <span class="text-teal-darken-2 ml-2">{{ formatCurrency(selectedHolding.targetSellPrice) }}</span>
+            </p>
+            <p v-if="selectedHolding.stopLossPrice" class="mb-2">
+              <strong>손절가:</strong>
+              <span class="text-red-darken-2 ml-2">{{ formatCurrency(selectedHolding.stopLossPrice) }}</span>
             </p>
             <v-text-field
               v-model.number="sellPrice"
               label="매도 가격"
               type="number"
+              variant="outlined"
+              density="compact"
               :rules="[v => v > 0 || '가격은 0보다 커야 합니다']"
               class="mt-4"
             />
           </div>
         </v-card-text>
-        <v-card-actions>
+        <v-card-actions class="pa-4 pt-0">
           <v-spacer />
-          <v-btn @click="sellDialog = false">취소</v-btn>
-          <v-btn color="orange" @click="confirmSell" :loading="sellLoading">매도 확인</v-btn>
+          <v-btn variant="flat" color="grey-lighten-2" @click="sellDialog = false">
+            취소
+          </v-btn>
+          <v-btn variant="flat" color="orange-darken-2" @click="confirmSell" :loading="sellLoading">
+            <v-icon start size="16">mdi-cash</v-icon>
+            매도 확인
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <!-- 보유 상세 다이얼로그 -->
-    <v-dialog v-model="detailDialog" max-width="600">
-      <v-card>
-        <v-card-title>보유 자산 상세</v-card-title>
-        <v-card-text>
-          <div v-if="selectedHolding">
-            <v-list>
-              <v-list-item>
-                <v-list-item-title>거래 ID</v-list-item-title>
-                <v-list-item-subtitle>{{ selectedHolding.transactionId }}</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>코인</v-list-item-title>
-                <v-list-item-subtitle>{{ selectedHolding.coinSymbol }}</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>보유 수량</v-list-item-title>
-                <v-list-item-subtitle>{{ formatNumber(selectedHolding.quantity, 8) }}</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>매수 가격</v-list-item-title>
-                <v-list-item-subtitle>{{ formatCurrency(selectedHolding.price) }}</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>투자 금액</v-list-item-title>
-                <v-list-item-subtitle>{{ formatCurrency(selectedHolding.totalAmount) }}</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item v-if="selectedHolding.currentPrice">
-                <v-list-item-title>현재가</v-list-item-title>
-                <v-list-item-subtitle>{{ formatCurrency(selectedHolding.currentPrice) }}</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item v-if="selectedHolding.targetSellPrice">
-                <v-list-item-title>목표 매도가</v-list-item-title>
-                <v-list-item-subtitle>{{ formatCurrency(selectedHolding.targetSellPrice) }}</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item v-if="selectedHolding.stopLossPrice">
-                <v-list-item-title>손절가</v-list-item-title>
-                <v-list-item-subtitle>{{ formatCurrency(selectedHolding.stopLossPrice) }}</v-list-item-subtitle>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>매수 시각</v-list-item-title>
-                <v-list-item-subtitle>{{ formatDateTime(selectedHolding.createdAt) }}</v-list-item-subtitle>
-              </v-list-item>
-            </v-list>
-          </div>
-        </v-card-text>
-        <v-card-actions>
+    <!-- ⭐⭐⭐ [Day 60 동기화] 보유 상세 다이얼로그 - 주식 페이지와 디자인 통일 ⭐⭐⭐ -->
+    <v-dialog v-model="detailDialog" max-width="700">
+      <v-card v-if="selectedHolding">
+        <v-card-title class="bg-blue-grey-darken-1 text-white py-3 px-4 d-flex align-center">
+          <v-icon class="mr-2">mdi-information-outline</v-icon>
+          <span>보유 자산 상세</span>
           <v-spacer />
-          <v-btn @click="detailDialog = false">닫기</v-btn>
+          <span class="text-caption">{{ selectedHolding.coinSymbol }}</span>
+        </v-card-title>
+
+        <v-card-text class="pa-4">
+          <!-- 코인 정보 영역 -->
+          <v-row dense class="mb-2">
+            <v-col cols="12">
+              <v-card variant="outlined" class="pa-3">
+                <div class="text-caption text-grey-darken-1 mb-1">코인</div>
+                <div class="text-body-1 font-weight-bold text-grey-darken-4">
+                  {{ selectedHolding.coinSymbol }}
+                </div>
+              </v-card>
+            </v-col>
+          </v-row>
+
+          <!-- 매수 정보 -->
+          <v-row dense class="mb-2">
+            <v-col cols="6" md="4">
+              <div class="text-caption text-grey-darken-1">거래 ID</div>
+              <div class="text-body-1 font-weight-medium">{{ selectedHolding.transactionId }}</div>
+            </v-col>
+            <v-col cols="6" md="4">
+              <div class="text-caption text-grey-darken-1">보유 수량</div>
+              <div class="text-body-1 font-weight-medium">{{ formatNumber(selectedHolding.quantity, 8) }}</div>
+            </v-col>
+            <v-col cols="6" md="4">
+              <div class="text-caption text-grey-darken-1">매수 가격</div>
+              <div class="text-body-1 font-weight-medium">{{ formatCurrency(selectedHolding.price) }}</div>
+            </v-col>
+            <v-col cols="6" md="4" class="mt-2">
+              <div class="text-caption text-grey-darken-1">투자 금액</div>
+              <div class="text-body-1 font-weight-medium">{{ formatCurrency(selectedHolding.totalAmount) }}</div>
+            </v-col>
+            <v-col v-if="selectedHolding.currentPrice" cols="6" md="4" class="mt-2">
+              <div class="text-caption text-grey-darken-1">현재가</div>
+              <div class="text-body-1 font-weight-medium">{{ formatCurrency(selectedHolding.currentPrice) }}</div>
+            </v-col>
+          </v-row>
+
+          <v-divider class="my-3" />
+
+          <!-- 자동매매 설정 -->
+          <v-row dense>
+            <v-col v-if="selectedHolding.targetSellPrice" cols="6">
+              <div class="text-caption text-grey-darken-1">목표 매도가</div>
+              <div class="text-body-1 font-weight-medium text-teal-darken-2">
+                {{ formatCurrency(selectedHolding.targetSellPrice) }}
+              </div>
+            </v-col>
+            <v-col v-if="selectedHolding.stopLossPrice" cols="6">
+              <div class="text-caption text-grey-darken-1">손절가</div>
+              <div class="text-body-1 font-weight-medium text-red-darken-2">
+                {{ formatCurrency(selectedHolding.stopLossPrice) }}
+              </div>
+            </v-col>
+            <v-col cols="12" class="mt-2">
+              <div class="text-caption text-grey-darken-1">매수 시각</div>
+              <div class="text-body-2">{{ formatDateTime(selectedHolding.createdAt) }}</div>
+            </v-col>
+          </v-row>
+        </v-card-text>
+
+        <v-card-actions class="pa-4 pt-0">
+          <v-spacer />
+          <v-btn variant="flat" color="blue-grey-darken-1" class="text-white" @click="detailDialog = false">
+            닫기
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

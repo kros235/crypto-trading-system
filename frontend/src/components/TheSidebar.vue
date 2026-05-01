@@ -77,15 +77,17 @@
           title="대시보드"
           @click="$router.push('/stock-dashboard')"
         />
+        <!-- ⭐⭐⭐ [Day 60 변경] disabled 제거 + @click 추가 ⭐⭐⭐ -->
         <v-list-item
           prepend-icon="mdi-briefcase-outline"
           title="보유 주식 자산"
-          disabled
+          @click="$router.push('/stock-holdings')"
         />
+        <!-- ⭐⭐⭐ [Day 60 변경] disabled 제거 + @click 추가 ⭐⭐⭐ -->
         <v-list-item
           prepend-icon="mdi-chart-line"
           title="주식 종목 목록"
-          disabled
+          @click="$router.push('/stock-list')"
         />
         <v-list-item
             prepend-icon="mdi-history"

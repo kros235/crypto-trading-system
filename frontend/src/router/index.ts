@@ -133,6 +133,19 @@ const router = createRouter({
       component: () => import('../views/StockDashboardView.vue'),
       meta: { requiresAuth: true }
     },
+    // ⭐⭐⭐ [Day 60 추가] 주식 종목 목록 + 보유 자산 라우트 ⭐⭐⭐
+    {
+      path: '/stock-list',
+      name: 'stock-list',
+      component: () => import('../views/StockListView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/stock-holdings',
+      name: 'stock-holdings',
+      component: () => import('../views/StockHoldingsView.vue'),
+      meta: { requiresAuth: true }
+    },
   ]
 })
 

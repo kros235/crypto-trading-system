@@ -4,6 +4,21 @@
 import api from './index'
 import type { StockInfo, StockTradingSetting, StockTradingSettingRequest, KisApiKeyRequest } from '@/types/stock'
 
+// ⭐⭐⭐ [Day 60 추가] 다중 종목 가격 조회 응답 타입 ⭐⭐⭐
+// 백엔드 StockPriceDTO 와 1:1 대응
+export interface StockPrice {
+  stockCode: string
+  currentPrice: number | null
+  changeFromPrevDay: number | null
+  changeRate: number | null              // 전일 대비율 (%)
+  accumulatedVolume: number | null
+  accumulatedTradingValue: number | null
+  openPrice: number | null
+  highPrice: number | null
+  lowPrice: number | null
+  prevClosePrice: number | null
+}
+
 // 주식 정보 API
 export const stockInfoApi = {
   // 활성 종목 목록
@@ -25,6 +40,12 @@ export const stockInfoApi = {
   // KIS API로 종목 검색
   searchFromKis: (keyword: string) =>
     api.get<StockInfo[]>('/stock/info/kis-search', { params: { keyword } }),
+
+  // ⭐⭐⭐ [Day 60 추가] 다중 종목 현재가/변동률 일괄 조회 ⭐⭐⭐
+  // 사용처: StockListView (종목 목록 페이지), StockHoldingsView 등
+  // KIS API 키 미등록 시: 응답은 정상이지만 가격 필드가 null (graceful degradation)
+  getPrices: (stockCodes: string[]) =>
+    api.post<StockPrice[]>('/stock/info/prices', { stockCodes }),
 }
 
 // 주식 거래 설정 API

@@ -138,6 +138,45 @@ public class StockInfoService {
                 .collect(Collectors.toList());
     }
 
+    // ──────────────────────────────────────────────────────────
+    // ⭐ [Day 60 추가] 다중 종목 현재가 일괄 조회
+    // ──────────────────────────────────────────────────────────
+    /**
+     * 여러 종목의 현재가/변동률을 일괄 조회하여 반환
+     *
+     * - 내부적으로 KisApiService.getCurrentPrice(userId, stockCode)를 N번 호출
+     * - KIS API 키 미등록 사용자나 일부 종목 조회 실패 시에도 graceful degradation
+     *   (실패한 종목은 currentPrice 등 필드가 null인 객체로 반환)
+     * - 종목 목록(StockListView) / 보유 자산(StockHoldingsView) 등에서 사용
+     *
+     * @param userId     사용자 ID (KIS API 인증용)
+     * @param stockCodes 조회할 종목코드 목록
+     * @return 종목별 가격 정보 리스트 (요청 순서 유지)
+     */
+    public List<com.cryptotrading.dto.stock.StockPriceDTO> getPricesForStocks(
+            String userId, List<String> stockCodes) {
+
+        if (stockCodes == null || stockCodes.isEmpty()) {
+            return List.of();
+        }
+
+        return stockCodes.stream()
+                .map(code -> {
+                    try {
+                        com.cryptotrading.dto.kis.KisQuoteDTO.CurrentPrice quote =
+                                kisApiService.getCurrentPrice(userId, code);
+                        return com.cryptotrading.dto.stock.StockPriceDTO.fromKisQuote(code, quote);
+                    } catch (Exception e) {
+                        log.warn("[종목 가격 조회 실패] stockCode={}, error={}", code, e.getMessage());
+                        // 실패해도 stockCode만 채워서 반환 (프론트에서 '-' 표시)
+                        return com.cryptotrading.dto.stock.StockPriceDTO.builder()
+                                .stockCode(code)
+                                .build();
+                    }
+                })
+                .collect(Collectors.toList());
+    }
+
     // Entity → DTO 변환
     private StockInfoDTO convertToDTO(StockInfo entity) {
         return StockInfoDTO.builder()

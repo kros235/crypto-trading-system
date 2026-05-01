@@ -1,4 +1,4 @@
-package com.cryptotrading.controller;
+package com.cryptotrading.controller.stock;
 
 import com.cryptotrading.dto.common.ApiResponse;
 import com.cryptotrading.dto.stock.StockTradingSettingDTO;

@@ -124,3 +124,39 @@ export const stockDashboardApi = {
   getAccount: () =>
     api.get('/stock/dashboard/account'),
 }
+
+// ⭐⭐⭐ [Day 61 추가] 주식 봇 모니터링 API ⭐⭐⭐
+// Phase 1 /api/bot/* 와 동일한 패턴, 주식은 /api/stock/bot/*
+export const stockBotApi = {
+  // 봇 상태 조회 (봇 활성화/장 운영/긴급정지/카운트다운)
+  getStatus: () =>
+    api.get('/stock/bot/status'),
+
+  // 봇 활성화
+  start: () =>
+    api.post('/stock/bot/start'),
+
+  // 봇 비활성화
+  stop: () =>
+    api.post('/stock/bot/stop'),
+
+  // 수동 매매 실행
+  execute: () =>
+    api.post('/stock/bot/execute'),
+
+  // 사용자 거래 설정의 모든 종목 기술적 지표 일괄 조회
+  getIndicators: () =>
+    api.get('/stock/bot/indicators'),
+
+  // 단일 종목 기술적 지표 조회
+  getIndicator: (stockCode: string) =>
+    api.get(`/stock/bot/indicators/${stockCode}`),
+
+  // 일일 거래 캐시 수동 초기화
+  resetDailyCache: () =>
+    api.post('/stock/bot/reset-daily-cache'),
+
+  // 보유기간 경고 대상 조회 (15일 이상/20일 이상)
+  getHoldingWarnings: () =>
+    api.get('/stock/bot/holding-warnings'),
+}

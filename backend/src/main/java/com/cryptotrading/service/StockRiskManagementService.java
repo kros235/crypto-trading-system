@@ -444,19 +444,28 @@ public class StockRiskManagementService {
         List<StockTransaction> warnList    = getWarnHoldings(userId, setting);
         List<StockTransaction> expiredList = getExpiredHoldings(userId, setting);
 
+        // ⭐ [Day 61 후속 v3 수정] 새로 추가된 필드 4개(transactionId, quantity, buyPrice, totalAmount)도 함께 채움
         java.util.stream.Stream<HoldingDaysWarning> warnStream = warnList.stream()
                 .map(tx -> new HoldingDaysWarning(
                         tx.getStockCode(),
                         tx.getHoldingDays() != null ? tx.getHoldingDays() : 0,
                         tx.getCreatedAt() != null ? tx.getCreatedAt().toLocalDate().toString() : "-",
-                        false));
+                        false,
+                        tx.getTransactionId(),
+                        tx.getQuantity(),
+                        tx.getPrice(),
+                        tx.getTotalAmount()));
 
         java.util.stream.Stream<HoldingDaysWarning> urgentStream = expiredList.stream()
                 .map(tx -> new HoldingDaysWarning(
                         tx.getStockCode(),
                         tx.getHoldingDays() != null ? tx.getHoldingDays() : 0,
                         tx.getCreatedAt() != null ? tx.getCreatedAt().toLocalDate().toString() : "-",
-                        true));
+                        true,
+                        tx.getTransactionId(),
+                        tx.getQuantity(),
+                        tx.getPrice(),
+                        tx.getTotalAmount()));
 
         return java.util.stream.Stream.concat(urgentStream, warnStream)
                 .collect(java.util.stream.Collectors.toList());
@@ -504,6 +513,12 @@ public class StockRiskManagementService {
      * ⭐ [Day 57 추가] 보유기간 경고 정보 전달용 내부 DTO
      * - 스케줄러 → 알림 서비스 간 데이터 전달에 사용
      * - StockTransaction 엔티티 의존성을 스케줄러에 노출하지 않기 위해 별도 DTO 사용
+     *
+     * ⭐ [Day 61 후속 v3 추가] 동일 종목 다중 보유 식별 + 알림 메시지 보강을 위해 4개 필드 추가
+     * - transactionId: 동일 종목 여러 건 보유 시 개별 식별 (보유기간 경고 메시지에서 어떤 매수 건인지 명시)
+     * - quantity: 매수 수량
+     * - buyPrice: 매수 단가
+     * - totalAmount: 매수 총 금액 (= price × quantity)
      */
     @lombok.Getter
     @lombok.AllArgsConstructor
@@ -512,5 +527,10 @@ public class StockRiskManagementService {
         private final int holdingDays;    // 현재 보유 거래일 수
         private final String buyDate;     // 매수일 (yyyy-MM-dd)
         private final boolean urgent;     // true = 최대 보유기간 초과 (🚨), false = 경고 (⚠️)
+        // ⭐ [Day 61 후속 v3 추가] 동일 종목 다중 보유 식별 + 알림 보강용 필드
+        private final Long transactionId;        // 거래 ID (동일 종목 여러 건 식별용)
+        private final Integer quantity;          // 매수 수량
+        private final java.math.BigDecimal buyPrice;     // 매수 단가
+        private final java.math.BigDecimal totalAmount;  // 매수 총 금액
     }
 }

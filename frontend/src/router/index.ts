@@ -140,10 +140,17 @@ const router = createRouter({
       component: () => import('../views/StockListView.vue'),
       meta: { requiresAuth: true }
     },
-    {
+{
       path: '/stock-holdings',
       name: 'stock-holdings',
       component: () => import('../views/StockHoldingsView.vue'),
+      meta: { requiresAuth: true }
+    },
+    // ⭐⭐⭐ [Day 61 추가] 주식 봇 모니터링 라우트 ⭐⭐⭐
+    {
+      path: '/stock-bot-monitor',
+      name: 'stock-bot-monitor',
+      component: () => import('../views/StockBotMonitorView.vue'),
       meta: { requiresAuth: true }
     },
   ]

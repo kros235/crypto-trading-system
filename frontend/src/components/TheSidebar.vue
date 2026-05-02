@@ -100,6 +100,12 @@
           title="주식 거래 설정"
           @click="$router.push('/stock/settings')"
         />
+        <!-- ⭐⭐⭐ [Day 61 추가] 주식 봇 모니터링 메뉴 ⭐⭐⭐ -->
+        <v-list-item
+          prepend-icon="mdi-robot"
+          title="봇 모니터링"
+          @click="$router.push('/stock-bot-monitor')"
+        />
       </v-list-group>
 
       <v-divider class="my-2" />

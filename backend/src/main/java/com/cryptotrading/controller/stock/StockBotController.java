@@ -31,6 +31,7 @@ public class StockBotController {
     private final StockTradingBotService stockTradingBotService;
     private final StockRiskManagementService stockRiskManagementService;
     private final com.cryptotrading.repository.StockTradingSettingRepository stockTradingSettingRepository; // ⭐ [Day 57 추가]
+    private final com.cryptotrading.service.StockTechnicalIndicatorService stockTechnicalIndicatorService; // ⭐ [Day 61 추가]
 
     /**
      * 수동으로 주식 자동매매 1회 실행
@@ -161,5 +162,96 @@ public class StockBotController {
                 stockRiskManagementService.getHoldingDaysWarnings(userId, settingOpt.get());
 
         return ResponseEntity.ok(warnings);
+    }
+
+    // ⭐ [Day 61 추가] 기술적 지표 조회 엔드포인트 ----------------------
+
+    /**
+     * ⭐ [Day 61 추가] 사용자 거래 설정의 모든 종목 기술적 지표 일괄 조회
+     * - Phase 1: GET /api/bot/indicators?markets=KRW-BTC,KRW-ETH 와 유사
+     * - 주식은 KIS API 키 인증이 사용자별로 필요하므로 stockCodes를 거래 설정에서 자동 추출
+     * - StockBotMonitorView 의 기술적 지표 테이블에서 사용
+     */
+    @GetMapping("/indicators")
+    public ResponseEntity<?> getAllIndicators(Authentication authentication) {
+        String userId = authentication.getName();
+        log.info("[주식봇 컨트롤러] 전 종목 기술적 지표 조회: {}", userId);
+
+        java.util.Optional<com.cryptotrading.entity.StockTradingSetting> settingOpt =
+                stockTradingSettingRepository.findByUserId(userId);
+
+        if (settingOpt.isEmpty()) {
+            return ResponseEntity.ok(java.util.Collections.emptyList());
+        }
+
+        java.util.List<String> stockCodes = parseStockCodes(settingOpt.get().getStockCodes());
+        if (stockCodes.isEmpty()) {
+            return ResponseEntity.ok(java.util.Collections.emptyList());
+        }
+
+        java.util.List<com.cryptotrading.dto.indicator.IndicatorResultDTO> results =
+                new java.util.ArrayList<>();
+        for (String stockCode : stockCodes) {
+            try {
+                com.cryptotrading.dto.indicator.IndicatorResultDTO indicator =
+                        stockTechnicalIndicatorService.calculateIndicators(userId, stockCode);
+                if (indicator != null) {
+                    results.add(indicator);
+                }
+            } catch (Exception e) {
+                log.warn("[주식봇 컨트롤러] 지표 조회 실패: {} - {}", stockCode, e.getMessage());
+            }
+        }
+
+        return ResponseEntity.ok(results);
+    }
+
+    /**
+     * ⭐ [Day 61 추가] 단일 종목 기술적 지표 조회
+     * - Phase 1: GET /api/bot/indicators/{market} 와 동일 패턴
+     */
+    @GetMapping("/indicators/{stockCode}")
+    public ResponseEntity<?> getIndicator(@PathVariable String stockCode,
+                                          Authentication authentication) {
+        String userId = authentication.getName();
+        log.info("[주식봇 컨트롤러] 단일 종목 기술적 지표 조회: {} - {}", userId, stockCode);
+
+        try {
+            com.cryptotrading.dto.indicator.IndicatorResultDTO indicator =
+                    stockTechnicalIndicatorService.calculateIndicators(userId, stockCode);
+            if (indicator == null) {
+                java.util.Map<String, String> error = new java.util.HashMap<>();
+                error.put("error", "지표 데이터를 계산할 수 없습니다: " + stockCode);
+                return ResponseEntity.badRequest().body(error);
+            }
+            return ResponseEntity.ok(indicator);
+        } catch (Exception e) {
+            log.error("[주식봇 컨트롤러] 지표 조회 실패: {} - {}", stockCode, e.getMessage());
+            java.util.Map<String, String> error = new java.util.HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    /**
+     * ⭐ [Day 61 추가] JSON 형식의 stockCodes 파싱
+     * - StockTradingBotService.parseStockCodes() 와 동일 로직
+     */
+    private java.util.List<String> parseStockCodes(String stockCodesJson) {
+        if (stockCodesJson == null || stockCodesJson.isBlank()) {
+            return new java.util.ArrayList<>();
+        }
+        try {
+            String cleaned = stockCodesJson.replaceAll("[\\[\\]\"\\s]", "");
+            if (cleaned.isEmpty()) return new java.util.ArrayList<>();
+            java.util.List<String> result = new java.util.ArrayList<>();
+            for (String part : cleaned.split(",")) {
+                if (!part.isBlank()) result.add(part.trim());
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("[주식봇 컨트롤러] 종목 코드 파싱 실패: {} - {}", stockCodesJson, e.getMessage());
+            return new java.util.ArrayList<>();
+        }
     }
 }

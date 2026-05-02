@@ -296,7 +296,7 @@
                     @click="resetDailyCache"
                   >
                     <v-icon left>mdi-cached</v-icon>
-                    일일 캐시 초기화
+                    일일 한도 초기화
                   </v-btn>
                 </div>
 
@@ -736,9 +736,9 @@ const helpContents = {
         </span></p>
       <p class="help-item"><span class="help-bullet">•</span> <strong>지표 새로고침</strong>
         <span class="help-desc">설정된 모든 종목의 기술적 지표(RSI, 볼린저밴드, 이동평균선 등)를 즉시 갱신합니다.</span></p>
-      <p class="help-item"><span class="help-bullet">•</span> <strong>일일 캐시 초기화</strong>
+      <p class="help-item"><span class="help-bullet">•</span> <strong>일일 한도 초기화</strong>
         <span class="help-desc">
-          <strong>오늘의 누적 매수·매도 금액 기록</strong>을 0원으로 초기화합니다.<br/>
+          <strong>오늘 사용한 일일 거래 한도를 0원으로 되돌려 다시 매매할 수 있게 합니다.</strong><br/>
           봇은 일일 거래 한도(예: 100만원)를 넘지 않도록 매일 매수/매도 누적 금액을 Redis 캐시에 저장합니다.<br/>
           이 캐시는 평일 15:35 KST(장 마감 직후)에 스케줄러가 자동으로 초기화하여<br/>
           다음 거래일부터 새로 카운트됩니다.<br/>
@@ -1318,16 +1318,16 @@ const refreshIndicators = async () => {
   showSnackbar('지표가 새로고침되었습니다.', 'success')
 }
 
-// 일일 캐시 초기화
+// 일일 한도 초기화 (백엔드 메서드명은 clearStockDailyCache - Redis 캐시 삭제로 결과적으로 한도가 초기화됨)
 const resetDailyCache = async () => {
   resettingCache.value = true
   try {
     await stockBotApi.resetDailyCache()
-    showSnackbar('일일 거래 캐시가 초기화되었습니다.', 'success')
+    showSnackbar('일일 거래 한도가 초기화되었습니다.', 'success')
     await fetchTodayStats()
   } catch (error) {
-    console.error('[주식봇 모니터] 일일 캐시 초기화 실패:', error)
-    showSnackbar('캐시 초기화에 실패했습니다.', 'error')
+    console.error('[주식봇 모니터] 일일 한도 초기화 실패:', error)
+    showSnackbar('한도 초기화에 실패했습니다.', 'error')
   } finally {
     resettingCache.value = false
   }

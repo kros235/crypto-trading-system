@@ -106,6 +106,12 @@
           title="봇 모니터링"
           @click="$router.push('/stock-bot-monitor')"
         />
+        <!-- ⭐⭐⭐ [Day 62 추가] 주식 백테스팅 메뉴 ⭐⭐⭐ -->
+        <v-list-item
+          prepend-icon="mdi-chart-timeline-variant"
+          title="백테스팅"
+          @click="$router.push('/stock-backtest')"
+        />
       </v-list-group>
 
       <v-divider class="my-2" />

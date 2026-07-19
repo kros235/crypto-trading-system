@@ -59,7 +59,11 @@ public class TradingScheduler {
     private static final LocalTime MAINTENANCE_END = LocalTime.of(9, 10);
 
     // ⭐⭐⭐ [추가] Redis 키 상수 ⭐⭐⭐
-    private static final String BOT_ENABLED_KEY = "trading:bot:enabled";
+    // ⭐⭐⭐ [Day 61.5 수정] 단일 전역 키 → 사용자별 키 패턴 (멀티유저 격리 버그 수정) ⭐⭐⭐
+    // 변경 이유: 기존엔 한 사용자가 봇을 OFF하면 모든 사용자의 자동매매가 차단되는
+    //           멀티유저 격리 버그가 있었음. 사용자별 독립 키로 변경.
+    //           예: trading:bot:enabled:user1, trading:bot:enabled:user2
+    private static final String BOT_ENABLED_KEY = "trading:bot:enabled:%s";
     
     // ⭐⭐⭐ [추가] static 참조용 ⭐⭐⭐
     private static StringRedisTemplate staticRedisTemplate;
@@ -68,18 +72,29 @@ public class TradingScheduler {
     @PostConstruct
     public void init() {
         staticRedisTemplate = this.redisTemplate;
-        log.info("⭐ TradingScheduler 초기화 완료 - 봇 상태: {}", isBotEnabled() ? "활성화" : "비활성화");
+        // ⭐⭐⭐ [Day 61.5 수정] 사용자별 키 패턴이라 시작 시점에는 특정 사용자의 봇 상태를 알 수 없음 ⭐⭐⭐
+        // 변경 이유: isBotEnabled()는 이제 userId 인자를 받으므로 init() 시점엔 호출 불가.
+        //           대신 키 패턴을 안내하는 로그로 대체.
+        log.info("⭐ TradingScheduler 초기화 완료 - 사용자별 봇 활성화 키 사용 (trading:bot:enabled:{{userId}})");
     }
 
     /**
      * ⭐ 봇 활성화 상태 조회 (Redis에서)
+     * ⭐⭐⭐ [Day 61.5 수정] userId 인자 추가 - 사용자별 봇 상태 독립 조회 ⭐⭐⭐
+     * 변경 이유: 기존 단일 전역 키 → 사용자별 키 패턴으로 변경.
+     *           예: trading:bot:enabled:user1 의 값 조회.
+     *           키가 없으면 기본값 true (활성화) 반환 → 새 사용자도 자동매매 기본 활성화.
+     *
+     * @param userId 사용자 ID
+     * @return true=활성화, false=비활성화
      */
-    public static boolean isBotEnabled() {
+    public static boolean isBotEnabled(String userId) {
         if (staticRedisTemplate == null) {
             return true; // Redis 연결 전 기본값
         }
         try {
-            String value = staticRedisTemplate.opsForValue().get(BOT_ENABLED_KEY);
+            String key = String.format(BOT_ENABLED_KEY, userId);
+            String value = staticRedisTemplate.opsForValue().get(key);
             return value == null || "true".equals(value); // 값이 없으면 기본값 true
         } catch (Exception e) {
             return true; // Redis 오류 시 기본값
@@ -88,17 +103,23 @@ public class TradingScheduler {
     
     /**
      * ⭐ 봇 활성화 상태 설정 (Redis에 저장)
+     * ⭐⭐⭐ [Day 61.5 수정] userId 인자 추가 - 사용자별 봇 상태 독립 설정 ⭐⭐⭐
+     * 변경 이유: 기존엔 한 사용자가 OFF하면 전체 영향. 이제 자기 키만 변경.
+     *
+     * @param userId 사용자 ID
+     * @param enabled true=활성화, false=비활성화
      */
-    public static void setBotEnabled(boolean enabled) {
+    public static void setBotEnabled(String userId, boolean enabled) {
         if (staticRedisTemplate != null) {
             try {
-                staticRedisTemplate.opsForValue().set(BOT_ENABLED_KEY, String.valueOf(enabled));
+                String key = String.format(BOT_ENABLED_KEY, userId);
+                staticRedisTemplate.opsForValue().set(key, String.valueOf(enabled));
             } catch (Exception e) {
                 // Redis 오류 시 무시
             }
         }
-        // ⭐⭐⭐ [수정] static 메서드에서는 log 사용 불가 - System.out 사용 ⭐⭐⭐
-        System.out.println("⭐ 자동매매 봇 상태 변경: " + (enabled ? "활성화" : "비활성화"));
+        // ⭐⭐⭐ [Day 61.5 수정] 로그에 userId 포함 - 누가 봇을 켰는지/껐는지 추적 가능 ⭐⭐⭐
+        System.out.println("⭐ 자동매매 봇 상태 변경 [" + userId + "]: " + (enabled ? "활성화" : "비활성화"));
     }
 
     /**
@@ -109,11 +130,11 @@ public class TradingScheduler {
     public void executeAutoTrading() {
         LocalTime now = LocalTime.now();
 
-        // ⭐⭐⭐ [수정] 봇 비활성화 상태면 스킵 - 메서드 호출로 변경 ⭐⭐⭐
-        if (!isBotEnabled()) {
-            log.info("⏸️ 자동매매 봇 비활성화 상태 - 스킵");
-            return;
-        }
+        // ⭐⭐⭐ [Day 61.5 수정] 단일 전역 봇 게이트 제거 ⭐⭐⭐
+        // 변경 이유: 멀티유저 격리 버그 수정.
+        //   - 기존: 한 사용자라도 봇 OFF하면 모든 사용자 매매 차단됨 (BUG)
+        //   - 수정: 사용자별 봇 상태 체크는 TradingBotService.executeForUser()에서 수행
+        //   - 점검 시간(업비트) 체크는 그대로 유지 - 시스템 전체 차원의 차단이므로
         
         // 업비트 점검 시간 체크
         if (isMaintenanceTime(now)) {

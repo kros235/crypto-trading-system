@@ -146,11 +146,18 @@ const router = createRouter({
       component: () => import('../views/StockHoldingsView.vue'),
       meta: { requiresAuth: true }
     },
-    // ⭐⭐⭐ [Day 61 추가] 주식 봇 모니터링 라우트 ⭐⭐⭐
+// ⭐⭐⭐ [Day 61 추가] 주식 봇 모니터링 라우트 ⭐⭐⭐
     {
       path: '/stock-bot-monitor',
       name: 'stock-bot-monitor',
       component: () => import('../views/StockBotMonitorView.vue'),
+      meta: { requiresAuth: true }
+    },
+    // ⭐⭐⭐ [Day 62 추가] 주식 백테스팅 라우트 ⭐⭐⭐
+    {
+      path: '/stock-backtest',
+      name: 'stock-backtest',
+      component: () => import('../views/StockBacktestView.vue'),
       meta: { requiresAuth: true }
     },
   ]

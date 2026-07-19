@@ -151,8 +151,64 @@ public class KisApiService {
             log.error("[KIS 시세] 일봉 API 오류 - stockCode: {}, 상태: {}, 응답: {}",
                     stockCode, e.getStatusCode(), e.getResponseBodyAsString());
             return Collections.emptyList();
+        } catch (Exception e) {log.error("[KIS 시세] 일봉 조회 예외 - stockCode: {}, 오류: {}",
+                    stockCode, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * ⭐⭐⭐ [Day 62 추가] 기간별 일봉 데이터 조회 (백테스팅 전용) ⭐⭐⭐
+     * API: GET /uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice
+     * tr_id: FHKST03010100 (국내주식기간별시세 - 일/주/월/년)
+     *
+     * - getDailyCandles()는 최근 N건 조회용(실거래 지표 계산)이라 과거 특정 구간을 지정할 수 없음
+     * - 백테스팅은 임의의 시작일~종료일 구간이 필요하므로 별도 메서드로 신규 구현
+     * - 1회 호출 시 최대 약 100건까지 반환되므로, StockBacktestService에서 구간을 나눠 페이징 호출함
+     *
+     * @param userId 사용자 ID
+     * @param stockCode 종목코드
+     * @param startDate 조회 시작일 (yyyyMMdd)
+     * @param endDate 조회 종료일 (yyyyMMdd)
+     * @return 일봉 데이터 리스트 (최신순으로 내려오므로 호출부에서 정렬 필요)
+     */
+    public List<KisQuoteDTO.DailyCandle> getDailyCandlesByDateRange(String userId, String stockCode,
+                                                                     String startDate, String endDate) {
+        log.debug("[KIS 시세] 기간별 일봉 조회 - userId: {}, stockCode: {}, {} ~ {}",
+                userId, stockCode, startDate, endDate);
+
+        try {
+            KisQuoteDTO.ApiResponse<KisQuoteDTO.DailyCandle> response = kisWebClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice")
+                            .queryParam("FID_COND_MRKT_DIV_CODE", "J")
+                            .queryParam("FID_INPUT_ISCD", stockCode)
+                            .queryParam("FID_INPUT_DATE_1", startDate)
+                            .queryParam("FID_INPUT_DATE_2", endDate)
+                            .queryParam("FID_PERIOD_DIV_CODE", "D")
+                            .queryParam("FID_ORG_ADJ_PRC", "0")
+                            .build())
+                    .headers(headers -> setCommonHeaders(headers, userId, "FHKST03010100"))
+                    .retrieve()
+                    .bodyToMono(new ParameterizedTypeReference<KisQuoteDTO.ApiResponse<KisQuoteDTO.DailyCandle>>() {})
+                    .timeout(Duration.ofSeconds(15))
+                    .block();
+
+            if (response != null && response.isSuccess() && response.getOutput2() != null) {
+                log.info("[KIS 시세] 기간별 일봉 조회 성공 - {} : {}건", stockCode, response.getOutput2().size());
+                return response.getOutput2();
+            }
+
+            log.warn("[KIS 시세] 기간별 일봉 조회 실패 - stockCode: {}, msg: {}",
+                    stockCode, response != null ? response.getMessage() : "null");
+            return Collections.emptyList();
+
+        } catch (WebClientResponseException e) {
+            log.error("[KIS 시세] 기간별 일봉 API 오류 - stockCode: {}, 상태: {}, 응답: {}",
+                    stockCode, e.getStatusCode(), e.getResponseBodyAsString());
+            return Collections.emptyList();
         } catch (Exception e) {
-            log.error("[KIS 시세] 일봉 조회 예외 - stockCode: {}, 오류: {}",
+            log.error("[KIS 시세] 기간별 일봉 조회 예외 - stockCode: {}, 오류: {}",
                     stockCode, e.getMessage());
             return Collections.emptyList();
         }

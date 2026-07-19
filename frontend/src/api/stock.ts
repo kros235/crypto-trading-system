@@ -156,7 +156,25 @@ export const stockBotApi = {
   resetDailyCache: () =>
     api.post('/stock/bot/reset-daily-cache'),
 
-  // 보유기간 경고 대상 조회 (15일 이상/20일 이상)
+// 보유기간 경고 대상 조회 (15일 이상/20일 이상)
   getHoldingWarnings: () =>
     api.get('/stock/bot/holding-warnings'),
+}
+
+// ⭐⭐⭐ [Day 62 추가] 주식/ETF 백테스트 API ⭐⭐⭐
+// Phase 1 backtestApi(/api/backtest) 구조 재사용
+import type { StockBacktestRequest, StockBacktestResult, AvailableStocksResponse } from '@/types/stockBacktest'
+
+export const stockBacktestApi = {
+  // 백테스트 실행 (실제 KIS API 기간별 일봉 조회 포함 - 종목/기간에 따라 다소 시간 소요될 수 있음)
+  run: (data: StockBacktestRequest) =>
+    api.post<StockBacktestResult>('/stock/backtest/run', data, { timeout: 300000 }), // 5분
+
+  // 백테스트 가능 종목 목록 (사용자 등록 활성 종목)
+  getAvailableStocks: () =>
+    api.get<AvailableStocksResponse>('/stock/backtest/available-stocks'),
+
+  // 기본 설정값
+  getDefaultSettings: () =>
+    api.get<StockBacktestRequest>('/stock/backtest/default-settings'),
 }

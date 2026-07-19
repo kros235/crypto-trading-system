@@ -60,6 +60,19 @@ public class TradingBotService {
         BotExecutionResult result = new BotExecutionResult(userId);
 
         try {
+            // ⭐⭐⭐ [Day 61.5 추가] 사용자별 봇 활성화 체크 (멀티유저 격리 버그 수정) ⭐⭐⭐
+            // 변경 이유: 기존엔 TradingScheduler.executeAutoTrading()에서 단일 전역 게이트로 체크.
+            //           이제 사용자별 봇 상태 체크는 여기서 수행.
+            //           스케줄러 자동 실행 + 수동 실행(/api/bot/execute) 모두 이 체크를 통과해야 함.
+            //           ※ 보유 자산 페이지의 수동 매도(/api/transactions/{id}/sell)는 이 메서드를 거치지 않으므로 영향 없음.
+            //           ※ 주식봇(StockTradingBotService.executeForUser)과 동일한 패턴으로 일관성 유지.
+            if (!com.cryptotrading.scheduler.TradingScheduler.isBotEnabled(userId)) {
+                log.info("⏸️ 코인봇 비활성화 상태: {} - 자동매매 스킵", userId);
+                result.setStatus("SKIP");
+                result.setMessage("코인봇 비활성화 상태");
+                return result;
+            }
+
             // 1. 사용자 및 설정 조회
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userId));

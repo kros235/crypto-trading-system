@@ -98,12 +98,12 @@
 
                   <v-divider class="my-4" />
 
-                  <!-- 고급 설정 -->
-                  <v-expansion-panels>
+                  <!-- 고급 설정 (카테고리별 아코디언으로 분리) -->
+                  <v-expansion-panels variant="accordion">
                     <v-expansion-panel>
                       <v-expansion-panel-title>
-                        <v-icon class="mr-2">mdi-tune</v-icon>
-                        고급 설정
+                        <v-icon class="mr-2">mdi-swap-vertical</v-icon>
+                        매수/매도 조건
                       </v-expansion-panel-title>
                       <v-expansion-panel-text>
                         <!-- 이동평균선 도움말  -->
@@ -372,12 +372,15 @@
                           </template>
                         </v-slider>
 
-                        <v-divider class="my-4" />
+                        </v-expansion-panel-text>
+                    </v-expansion-panel>
 
-                        <div class="text-subtitle-2 mb-3 d-flex align-center">
-                          <v-icon size="small" class="mr-1">mdi-chart-bell-curve-cumulative</v-icon>
-                          기술적 지표 설정
-                        </div>
+                    <v-expansion-panel>
+                      <v-expansion-panel-title>
+                        <v-icon size="small" class="mr-1">mdi-chart-bell-curve-cumulative</v-icon>
+                        기술적 지표 설정
+                      </v-expansion-panel-title>
+                      <v-expansion-panel-text>
 
                         <!-- RSI 설정 -->
                         <div class="text-caption text-grey mb-2 d-flex align-center">
@@ -478,13 +481,47 @@
                             <span class="text-body-2">{{ request.volumeThreshold }}%</span>
                           </template>
                         </v-slider>
-                        <v-divider class="my-4" />
-                        
-                        <!-- 리스크 관리 설정 -->
-                        <div class="text-subtitle-2 mb-3">
-                          <v-icon size="small" class="mr-1">mdi-shield-check</v-icon>
-                          리스크 관리
+                        </v-expansion-panel-text>
+                    </v-expansion-panel>
+
+                    <!-- ⭐⭐⭐ [UI 통일] 매수 방식 카테고리 신규 분리 (기존 리스크 관리 섹션 안에 있던 토글을 이동) ⭐⭐⭐ -->
+                    <v-expansion-panel>
+                      <v-expansion-panel-title>
+                        <v-icon size="small" class="mr-1">mdi-cash-multiple</v-icon>
+                        매수 방식
+                      </v-expansion-panel-title>
+                      <v-expansion-panel-text>
+                        <!-- ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin (매수 방식 선택) ⭐⭐⭐ -->
+                        <div class="d-flex align-center mb-1">
+                          <v-switch
+                            v-model="request.useRoundRobin"
+                            :label="request.useRoundRobin ? '🔄 라운드로빈' : '💵 고정 금액'"
+                            color="primary"
+                            hide-details
+                            density="compact"
+                          />
+                          <HelpButton 
+                            use-dialog
+                            :dialog-title="helpContents.useRoundRobin.title"
+                            :dialog-content="helpContents.useRoundRobin.content"
+                            size="x-small"
+                            color="grey"
+                          />
                         </div>
+                        <div class="text-caption text-grey-darken-1 mb-3">
+                          {{ request.useRoundRobin 
+                              ? '일일 한도를 매수 신호 수로 균등 분배' 
+                              : `각 코인에 ${formatCurrency(request.fixedBuyAmount)} 매수` }}
+                        </div>
+                      </v-expansion-panel-text>
+                    </v-expansion-panel>
+
+                    <v-expansion-panel>
+                      <v-expansion-panel-title>
+                        <v-icon size="small" class="mr-1">mdi-shield-check</v-icon>
+                        리스크 관리
+                      </v-expansion-panel-title>
+                      <v-expansion-panel-text>
                         
                         <!-- 일일 거래 한도 -->
                         <div class="text-caption text-grey mb-2 d-flex align-center">
@@ -534,29 +571,6 @@
                         </div>
                         <div class="text-caption text-grey-darken-1 mb-3">
                           ON: 매도 금액만큼 일일 매수 한도가 복구됩니다<br/>(최대 일일 한도까지)
-                        </div>
-                        
-                        <!-- ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin (매수 방식 선택) ⭐⭐⭐ -->
-                        <div class="d-flex align-center mb-1">
-                          <v-switch
-                            v-model="request.useRoundRobin"
-                            :label="request.useRoundRobin ? '🔄 라운드로빈' : '💵 고정 금액'"
-                            color="primary"
-                            hide-details
-                            density="compact"
-                          />
-                          <HelpButton 
-                            use-dialog
-                            :dialog-title="helpContents.useRoundRobin.title"
-                            :dialog-content="helpContents.useRoundRobin.content"
-                            size="x-small"
-                            color="grey"
-                          />
-                        </div>
-                        <div class="text-caption text-grey-darken-1 mb-3">
-                          {{ request.useRoundRobin 
-                              ? '일일 한도를 매수 신호 수로 균등 분배' 
-                              : `각 코인에 ${formatCurrency(request.fixedBuyAmount)} 매수` }}
                         </div>
                         
                         <!-- 단일 종목 비중 제한 -->
@@ -759,10 +773,10 @@
               <!-- 요약 카드 -->
               <v-row>
                 <v-col cols="6" md="3">
-                  <v-card :color="result.totalProfit >= 0 ? 'success' : 'error'" variant="tonal">
+                  <v-card :color="result.totalProfit >= 0 ? 'success' : 'error'" variant="tonal" class="summary-card">
                     <v-card-text class="text-center">
-                      <div class="text-overline">총 수익</div>
-                      <div class="text-h5 font-weight-bold">
+                      <div class="text-overline summary-label">총 수익</div>
+                      <div class="text-h5 font-weight-bold summary-value">
                         {{ formatCurrency(result.totalProfit) }}
                       </div>
                       <div :class="result.totalProfitRate >= 0 ? 'text-success' : 'text-error'">
@@ -772,29 +786,29 @@
                   </v-card>
                 </v-col>
                 <v-col cols="6" md="3">
-                  <v-card variant="tonal">
+                  <v-card variant="tonal" class="summary-card">
                     <v-card-text class="text-center">
-                      <div class="text-overline">승률</div>
-                      <div class="text-h5 font-weight-bold">{{ result.winRate.toFixed(1) }}%</div>
-                      <div class="text-grey">{{ result.winCount }}승 {{ result.loseCount }}패</div>
+                      <div class="text-overline summary-label">승률</div>
+                      <div class="text-h5 font-weight-bold summary-value">{{ result.winRate.toFixed(1) }}%</div>
+                      <div class="summary-sub">{{ result.winCount }}승 {{ result.loseCount }}패</div>
                     </v-card-text>
                   </v-card>
                 </v-col>
                 <v-col cols="6" md="3">
-                  <v-card variant="tonal">
+                  <v-card variant="tonal" class="summary-card">
                     <v-card-text class="text-center">
-                      <div class="text-overline">총 거래</div>
-                      <div class="text-h5 font-weight-bold">{{ result.totalTrades }}회</div>
-                      <div class="text-grey">매수 {{ result.buyCount }} / 매도 {{ result.sellCount }}</div>
+                      <div class="text-overline summary-label">총 거래</div>
+                      <div class="text-h5 font-weight-bold summary-value">{{ result.totalTrades }}회</div>
+                      <div class="summary-sub">매수 {{ result.buyCount }} / 매도 {{ result.sellCount }}</div>
                     </v-card-text>
                   </v-card>
                 </v-col>
                 <v-col cols="6" md="3">
-                  <v-card color="warning" variant="tonal">
+                  <v-card color="warning" variant="tonal" class="summary-card">
                     <v-card-text class="text-center">
-                      <div class="text-overline">최대 낙폭</div>
-                      <div class="text-h5 font-weight-bold">-{{ result.maxDrawdown.toFixed(2) }}%</div>
-                      <div class="text-grey">MDD</div>
+                      <div class="text-overline summary-label">최대 낙폭</div>
+                      <div class="text-h5 font-weight-bold summary-value">-{{ result.maxDrawdown.toFixed(2) }}%</div>
+                      <div class="summary-sub">MDD</div>
                     </v-card-text>
                   </v-card>
                 </v-col>
@@ -858,7 +872,7 @@
       density="compact"
       mandatory
       color="primary"
-      class="ml-4"
+      class="ml-4 chart-view-toggle"
     >
       <v-btn value="full" size="small">
         <v-icon size="small" class="mr-1">mdi-fit-to-screen</v-icon>
@@ -871,104 +885,106 @@
     </v-btn-toggle>
   </v-card-title>
   <v-card-text>
-    <!-- ★★★ 수정: 스크롤 모드 지원 래퍼 ★★★ -->
-    <div 
-      class="chart-scroll-container"
-      :class="{ 'scroll-mode': isScrollMode }"
-    >
+    <!-- ⭐⭐⭐ [버그 수정] chart-outer 신규: 스크롤 컨테이너와 라벨을 완전히 분리하는 바깥 래퍼 ⭐⭐⭐ -->
+    <div class="chart-outer">
       <div 
-        class="chart-wrapper"
-        :style="{ width: chartWrapperWidth }"
-        @mousemove="handleChartHover"
-        @mouseleave="hoveredIndex = -1"
+        class="chart-scroll-container"
+        :class="{ 'scroll-mode': isScrollMode }"
       >
-        <svg 
-          class="custom-chart"
-          :viewBox="`0 0 ${dynamicSvgWidth} ${svgHeight}`"
-          preserveAspectRatio="none"
-        >
-          <!-- 그라데이션 정의 -->
-          <defs>
-            <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" style="stop-color:#42A5F5;stop-opacity:0.6" />
-              <stop offset="100%" style="stop-color:#42A5F5;stop-opacity:0.1" />
-            </linearGradient>
-          </defs>
-          
-          <!-- 영역 채우기 -->
-          <path :d="areaPath" fill="url(#areaGradient)" />
-          
-          <!-- 기준선들 -->
-          <line 
-            :x1="svgPadding" 
-            :y1="getYPosition(result.initialBalance)" 
-            :x2="dynamicSvgWidth - svgPadding" 
-            :y2="getYPosition(result.initialBalance)"
-            stroke="#FF9800" 
-            stroke-width="2" 
-            stroke-dasharray="6,4"
-          />
-          <line 
-            :x1="svgPadding" 
-            :y1="getYPosition(maxBalance)" 
-            :x2="dynamicSvgWidth - svgPadding" 
-            :y2="getYPosition(maxBalance)"
-            stroke="#4CAF50" 
-            stroke-width="2" 
-            stroke-dasharray="6,4"
-          />
-          <line 
-            :x1="svgPadding" 
-            :y1="getYPosition(minBalance)" 
-            :x2="dynamicSvgWidth - svgPadding" 
-            :y2="getYPosition(minBalance)"
-            stroke="#F44336" 
-            stroke-width="2" 
-            stroke-dasharray="6,4"
-          />
-          
-          <!-- 라인 차트 -->
-          <path :d="linePath" fill="none" stroke="#1976D2" stroke-width="2.5" />
-          
-          <!-- 데이터 포인트 -->
-          <circle
-            v-for="(point, index) in chartPoints"
-            :key="index"
-            :cx="point.x"
-            :cy="point.y"
-            :r="hoveredIndex === index ? 8 : pointRadius"
-            :fill="getPointColor(index)"
-            stroke="white"
-            stroke-width="2"
-            class="chart-point"
-          />
-        </svg>
-        
-        <!-- 기준선 라벨 (스크롤 모드에서는 고정) -->
-        <div class="chart-labels" :class="{ 'labels-fixed': isScrollMode }">
-          <span class="chart-label label-max" :style="{ top: getLabelPosition(maxBalance) + '%' }">
-            최고: {{ formatCurrency(maxBalance) }}
-          </span>
-          <span class="chart-label label-initial" :style="{ top: getLabelPosition(result.initialBalance) + '%' }">
-            초기: {{ formatCurrency(result.initialBalance) }}
-          </span>
-          <span class="chart-label label-min" :style="{ top: getLabelPosition(minBalance) + '%' }">
-            최저: {{ formatCurrency(minBalance) }}
-          </span>
-        </div>
-        
-        <!-- 툴팁 -->
         <div 
-          v-if="hoveredIndex >= 0 && hoveredData"
-          class="chart-tooltip"
-          :style="{ left: tooltipX + 'px' }"
+          class="chart-wrapper"
+          :style="{ width: chartWrapperWidth }"
+          @mousemove="handleChartHover"
+          @mouseleave="hoveredIndex = -1"
         >
-          <div class="font-weight-bold">{{ hoveredData.date }}</div>
-          <div>자산: {{ formatCurrency(hoveredData.balance) }}</div>
-          <div :class="hoveredData.profitRate >= 0 ? 'text-success' : 'text-error'">
-            수익률: {{ hoveredData.profitRate >= 0 ? '+' : '' }}{{ hoveredData.profitRate.toFixed(2) }}%
+          <svg 
+            class="custom-chart"
+            :viewBox="`0 0 ${dynamicSvgWidth} ${svgHeight}`"
+            preserveAspectRatio="none"
+          >
+            <!-- 그라데이션 정의 -->
+            <defs>
+              <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#42A5F5;stop-opacity:0.6" />
+                <stop offset="100%" style="stop-color:#42A5F5;stop-opacity:0.1" />
+              </linearGradient>
+            </defs>
+            
+            <!-- 영역 채우기 -->
+            <path :d="areaPath" fill="url(#areaGradient)" />
+            
+            <!-- 기준선들 -->
+            <line 
+              :x1="svgPadding" 
+              :y1="getYPosition(result.initialBalance)" 
+              :x2="dynamicSvgWidth - svgPadding" 
+              :y2="getYPosition(result.initialBalance)"
+              stroke="#FF9800" 
+              stroke-width="2" 
+              stroke-dasharray="6,4"
+            />
+            <line 
+              :x1="svgPadding" 
+              :y1="getYPosition(maxBalance)" 
+              :x2="dynamicSvgWidth - svgPadding" 
+              :y2="getYPosition(maxBalance)"
+              stroke="#4CAF50" 
+              stroke-width="2" 
+              stroke-dasharray="6,4"
+            />
+            <line 
+              :x1="svgPadding" 
+              :y1="getYPosition(minBalance)" 
+              :x2="dynamicSvgWidth - svgPadding" 
+              :y2="getYPosition(minBalance)"
+              stroke="#F44336" 
+              stroke-width="2" 
+              stroke-dasharray="6,4"
+            />
+            
+            <!-- 라인 차트 -->
+            <path :d="linePath" fill="none" stroke="#1976D2" stroke-width="2.5" />
+            
+            <!-- 데이터 포인트 -->
+            <circle
+              v-for="(point, index) in chartPoints"
+              :key="index"
+              :cx="point.x"
+              :cy="point.y"
+              :r="hoveredIndex === index ? 8 : pointRadius"
+              :fill="getPointColor(index)"
+              stroke="white"
+              stroke-width="2"
+              class="chart-point"
+            />
+          </svg>
+          
+          <!-- 툴팁 -->
+          <div 
+            v-if="hoveredIndex >= 0 && hoveredData"
+            class="chart-tooltip"
+            :style="{ left: tooltipX + 'px' }"
+          >
+            <div class="font-weight-bold">{{ hoveredData.date }}</div>
+            <div>자산: {{ formatCurrency(hoveredData.balance) }}</div>
+            <div :class="hoveredData.profitRate >= 0 ? 'text-success' : 'text-error'">
+              수익률: {{ hoveredData.profitRate >= 0 ? '+' : '' }}{{ hoveredData.profitRate.toFixed(2) }}%
+            </div>
           </div>
         </div>
+      </div>
+
+      <!-- chart-scroll-container 바깥이므로 스크롤과 무관하게 항상 고정된 위치 -->
+      <div class="chart-labels">
+        <span class="chart-label label-max" :style="{ top: getLabelPosition(maxBalance) + '%' }">
+          최고: {{ formatCurrency(maxBalance) }}
+        </span>
+        <span class="chart-label label-initial" :style="{ top: getLabelPosition(result.initialBalance) + '%' }">
+          초기: {{ formatCurrency(result.initialBalance) }}
+        </span>
+        <span class="chart-label label-min" :style="{ top: getLabelPosition(minBalance) + '%' }">
+          최저: {{ formatCurrency(minBalance) }}
+        </span>
       </div>
     </div>
     
@@ -2620,6 +2636,13 @@ function handleChartHover(event: MouseEvent) {
 </script>
 
 <style scoped>
+
+/* ⭐⭐⭐ [디테일 수정] 전체보기/스크롤보기 버튼 그룹 테두리 ⭐⭐⭐ */
+.chart-view-toggle {
+  border: 2px solid #000000 !important;
+  border-radius: 8px;
+}
+
 .text-success {
   color: #4CAF50 !important;
   font-weight: bold;
@@ -2693,6 +2716,27 @@ function handleChartHover(event: MouseEvent) {
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
+/* ⭐⭐⭐ [디테일 수정] 요약 카드 테두리 + 텍스트 대비 개선 ⭐⭐⭐ */
+.summary-card {
+  border: 2px solid #000000;
+}
+.summary-label {
+  color: #000000 !important;
+}
+.summary-value {
+  color: #000000 !important;
+}
+.summary-sub {
+  color: #000000 !important;
+  font-size: 0.75rem;
+}
+
+/* ⭐⭐⭐ [버그 수정] 라벨의 위치 기준점(anchor) - 스크롤과 무관하게 고정 ⭐⭐⭐ */
+.chart-outer {
+  position: relative;
+  width: 100%;
+}
+
 .chart-scroll-container {
   position: relative;
   width: 100%;
@@ -2722,12 +2766,6 @@ function handleChartHover(event: MouseEvent) {
 
 .chart-scroll-container.scroll-mode::-webkit-scrollbar-thumb:hover {
   background: #1565C0;
-}
-
-/* 스크롤 모드에서 라벨 고정 */
-.labels-fixed {
-  position: fixed !important;
-  right: 20px !important;
 }
 
 /* 스크롤 모드에서 차트 래퍼 */

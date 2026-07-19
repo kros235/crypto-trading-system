@@ -121,9 +121,11 @@ public class BotController {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
         DateTimeFormatter fullFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     
-        boolean isBotActive = TradingScheduler.isBotEnabled() && !isMaintenanceTime;
+        // ⭐⭐⭐ [Day 61.5 수정] isBotEnabled() 호출에 userId 전달 ⭐⭐⭐
+        // 변경 이유: 사용자별 봇 상태로 변경됨. 이제 자기 자신의 봇 상태를 정확히 응답.
+        boolean isBotActive = TradingScheduler.isBotEnabled(userId) && !isMaintenanceTime;
         status.put("isRunning", isBotActive);
-        status.put("botEnabled", TradingScheduler.isBotEnabled()); 
+        status.put("botEnabled", TradingScheduler.isBotEnabled(userId));
 
         status.put("lastExecutedAt", lastExecution.format(fullFormatter));
         status.put("nextExecutionAt", nextExecution.format(fullFormatter));
@@ -142,11 +144,15 @@ public class BotController {
 
     /**
      * ⭐ 자동매매 봇 시작
+     * ⭐⭐⭐ [Day 61.5 수정] Authentication 인자 추가 - 사용자별 봇 시작 (멀티유저 격리 버그 수정) ⭐⭐⭐
+     * 변경 이유: 기존엔 누가 호출해도 전역 ON. 이제 자기 자신의 봇만 시작.
+     *           프론트엔드(botApi.start()) 변경 불필요 - JWT 토큰으로 자동 추출됨.
      */
     @PostMapping("/start")
-    public ResponseEntity<Map<String, Object>> startBot() {
-        log.info("🟢 자동매매 봇 시작 요청");
-        TradingScheduler.setBotEnabled(true);
+    public ResponseEntity<Map<String, Object>> startBot(Authentication authentication) {
+        String userId = authentication.getName();
+        log.info("🟢 자동매매 봇 시작 요청: {}", userId);
+        TradingScheduler.setBotEnabled(userId, true);
         
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -158,11 +164,14 @@ public class BotController {
     
     /**
      * ⭐ 자동매매 봇 중지
+     * ⭐⭐⭐ [Day 61.5 수정] Authentication 인자 추가 - 사용자별 봇 중지 (멀티유저 격리 버그 수정) ⭐⭐⭐
+     * 변경 이유: 기존엔 누가 호출해도 전역 OFF. 이제 자기 자신의 봇만 중지.
      */
     @PostMapping("/stop")
-    public ResponseEntity<Map<String, Object>> stopBot() {
-        log.info("🔴 자동매매 봇 중지 요청");
-        TradingScheduler.setBotEnabled(false);
+    public ResponseEntity<Map<String, Object>> stopBot(Authentication authentication) {
+        String userId = authentication.getName();
+        log.info("🔴 자동매매 봇 중지 요청: {}", userId);
+        TradingScheduler.setBotEnabled(userId, false);
         
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);

@@ -874,12 +874,45 @@ KIS_BASE_URL=https://openapivts.koreainvestment.com:29443
 | **59** | ⑫ StockDashboardView (주식 대시보드 프론트엔드) + StockAssetSnapshot Entity/Repository/Service + StockDashboardController (통계/환율/스냅샷 API) + 스냅샷 자동화 (23:59 스케줄 / 거래 즉시 갱신 / 수동 갱신) + 스냅샷 API 경로 오류 수정 (클래스 레벨 prefix 중복 해결) **+ [후속] 차트 레이아웃 버그 수정 (.chart-container position:relative/width:100% + SVG 명시적 크기 지정, 개발자 도구 OFF 상태 SVG 늘어남 문제 해결) + 코인 대시보드 차트 바닥 회색 파선 누락 버그 수정 + 두 대시보드 chartPeriod 기본값 'all'→'7' 변경** | 대시보드 + 스냅샷 시스템 | ✅ 완료 |
 | **60** | ⑬ StockHoldingsView + StockListView 신규 작성 + 백엔드 다중 종목 가격 일괄 조회 API + 프론트엔드 API 모듈 확장 + 라우터/사이드바 연결 + **코인 보유 자산 페이지와 UI 100% 통일 (탭/요약카드/highlight-card/매도다이얼로그/상세다이얼로그 디자인 시스템 통일)** | StockPriceDTO, StockInfoService(getPricesForStocks), StockInfoController, api/stock.ts(StockPrice/getPrices), StockHoldingsView.vue, StockListView.vue, router/index.ts, TheSidebar.vue, **HoldingsView.vue (매도/상세 다이얼로그 디자인 통일)** | ✅ 완료 |
 | **61** | ⑭ StockBotMonitorView 신규 작성 (1769줄) + StockBotController 지표 조회 엔드포인트 2개 추가 + StockRiskManagementService HoldingDaysWarning DTO 4개 필드 추가 (transactionId/quantity/buyPrice/totalAmount, 동일 종목 다중 보유 식별) + stockBotApi 모듈 8개 메서드 + /stock-bot-monitor 라우트/사이드바 + **[v2~v7 후속 보완 누적] 알림 테스트 폴백 직접 호출 / 데모 모드 토글 / 봇 분리 안내 / Discord 칩 카드 우측하단 / 도움말 줄바꿈 정리 / 보유기간 경고 풍부 UI / 회색 칩 검정 글씨 / "주식 봇 상태" 라벨 통일 / 보유기간 경고 일수 검정 굵게 / 일일 한도 초기화 직관 표현 + 5가지 운영 사례 도움말 / 디스코드/수동제어 다이얼로그 폭 800px** | StockBotMonitorView.vue, StockBotController.java, StockRiskManagementService.java, api/stock.ts, router/index.ts, TheSidebar.vue | ✅ 완료 |
-| **62** | ⑮ StockBacktestService + StockBacktestView | 백테스팅 | ⏳ 예정 |
+| **62** | ⑮ StockBacktestService + StockBacktestView + 코인/주식 백테스트 UI 통일 | 백테스팅 | ✅ 완료 |
 | **63** | ⑯ StockProfitService + 수익분석 + 일일리포트 + **StockHoldingsView 수익분석 영역 활성화** ⭐ | 수익 분석 | ⏳ 예정 |
 | **64** | ⑰ AdminHolidayView + 관리자 통합 | 관리자 기능 | ⏳ 예정 |
 | **65** | ⑱ 사이드바 활성화 + SecurityConfig 업데이트 + 통합 테스트 | 통합 | ⏳ 예정 |
 | **66** | ⑲ AI 뉴스 가중치 주식 적용** (StockNewsAnalysisService 신규, stock_news/stock_news_analysis 테이블 추가, StockSettingService useAiAnalysis 활성화, StockSignalDetectorService 가중치 반영, 주식 뉴스 페이지 StockNewsView.vue 신규, StockBotMonitorView 가중치 버튼을 주식용 엔드포인트로 변경) + 최종 테스트 + 문서화 + v2.0 릴리즈 + (v2.1 리팩토링 계획 수립: com.cryptotrading → com.investment 패키지 리네이밍, controller/service/entity 서브패키지 crypto/stock/common 분리) | 배포 + AI 가중치 + 리팩토링 계획서 | ⏳ 예정 |
 | **별도** | 🚨 **[버그 수정]** 코인봇 멀티유저 격리 버그 수정 - TradingScheduler `BOT_ENABLED_KEY` 단일 전역 → 사용자별 키 변경 + isBotEnabled/setBotEnabled에 userId 인자 추가 + executeAutoTrading의 전역 게이트 제거 + executeForUser에 사용자별 체크 추가 + BotController에서 Authentication.getName() 받아 전달 (한주 형 별도 신청 시 진행) | TradingScheduler.java, TradingBotService.java, BotController.java | ⏳ 별도 신청 시 |
+
+---
+
+## 📌 Day 62 상세 작업 내역
+
+### 백엔드
+- [x] `StockBacktestRequestDTO.java` / `StockBacktestResultDTO.java` 신규
+  (Phase 1 BacktestRequestDTO/ResultDTO 재사용 구조, coinSymbols→stockCodes, 정수 수량, maxHoldingDays 필드 추가)
+- [x] `StockBacktestService.java` 신규
+  - 수수료 0.015%, 슬리피지 0.05% 반영
+  - 레버리지 ETF decay 방지용 `maxHoldingDays` 강제매도 로직(조건 0) 추가
+  - KIS 기간별시세 API(FHKST03010100) 100건 단위 페이징 조회
+- [x] `StockBacktestController.java` 신규 (`/api/stock/backtest/{run,available-stocks,default-settings}`)
+- [x] `KisApiService.java`에 `getDailyCandlesByDateRange()` 메서드 추가 (기존 코드 미변경, 신규 메서드만 삽입)
+
+### 프론트엔드
+- [x] `StockBacktestView.vue` 신규 (레버리지 ETF 보유기간 제한 패널 포함)
+- [x] `types/stockBacktest.ts`, `api/stock.ts`(stockBacktestApi) 신규
+- [x] `router/index.ts`, `TheSidebar.vue`에 `/stock-backtest` 라우트/메뉴 추가
+
+### 코인/주식 백테스트 UI 통일 작업 (Day 62 당일 추가 반영)
+- [x] 요약 카드(총수익/승률/총거래/최대낙폭) 구조 통일 + 카드 테두리(2px 검정) + 텍스트 대비 개선
+- [x] 자산 변동 차트: 그라데이션/기준선/전체보기·스크롤보기 토글을 코인 → 주식 화면으로 이식
+- [x] 차트 라벨 스크롤 버그 수정 (`chart-outer` 래퍼로 라벨을 스크롤 컨테이너 바깥 분리, 코인 화면도 동일 수정)
+- [x] 전체보기/스크롤보기 버튼 그룹 테두리 추가 (코인/주식 공통)
+- [x] 코인 `BacktestView.vue` 고급 설정을 단일 아코디언 → 4개 카테고리(매수/매도 조건, 기술적 지표 설정, 매수 방식, 리스크 관리)로 분리
+- [x] `StockBacktestView.vue` 아코디언 패널 아이콘 추가, 도움말(HelpButton) 21개 항목 신규 작성 (주식 기준 수치로 별도 작성)
+- [x] 요약 카드 상단 "백테스트 결과" 타이틀 + 결과 해석 도움말 추가 (코인과 동일 구성)
+
+### 참고사항 / 알려진 제한
+- `useMarketTrendFilter`는 KOSPI/KOSDAQ 프록시 종목 미설정으로 Day 62 기준 no-op 처리
+- `maxHoldingDays` 강제매도는 현재 종목 유형(레버리지/인버스/일반) 구분 없이 전체 적용됨 → Day 63 백로그로 이관
+- DB 스키마 변경 없음 (백테스트 결과 미저장, Phase 1과 동일 구조)
 
 ---
 
@@ -908,6 +941,17 @@ KIS_BASE_URL=https://openapivts.koreainvestment.com:29443
   - [ ] Phase 1 `HoldingsView.vue` 코드 패턴 차용 (구조 동일)
 - [ ] `frontend/src/api/stock.ts` 확장
   - [ ] `stockProfitApi.getPeriodStats()`, `getStockStats()`, `getAssetSnapshots()` 메서드 추가
+
+### ⭐ Day 62 백로그 — 레버리지/인버스 종목만 `maxHoldingDays` 강제매도 적용
+> **배경**: Day 62 시점 `StockBacktestService`는 종목 유형과 무관하게 보유기간 강제매도를 모든 종목에 일괄 적용함.
+> 일반 지수추종 ETF(예: KODEX 200)는 장기 보유가 유리할 수 있어 백테스트 결과가 왜곡될 수 있음.
+
+- [ ] `StockBacktestService`에 `StockInfoService` 의존성 추가
+- [ ] `runBacktest()` 시작 시 `stockCodes` 전체에 대해 `etfType`을 일괄 조회하여 `Map<String, String>` 생성
+- [ ] `checkSellSignal()`의 "조건 0(보유기간 초과)"을 `etfType`이 `LEVERAGE`/`INVERSE`일 때만 평가하도록 분기 처리
+  (`etfType`이 null인 예외 케이스는 종목명 키워드 "레버리지"/"인버스" 보조 판별로 폴백)
+- [ ] `StockBacktestView.vue`의 "레버리지 ETF 보유기간 제한" 패널에, 선택 종목 중 레버리지/인버스가 없으면
+      "선택한 종목 중 레버리지/인버스 상품이 없어 이 설정은 적용되지 않습니다" 안내 문구 표시
 
 
 ### ⭐ Day 61 v2~v7 후속 항목 (Day 63 작업 시 함께 정리)
@@ -1295,10 +1339,10 @@ frontend/src/views/
 |------|------|--------|
 | Phase 1 (암호화폐) | ✅ 완료 | 100% |
 | Phase 2-1 (기반 구축) | ✅ 완료 | ~100% (Day 48~55 완료, 기반 구축 단계 마무리) |
-| Phase 2-2 (핵심 기능) | 🔄 진행 중 | ~92% (Day 53~61 완료 **+ Day 60 디자인 시스템 통일 + Day 61 봇 모니터링 페이지**) |
-| Phase 2-3 (고도화) | ⏳ 예정 | 0% |
-| Phase 2-4 (안정화) | ⏳ 예정 | 0% |
-| **전체 프로젝트** | - | **~82%** (Phase 1 완료, Phase 2 Day 61 완료) |
+| Phase 2-2 (핵심 기능) | ✅ 완료 | 100% (Day 53~62 완료 **+ Day 60 디자인 시스템 통일 + Day 61 봇 모니터링 페이지 + Day 62 백테스팅 + 코인/주식 UI 통일**) |
+| Phase 2-3 (고도화) | ⏳ 예정 | 0% (Day 63~64 예정) |
+| Phase 2-4 (안정화) | ⏳ 예정 | 0% (Day 65 예정) |
+| **전체 프로젝트** | - | **~85%** (Phase 1 완료, Phase 2 Day 62/66 완료, 잔여 4일) |
 | v2.1 패키지 리팩토링 | ⏳ 예정 (Day 66 이후) | 0% |
 | v3.0 Backend 컨테이너 분리 | ⏳ 예정 (v2.1 완료 이후) | 0% |
 | Phase 3 달러 거래 | ⏳ 미정 (v3.0 완료 이후) | 0% |

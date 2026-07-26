@@ -13,9 +13,14 @@ import com.cryptotrading.entity.TradingSetting;
 import com.cryptotrading.repository.UserRepository;
 import com.cryptotrading.repository.TradingSettingRepository; 
 import com.cryptotrading.repository.CoinNewsRepository;
+// ⭐⭐⭐ [개선] 코인/주식 활동 여부 판별용 리포지토리 3개 추가 ⭐⭐⭐
+import com.cryptotrading.repository.TransactionRepository;
+import com.cryptotrading.repository.StockTradingSettingRepository;
+import com.cryptotrading.repository.StockTransactionRepository;
 import com.cryptotrading.dto.notification.DailyReportDTO;
 import com.cryptotrading.service.RiskManagementService;
 import com.cryptotrading.service.DailyAssetSnapshotService;  // ⭐⭐⭐ [신규 추가] 일별 자산 스냅샷 서비스 ⭐⭐⭐
+import com.cryptotrading.service.StockDailyReportService;    // ⭐⭐⭐ [Day 63 추가] 코인+주식 통합 일일 리포트용 ⭐⭐⭐
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,12 +49,19 @@ public class TradingScheduler {
     private final NewsAnalysisService newsAnalysisService;
     private final CoinNewsRepository coinNewsRepository;
     private final TradingSettingRepository tradingSettingRepository;
+    // ⭐⭐⭐ [개선] 코인/주식 활동 여부(거래설정 존재 또는 거래내역 존재) 판별용 ⭐⭐⭐
+    private final TransactionRepository transactionRepository;
+    private final StockTradingSettingRepository stockTradingSettingRepository;
+    private final StockTransactionRepository stockTransactionRepository;
     
    // ⭐⭐⭐ [추가] RiskManagementService (총자산 스냅샷 관리) ⭐⭐⭐
     private final RiskManagementService riskManagementService;
     
     // ⭐⭐⭐ [신규 추가] 일별 자산 스냅샷 서비스 ⭐⭐⭐
     private final DailyAssetSnapshotService dailyAssetSnapshotService;
+    
+    // ⭐⭐⭐ [Day 63 추가] 주식 일일 리포트 서비스 (코인+주식 통합 리포트용) ⭐⭐⭐
+    private final StockDailyReportService stockDailyReportService;
     
     // ⭐⭐⭐ [추가] Redis Template (한 번만 선언) ⭐⭐⭐
     private final StringRedisTemplate redisTemplate;
@@ -209,15 +221,51 @@ public class TradingScheduler {
         log.info("========== 일일 리포트 발송 시작 ==========");
 
         try {
-            // ⭐⭐⭐ [수정] 비활성 사용자 제외 - findAll() → findByIsActive(true) ⭐⭐⭐
-            // 사유: findAll()은 비활성 사용자도 포함하여 메일/Discord DM/Webhook 모두 발송됨
-            //       사용자별 루프 안에서 NotificationService.sendDailyReport()(Webhook)도 호출되므로
-            //       이 한 줄 변경으로 3채널 모두 자동 차단됨
             List<User> users = userRepository.findByIsActive(true);
        
             for (User user : users) {
                 try {
+                    // ⭐⭐⭐ [개선] 코인/주식 각각 활동(거래설정 또는 거래내역) 여부 판별 ⭐⭐⭐
+                    // 왜: 코인을 아예 안 하는 사용자에게 "코인 총 손익 0원" 섹션이,
+                    //     주식을 아예 안 하는 사용자에게 "[주식]" 섹션이 무의미하게 뜨는 것을 방지하기 위함.
+                    boolean hasCoinActivity = tradingSettingRepository.findByUserId(user.getUserId()).isPresent()
+                            || transactionRepository.countByUserId(user.getUserId()) > 0;
+                    boolean hasStockActivity = stockTradingSettingRepository.existsByUserId(user.getUserId())
+                            || stockTransactionRepository.countByUserId(user.getUserId()) > 0;
+
+                    if (!hasCoinActivity && !hasStockActivity) {
+                        log.debug("사용자 {} 코인/주식 활동 이력 없음 - 일일 리포트 발송 생략", user.getUserId());
+                        continue;
+                    }
+
                     DailyReportDTO report = dailyReportService.generateDailyReport(user.getUserId());
+                    report.setHasCoinActivity(hasCoinActivity);
+
+                    // ⭐⭐⭐ [Day 63 추가] 주식 리포트 병합 (코인+주식 통합 발송) ⭐⭐⭐
+                    // 왜: 별도 발송 채널을 새로 만들지 않고 기존 23:50 스케줄 1건에 합류시키기 위함.
+                    //     실패해도 코인 리포트 발송에는 영향 없도록 개별 try-catch로 격리.
+                    //     hasStockActivity가 false면 병합 자체를 생략 → stockBuyCount가 null로 남아
+                    //     "[주식]" 섹션이 자동으로 숨겨짐(기존 hasStockData 로직 그대로 재사용).
+                    if (hasStockActivity) {
+                        try {
+                            DailyReportDTO stockReport = stockDailyReportService.generateStockDailyReport(user.getUserId());
+                            report.setStockBuyCount(stockReport.getStockBuyCount());
+                            report.setStockSellCount(stockReport.getStockSellCount());
+                            report.setStockTotalBuyAmount(stockReport.getStockTotalBuyAmount());
+                            report.setStockTotalSellAmount(stockReport.getStockTotalSellAmount());
+                            report.setStockRealizedProfit(stockReport.getStockRealizedProfit());
+                            report.setStockUnrealizedProfit(stockReport.getStockUnrealizedProfit());
+                            report.setStockTotalProfit(stockReport.getStockTotalProfit());
+                            report.setStockProfitRate(stockReport.getStockProfitRate());
+                            report.setStockHoldingCount(stockReport.getStockHoldingCount());
+                            report.setStockTotalHoldingValue(stockReport.getStockTotalHoldingValue());
+                            report.setStockTotalInvestment(stockReport.getStockTotalInvestment());
+                            report.setStockSummaries(stockReport.getStockSummaries());
+                        } catch (Exception stockEx) {
+                            log.warn("사용자 {} 주식 리포트 병합 실패 (코인 리포트는 정상 발송): {}", user.getUserId(), stockEx.getMessage());
+                        }
+                    }
+
                     notificationService.sendDailyReport(report);
                
                     // 이메일 알림
@@ -227,17 +275,33 @@ public class TradingScheduler {
 
                     // Discord DM 발송
                     if (user.getDiscordUserId() != null && !user.getDiscordUserId().isEmpty()) {
-                        String profitSign = report.getTotalProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "";
+                        boolean hasStockData = report.getStockBuyCount() != null;
+                        // ⭐⭐⭐ [개선] 활동 조합에 따라 제목 접두어와 표시할 숫자를 선택 ⭐⭐⭐
+                        String titlePrefix = (hasCoinActivity && hasStockData) ? "" : hasStockData ? "주식 " : "코인 ";
+                        java.math.BigDecimal realized = (!hasCoinActivity && hasStockData) ? report.getStockRealizedProfit() : report.getRealizedProfit();
+                        java.math.BigDecimal unrealized = (!hasCoinActivity && hasStockData) ? report.getStockUnrealizedProfit() : report.getUnrealizedProfit();
+                        java.math.BigDecimal total = (!hasCoinActivity && hasStockData) ? report.getStockTotalProfit() : report.getTotalProfit();
+                        java.math.BigDecimal rate = (!hasCoinActivity && hasStockData) ? report.getStockProfitRate() : report.getProfitRate();
+                        int holdCount = (!hasCoinActivity && hasStockData) ? report.getStockHoldingCount() : report.getHoldingCount();
+                        java.math.BigDecimal holdValue = (!hasCoinActivity && hasStockData) ? report.getStockTotalHoldingValue() : report.getTotalHoldingValue();
+
+                        String profitSign = total.compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "";
+                        // ⭐⭐⭐ [개선] 종목별 평가액 내역 추가 (코인+주식 통합, sendBuyNotification과 동일한 필드 포맷) ⭐⭐⭐
+                        var holdingsBreakdown = discordBotService.buildHoldingsBreakdown(
+                                hasCoinActivity ? report.getCoinSummaries() : null,
+                                hasStockData ? report.getStockSummaries() : null);
                         discordBotService.sendDailyReportDM(
                             user.getDiscordUserId(),
+                            titlePrefix,
                             report.getReportDate().toString(),
-                            profitSign + String.format("%,.0f", report.getRealizedProfit()),
-                            (report.getUnrealizedProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "") 
-                                + String.format("%,.0f", report.getUnrealizedProfit()),
-                            profitSign + String.format("%,.0f", report.getTotalProfit()),
-                            profitSign + report.getProfitRate().setScale(2, RoundingMode.HALF_UP).toPlainString(),
-                            report.getHoldingCount(),
-                            String.format("%,.0f", report.getTotalHoldingValue())
+                            profitSign + String.format("%,.0f", realized),
+                            (unrealized.compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "")
+                                + String.format("%,.0f", unrealized),
+                            profitSign + String.format("%,.0f", total),
+                            profitSign + rate.setScale(2, RoundingMode.HALF_UP).toPlainString(),
+                            holdCount,
+                            String.format("%,.0f", holdValue),
+                            holdingsBreakdown
                         );
                     }
                

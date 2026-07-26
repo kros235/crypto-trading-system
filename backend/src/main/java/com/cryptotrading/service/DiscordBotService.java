@@ -1,5 +1,6 @@
 package com.cryptotrading.service;
 
+import com.cryptotrading.dto.notification.DailyReportDTO;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -13,9 +14,12 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.awt.Color;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @Slf4j
@@ -307,12 +311,17 @@ public class DiscordBotService {
 
     /**
      * 일일 리포트 DM
+     * ⭐⭐⭐ [Day 63 개선] holdingsBreakdown 파라미터 추가 ⭐⭐⭐
+     * 왜: 기존엔 "보유 종목 1개 / 총 평가액 0원"처럼 요약만 보여주고 개별 종목은 알 수 없었음.
+     *     요약 줄 아래에 종목명(코드)별 평가액을 나열하는 필드를 추가.
+     *     holdingsBreakdown이 비어있으면(null/blank) 기존과 동일하게 요약 필드만 표시.
      */
     @Async
-    public void sendDailyReportDM(String discordUserId, String reportDate,
+    public void sendDailyReportDM(String discordUserId, String titlePrefix, String reportDate,
                                    String realizedProfit, String unrealizedProfit,
                                    String totalProfit, String profitRate,
-                                   int holdingCount, String totalHoldingValue) {
+                                   int holdingCount, String totalHoldingValue,
+                                   List<HoldingRow> holdingsBreakdown) {
         if (!isEnabled() || discordUserId == null || discordUserId.isBlank()) {
             return;
         }
@@ -323,16 +332,31 @@ public class DiscordBotService {
 
             boolean isProfit = !totalProfit.startsWith("-");
             Color color = isProfit ? Color.GREEN : Color.RED;
+            String prefix = (titlePrefix == null) ? "" : titlePrefix;
 
             EmbedBuilder embed = new EmbedBuilder()
-                    .setTitle("📊 일일 리포트 - " + reportDate)
+                    .setTitle("📊 " + prefix + "일일 리포트 - " + reportDate)
                     .setColor(color)
                     .addField("💰 실현 손익", realizedProfit + "원", true)
                     .addField("📈 평가 손익", unrealizedProfit + "원", true)
+                    // ⭐⭐⭐ [버그 수정] 투명 스페이서로 3칸을 채워 간격을 좁힘 ⭐⭐⭐
+                    .addField("\u200B", "\u200B", true)
                     .addField("📋 총 손익", totalProfit + "원 (" + profitRate + "%)", false)
                     .addField("🪙 보유 종목", holdingCount + "개", true)
                     .addField("💎 총 평가액", totalHoldingValue + "원", true)
-                    .setFooter("코인 & 주식 자동매매 시스템", null)
+                    .addField("\u200B", "\u200B", true);
+
+            // ⭐⭐⭐ [개선] 매수/매도 체결 알림과 동일하게 종목별로 "종목/수량/평가액" 필드를 나란히(inline) 추가 ⭐⭐⭐
+            // 왜: 위에서 이미 3칸을 채웠으므로 자동으로 새 줄에서 시작됨
+            if (holdingsBreakdown != null && !holdingsBreakdown.isEmpty()) {
+                for (HoldingRow row : holdingsBreakdown) {
+                    embed.addField("📦 종목", row.name(), true);
+                    embed.addField("수량", row.quantity(), true);
+                    embed.addField("평가액", row.evaluation(), true);
+                }
+            }
+
+            embed.setFooter("코인 & 주식 자동매매 시스템", null)
                     .setTimestamp(LocalDateTime.now().atZone(java.time.ZoneId.systemDefault()).toInstant());
 
             user.openPrivateChannel()
@@ -387,4 +411,45 @@ public class DiscordBotService {
             log.error("{} 리포트 DM 발송 오류: {}", periodLabel, e.getMessage());
         }
     }
+
+    /**
+     * ⭐⭐⭐ [Day 63 개선] 코인/주식 보유 종목별 평가액을 한 줄씩 나열한 문자열 생성 ⭐⭐⭐
+     * 왜: Discord 일일 리포트 Embed에 "종목별 평가액" 필드를 추가하기 위함.
+     *     coinSummaries/stockSummaries 중 하나만 넘겨도 되고(둘 다 null 아니면 합쳐서 표시),
+     *     주식은 "종목명 (코드)" 형태로, 코인은 기존처럼 심볼 그대로 표시.
+     */
+    public List<HoldingRow> buildHoldingsBreakdown(List<DailyReportDTO.CoinSummary> coinSummaries,
+                                                     List<DailyReportDTO.StockSummary> stockSummaries) {
+        List<HoldingRow> rows = new ArrayList<>();
+
+        if (coinSummaries != null) {
+            for (DailyReportDTO.CoinSummary c : coinSummaries) {
+                BigDecimal evaluation = (c.getCurrentPrice() != null && c.getTotalQuantity() != null)
+                        ? c.getCurrentPrice().multiply(c.getTotalQuantity())
+                        : BigDecimal.ZERO;
+                String qty = c.getTotalQuantity() != null ? c.getTotalQuantity().toPlainString() : "0";
+                rows.add(new HoldingRow(c.getCoinSymbol(), qty, String.format("%,.0f원", evaluation)));
+            }
+        }
+
+        if (stockSummaries != null) {
+            for (DailyReportDTO.StockSummary s : stockSummaries) {
+                BigDecimal evaluation = (s.getCurrentPrice() != null && s.getTotalQuantity() != null)
+                        ? s.getCurrentPrice().multiply(s.getTotalQuantity())
+                        : BigDecimal.ZERO;
+                String displayName = (s.getStockName() != null && !s.getStockName().equals(s.getStockCode()))
+                        ? s.getStockName() + " (" + s.getStockCode() + ")"
+                        : s.getStockCode();
+                String qty = s.getTotalQuantity() != null ? s.getTotalQuantity().toPlainString() + "주" : "0주";
+                rows.add(new HoldingRow(displayName, qty, String.format("%,.0f원", evaluation)));
+            }
+        }
+
+        return rows;
+    }
+
+    /**
+     * 종목별 평가액 한 줄 (Discord Embed 필드 3개 - 종목/수량/평가액 - 로 표시됨)
+     */
+    public record HoldingRow(String name, String quantity, String evaluation) {}
 }

@@ -110,6 +110,35 @@ public class NotificationService {
     }
 
     /**
+     * ⭐⭐⭐ [Day 63 추가] 주식 보유기간 경고 메시지 빌더 (public) ⭐⭐⭐
+     * 왜: StockTradingScheduler.buildHoldingDaysWarningMessage()와 동일 내용이지만 그 메서드는 private이라
+     *     NotificationController의 테스트 엔드포인트에서 재사용할 수 없음. 운영 중인 스케줄러 코드는
+     *     그대로 두고(불필요한 리팩토링 회피), 테스트 엔드포인트 전용으로 공개 메서드를 추가함.
+     */
+    public String buildStockHoldingWarningMessage(
+            com.cryptotrading.service.StockRiskManagementService.HoldingDaysWarning warning, int maxHoldingDays) {
+
+        String urgencyText = warning.isUrgent()
+                ? "🚨 최대 보유기간에 도달했습니다!"
+                : "⚠️ 보유기간 경고 임계값에 도달했습니다.";
+
+        return String.format(
+                "%s\n\n" +
+                "• 종목: %s\n" +
+                "• 현재 보유기간: %d 거래일\n" +
+                "• 최대 보유기간: %d 거래일\n" +
+                "• 매수일: %s\n\n" +
+                "레버리지 ETF 장기 보유 시 변동성 끌림(Volatility Drag)으로\n" +
+                "인한 가치 침식이 발생할 수 있습니다.\n" +
+                "포지션 정리를 검토해 주세요.",
+                urgencyText,
+                warning.getStockCode(),
+                warning.getHoldingDays(),
+                maxHoldingDays,
+                warning.getBuyDate());
+    }
+
+    /**
      * 봇 상태 알림
      */
     public void notifyBotStatus(String message, boolean isError) {
@@ -274,6 +303,56 @@ public class NotificationService {
                     coinProfitSign, formatNumber(coin.getProfitLoss()),
                     coinProfitSign, coin.getProfitRate().setScale(2, RoundingMode.HALF_UP)
                 ));
+            }
+        }
+
+        // ⭐⭐⭐ [Day 63 추가] 주식 섹션 (stockBuyCount가 null이면 주식 리포트가 병합되지 않은 것이므로 기존과 동일하게 스킵) ⭐⭐⭐
+        if (report.getStockBuyCount() != null) {
+            String stockProfitEmoji = report.getStockTotalProfit().compareTo(BigDecimal.ZERO) >= 0 ? "📈" : "📉";
+            String stockProfitSign = report.getStockTotalProfit().compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
+
+            sb.append(String.format("""
+                
+                ━━━━━━━━━━━━━━━━━━━━━━
+                
+                📊 **[주식] 거래 요약**
+                • 매수: %d건 (%s원)
+                • 매도: %d건 (%s원)
+                
+                %s **[주식] 손익 현황**
+                • 실현 손익: %s%s원
+                • 평가 손익: %s%s원
+                • **총 손익**: %s%s원 (%s%s%%)
+                
+                📦 **[주식] 보유 현황**
+                • 보유 종목: %d종목
+                • 총 평가액: %s원
+                • 투자 원금: %s원
+                
+                """,
+                report.getStockBuyCount(), formatNumber(report.getStockTotalBuyAmount()),
+                report.getStockSellCount(), formatNumber(report.getStockTotalSellAmount()),
+                stockProfitEmoji,
+                stockProfitSign, formatNumber(report.getStockRealizedProfit()),
+                report.getStockUnrealizedProfit().compareTo(BigDecimal.ZERO) >= 0 ? "+" : "",
+                formatNumber(report.getStockUnrealizedProfit()),
+                stockProfitSign, formatNumber(report.getStockTotalProfit()),
+                stockProfitSign, report.getStockProfitRate().setScale(2, RoundingMode.HALF_UP),
+                report.getStockHoldingCount(),
+                formatNumber(report.getStockTotalHoldingValue()),
+                formatNumber(report.getStockTotalInvestment())
+            ));
+
+            if (report.getStockSummaries() != null && !report.getStockSummaries().isEmpty()) {
+                sb.append("📋 **[주식] 종목별 현황**\n");
+                for (DailyReportDTO.StockSummary stock : report.getStockSummaries()) {
+                    String stockSign = stock.getProfitLoss().compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
+                    sb.append(String.format("• %s: %s%s원 (%s%s%%)\n",
+                        stock.getStockCode(),
+                        stockSign, formatNumber(stock.getProfitLoss()),
+                        stockSign, stock.getProfitRate().setScale(2, RoundingMode.HALF_UP)
+                    ));
+                }
             }
         }
         

@@ -21,10 +21,13 @@
               type="info"
               variant="tonal"
               density="compact"
-              icon="mdi-information"
-              class="h-100 d-flex align-center"
+              :icon="false"
+              class="h-100"
             >
-              <span class="text-body-2">이 페이지의 봇 ON/OFF는 <strong>주식 자동매매 전용</strong>이며, 코인 자동매매 봇과 독립적으로 동작합니다.</span>
+              <div class="d-flex align-center" style="gap: 8px;">
+                <v-icon icon="mdi-information" size="20" />
+                <span class="text-body-2">이 페이지의 봇 ON/OFF는 <strong>주식 자동매매 전용</strong>이며, 코인 자동매매 봇과 독립적으로 동작합니다.</span>
+              </div>
             </v-alert>
           </v-col>
           <v-col cols="12" md="4">
@@ -849,7 +852,6 @@ const helpContents = {
         <span class="help-desc">AI 뉴스 분석에 따른 가중치 변경 알림 샘플</span></p>
       <p class="help-note">
         💡 <strong>현재 안내</strong><br/>
-        주식 전용 알림 템플릿은 Day 63에 정식 추가될 예정이며, 현재는 코인용 템플릿으로 발송됩니다.<br/>
         프로필 설정에서 이메일을 먼저 등록해야 테스트가 가능합니다.
       </p>
     `
@@ -871,7 +873,6 @@ const helpContents = {
         <span class="help-desc">AI 뉴스 분석에 따른 가중치 변경 알림 DM 샘플</span></p>
       <p class="help-note">
         💡 <strong>현재 안내</strong><br/>
-        주식 전용 DM 템플릿은 Day 63에 정식 추가될 예정이며, 현재는 코인용 템플릿으로 발송됩니다.<br/>
         Discord User ID는 개발자 모드를 켜고 본인 프로필에서 "ID 복사"로 확인할 수 있습니다.
       </p>
     `
@@ -1334,12 +1335,10 @@ const resetDailyCache = async () => {
 }
 
 // 이메일 테스트 발송
-// ⭐⭐⭐ [Day 61 후속 수정] 폴백 로직 제거 → 처음부터 코인용 엔드포인트로 직접 호출 ⭐⭐⭐
-// 이유:
-//   - 백엔드에 /notifications/email/test-stock-* 엔드포인트가 아직 미구현 → 500 에러 발생
-//   - GlobalExceptionHandler가 NoHandlerFoundException 활성화 안 되어 있어 404 폴백 동작 X
-//   - Day 63 작업으로 주식 전용 알림 엔드포인트 추가 예정. 그때 다시 주식용으로 변경
-//   - weight 항목은 AI 뉴스 가중치 기능으로, Phase 2 신규 항목 (Phase2_Implementation_Plan에 추가)
+// ⭐⭐⭐ [Day 63 백로그 완료] 코인용 엔드포인트 임시 호출 → 주식 전용 엔드포인트로 교체 ⭐⭐⭐
+// 이유: 백엔드에 /notifications/email/test-stock-* 엔드포인트가 Day 63에서 추가됨에 따라
+//       더 이상 코인용 엔드포인트를 빌려 쓸 필요가 없어짐 (holding 케이스의 매수-테스트 폴백도 제거).
+//       weight 항목은 AI 뉴스 가중치 기능으로, 코인/주식 공용이라 기존 엔드포인트 그대로 사용.
 const sendEmailTest = async (type: 'buy' | 'sell' | 'report' | 'holding' | 'weight') => {
   emailTestLoading.value[type] = true
   try {
@@ -1348,30 +1347,29 @@ const sendEmailTest = async (type: 'buy' | 'sell' | 'report' | 'holding' | 'weig
 
     switch (type) {
       case 'buy':
-        endpoint = '/notifications/email/test-buy'
-        successMsg = '매수 체결 테스트 이메일이 발송되었습니다. (현재는 코인용 템플릿)'
+        endpoint = '/notifications/email/test-stock-buy'
+        successMsg = '주식 매수 체결 테스트 이메일이 발송되었습니다.'
         break
       case 'sell':
-        endpoint = '/notifications/email/test-sell'
-        successMsg = '매도 체결 테스트 이메일이 발송되었습니다. (현재는 코인용 템플릿)'
+        endpoint = '/notifications/email/test-stock-sell'
+        successMsg = '주식 매도 체결 테스트 이메일이 발송되었습니다.'
         break
       case 'report':
-        endpoint = '/notifications/email/daily-report'
-        successMsg = '일일 리포트 테스트 이메일이 발송되었습니다. (현재는 코인용 템플릿)'
+        endpoint = '/notifications/email/test-stock-daily-report'
+        successMsg = '주식 일일 리포트 테스트 이메일이 발송되었습니다.'
         break
       case 'holding':
-        // 보유기간 경고 이메일은 Day 63에서 정식 추가 예정 → 현재는 매수 테스트로 대체
-        endpoint = '/notifications/email/test-buy'
-        successMsg = '보유기간 경고 알림 (Day 63에서 정식 추가 예정 - 현재는 임시 발송)'
+        endpoint = '/notifications/email/test-stock-holding-warning'
+        successMsg = '레버리지 ETF 보유기간 경고 테스트 이메일이 발송되었습니다.'
         break
       case 'weight':
         endpoint = '/notifications/email/test-weight-change'
-        successMsg = 'AI 뉴스 가중치 변경 테스트 이메일이 발송되었습니다. (현재는 코인용 템플릿)'
+        successMsg = 'AI 뉴스 가중치 변경 테스트 이메일이 발송되었습니다.'
         break
     }
 
     await api.post(endpoint)
-    showSnackbar(successMsg, type === 'holding' ? 'info' : 'success')
+    showSnackbar(successMsg, 'success')
   } catch (error) {
     console.error('[주식봇 모니터] 이메일 테스트 발송 실패:', error)
     showSnackbar('이메일 발송에 실패했습니다.', 'error')
@@ -1381,8 +1379,8 @@ const sendEmailTest = async (type: 'buy' | 'sell' | 'report' | 'holding' | 'weig
 }
 
 // 디스코드 테스트 발송
-// ⭐⭐⭐ [Day 61 후속 수정] 폴백 제거 → 처음부터 코인용 엔드포인트로 직접 호출 ⭐⭐⭐
-// (이메일과 동일한 사유 - Day 63에서 주식용 정식 추가 예정)
+// ⭐⭐⭐ [Day 63 백로그 완료] 코인용 엔드포인트 임시 호출 → 주식 전용 엔드포인트로 교체 ⭐⭐⭐
+// (이메일과 동일한 사유 - weight 항목은 코인/주식 공용이라 기존 엔드포인트 그대로 사용)
 const sendDiscordTest = async (type: 'buy' | 'sell' | 'stoploss' | 'report' | 'weight') => {
   discordTestLoading.value[type] = true
   try {
@@ -1391,24 +1389,24 @@ const sendDiscordTest = async (type: 'buy' | 'sell' | 'stoploss' | 'report' | 'w
 
     switch (type) {
       case 'buy':
-        endpoint = '/notifications/discord/test-buy'
-        successMsg = '매수 알림 테스트 DM이 발송되었습니다. (현재는 코인용 템플릿)'
+        endpoint = '/notifications/discord/test-stock-buy'
+        successMsg = '주식 매수 알림 테스트 DM이 발송되었습니다.'
         break
       case 'sell':
-        endpoint = '/notifications/discord/test-sell'
-        successMsg = '매도 알림 테스트 DM이 발송되었습니다. (현재는 코인용 템플릿)'
+        endpoint = '/notifications/discord/test-stock-sell'
+        successMsg = '주식 매도 알림 테스트 DM이 발송되었습니다.'
         break
       case 'stoploss':
-        endpoint = '/notifications/discord/test-stoploss'
-        successMsg = '손절매 알림 테스트 DM이 발송되었습니다. (현재는 코인용 템플릿)'
+        endpoint = '/notifications/discord/test-stock-stoploss'
+        successMsg = '주식 손절매 알림 테스트 DM이 발송되었습니다.'
         break
       case 'report':
-        endpoint = '/notifications/discord/test-daily-report'
-        successMsg = '일일 리포트 테스트 DM이 발송되었습니다. (현재는 코인용 템플릿)'
+        endpoint = '/notifications/discord/test-stock-daily-report'
+        successMsg = '주식 일일 리포트 테스트 DM이 발송되었습니다.'
         break
       case 'weight':
         endpoint = '/notifications/discord/test-weight-change'
-        successMsg = 'AI 뉴스 가중치 변경 테스트 DM이 발송되었습니다. (현재는 코인용 템플릿)'
+        successMsg = 'AI 뉴스 가중치 변경 테스트 DM이 발송되었습니다.'
         break
     }
 

@@ -80,6 +80,7 @@
                         variant="flat"
                         class="ml-2 text-indigo-darken-2 custom-search-btn"
                         @click="applyCustomPeriod"
+                        :loading="loadingProfit"
                       >
                         조회
                       </v-btn>
@@ -95,11 +96,19 @@
                             <div class="text-caption text-grey-darken-1 mb-1">
                               {{ getPeriodLabel(selectedPeriod) }} 수익
                             </div>
-                            <div class="text-h4 font-weight-bold text-teal-darken-2">
-                              +{{ formatCurrency(0) }}
+                            <div
+                              class="text-h4 font-weight-bold"
+                              :class="currentPeriodProfit >= 0 ? 'text-teal-darken-2' : 'text-red-darken-2'"
+                            >
+                              {{ currentPeriodProfit >= 0 ? '+' : '' }}{{ formatCurrency(currentPeriodProfit) }}
                             </div>
-                            <v-chip color="teal" size="small" variant="flat" class="mt-2">
-                              +0.00%
+                            <v-chip
+                              :color="currentPeriodProfitPct >= 0 ? 'teal' : 'red'"
+                              size="small"
+                              variant="flat"
+                              class="mt-2"
+                            >
+                              {{ currentPeriodProfitPct >= 0 ? '+' : '' }}{{ currentPeriodProfitPct.toFixed(2) }}%
                             </v-chip>
                           </v-col>
 
@@ -109,37 +118,37 @@
                             <v-row dense>
                               <v-col cols="6" sm="3">
                                 <div class="text-caption text-grey-darken-1">거래 건수</div>
-                                <div class="text-h6 font-weight-medium">0건</div>
+                                <div class="text-h6 font-weight-medium">{{ periodDetail?.tradeCount || 0 }}건</div>
                               </v-col>
                               <v-col cols="6" sm="3">
                                 <div class="text-caption text-grey-darken-1">익절 / 손절</div>
                                 <div class="text-body-1">
-                                  <span class="text-teal font-weight-medium">0</span>
+                                  <span class="text-teal font-weight-medium">{{ periodDetail?.winCount || 0 }}</span>
                                   <span class="mx-1">/</span>
-                                  <span class="text-red font-weight-medium">0</span>
+                                  <span class="text-red font-weight-medium">{{ periodDetail?.loseCount || 0 }}</span>
                                 </div>
                               </v-col>
                               <v-col cols="6" sm="3">
                                 <div class="text-caption text-grey-darken-1">승률</div>
-                                <div class="text-h6 font-weight-medium">0.0%</div>
+                                <div class="text-h6 font-weight-medium">{{ (periodDetail?.winRate || 0).toFixed(1) }}%</div>
                               </v-col>
                               <v-col cols="6" sm="3">
                                 <div class="text-caption text-grey-darken-1">건당 평균</div>
-                                <div class="text-body-1 font-weight-medium text-teal">
-                                  {{ formatCurrency(0) }}
+                                <div class="text-body-1 font-weight-medium" :class="(periodDetail?.avgProfit || 0) >= 0 ? 'text-teal' : 'text-red'">
+                                  {{ formatCurrency(periodDetail?.avgProfit || 0) }}
                                 </div>
                               </v-col>
                               <v-col cols="6" sm="3" class="mt-2">
                                 <div class="text-caption text-grey-darken-1">최대 수익</div>
-                                <div class="text-body-1 text-teal font-weight-medium">{{ formatCurrency(0) }}</div>
+                                <div class="text-body-1 text-teal font-weight-medium">{{ formatCurrency(periodDetail?.maxProfit || 0) }}</div>
                               </v-col>
                               <v-col cols="6" sm="3" class="mt-2">
                                 <div class="text-caption text-grey-darken-1">최대 손실</div>
-                                <div class="text-body-1 text-red font-weight-medium">{{ formatCurrency(0) }}</div>
+                                <div class="text-body-1 text-red font-weight-medium">{{ formatCurrency(periodDetail?.maxLoss || 0) }}</div>
                               </v-col>
                               <v-col cols="12" sm="6" class="mt-2">
                                 <div class="text-caption text-grey-darken-1">조회 기간</div>
-                                <div class="text-body-2">- ~ -</div>
+                                <div class="text-body-2">{{ periodDetail?.startDate || '-' }} ~ {{ periodDetail?.endDate || '-' }}</div>
                               </v-col>
                             </v-row>
                           </v-col>
@@ -158,7 +167,8 @@
                           variant="flat"
                           color="grey-lighten-3"
                           class="text-grey-darken-2 mr-2 snapshot-btn"
-                          disabled
+                          :loading="snapshotRefreshing"
+                          @click="refreshSnapshot"
                         >
                           <v-icon size="16" class="mr-1">mdi-database-refresh</v-icon>
                           스냅샷 갱신
@@ -182,11 +192,125 @@
                       </v-card-title>
 
                       <v-card-text class="pa-4">
-                        <div class="text-center py-8 text-grey-darken-2">
+                        <div v-if="assetHistory.length > 0" class="chart-container">
+                          <div
+                            class="chart-wrapper-backtest"
+                            :class="{ 'scroll-mode': chartViewMode === 'scroll' }"
+                            :style="chartViewMode === 'scroll' ? { width: dynamicChartWidth + 'px' } : {}"
+                            @mousemove="handleChartHover"
+                            @mouseleave="hoveredIndex = -1"
+                            @touchstart.prevent="handleChartTouch"
+                            @touchmove.prevent="handleChartTouch"
+                            @touchend="hoveredIndex = -1"
+                          >
+                            <svg
+                              class="custom-chart"
+                              :viewBox="`0 0 ${chartViewMode === 'scroll' ? dynamicChartWidth : svgWidth} ${svgHeight}`"
+                              preserveAspectRatio="none"
+                            >
+                              <defs>
+                                <linearGradient id="stockProfitAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                  <stop offset="0%" style="stop-color:#42A5F5;stop-opacity:0.6" />
+                                  <stop offset="100%" style="stop-color:#42A5F5;stop-opacity:0.1" />
+                                </linearGradient>
+                              </defs>
+
+                              <path :d="areaPath" fill="url(#stockProfitAreaGradient)" />
+
+                              <rect
+                                v-for="(point, index) in chartPoints"
+                                :key="'bar-' + index"
+                                :x="point.x - barWidth / 2"
+                                :y="getYPosition(point.depositAmount)"
+                                :width="barWidth"
+                                :height="Math.max(0, (svgHeight - svgPadding) - getYPosition(point.depositAmount))"
+                                fill="#FF9800"
+                                :opacity="hoveredIndex === index ? 0.6 : 0.35"
+                                rx="1"
+                              />
+
+                              <line
+                                :x1="svgPadding" :y1="getYPosition(maxEvaluation)"
+                                :x2="effectiveWidth - (chartViewMode === 'scroll' ? scrollPaddingRight : svgPaddingRight)" :y2="getYPosition(maxEvaluation)"
+                                stroke="#4CAF50" stroke-width="2" stroke-dasharray="6,4"
+                              />
+                              <line
+                                :x1="svgPadding" :y1="getYPosition(minEvaluation)"
+                                :x2="effectiveWidth - (chartViewMode === 'scroll' ? scrollPaddingRight : svgPaddingRight)" :y2="getYPosition(minEvaluation)"
+                                stroke="#F44336" stroke-width="2" stroke-dasharray="6,4"
+                              />
+
+                              <path :d="depositLinePath" fill="none" stroke="#FF9800" stroke-width="2" stroke-dasharray="6,4" />
+                              <path :d="linePath" fill="none" stroke="#1976D2" stroke-width="2.5" stroke-dasharray="8,4" />
+
+                              <circle
+                                v-for="(point, index) in chartPoints"
+                                :key="'eval-' + index"
+                                :cx="point.x" :cy="point.y"
+                                :r="hoveredIndex === index ? 8 : 4"
+                                :fill="getPointColor(point.evaluationAmount)"
+                                stroke="white" stroke-width="2" class="chart-point"
+                              />
+
+                              <circle
+                                v-for="(point, index) in chartPoints"
+                                :key="'dep-' + index"
+                                :cx="point.x" :cy="getYPosition(point.depositAmount)"
+                                :r="hoveredIndex === index ? 6 : 3"
+                                fill="#FF9800" stroke="white" stroke-width="1.5" class="chart-point"
+                              />
+                            </svg>
+
+                            <div class="chart-labels-backtest">
+                              <span class="chart-label label-max" :style="{ top: getAdjustedLabelPosition('max') + '%' }">
+                                최고 평가 금액 : {{ formatCurrency(maxEvaluation) }}
+                              </span>
+                              <span class="chart-label label-evaluation" :style="{ top: getAdjustedLabelPosition('evaluation') + '%' }">
+                                평가금액 추세 : {{ formatCurrency(latestEvaluationAmount) }}
+                              </span>
+                              <span class="chart-label label-deposit" :style="{ top: getAdjustedLabelPosition('deposit') + '%' }">
+                                불입금액 추세 : {{ formatCurrency(latestDepositAmount) }}
+                              </span>
+                              <span class="chart-label label-min" :style="{ top: getAdjustedLabelPosition('min') + '%' }">
+                                최저 평가 금액 : {{ formatCurrency(minEvaluation) }}
+                              </span>
+                              <span class="chart-label label-floor" :style="{ top: getAdjustedLabelPosition('floor') + '%' }">
+                                차트 바닥 : {{ formatCurrency(minBalance) }}
+                              </span>
+                            </div>
+
+                            <div
+                              v-if="hoveredIndex >= 0 && hoveredData"
+                              class="chart-tooltip-backtest"
+                              :style="{
+                                left: (tooltipX > chartWrapperWidth * 0.5 ? tooltipX - 10 : tooltipX + 10) + 'px',
+                                top: Math.max(60, Math.min(svgHeight - 80, tooltipY)) + 'px',
+                                transform: tooltipX > chartWrapperWidth * 0.5 ? 'translateX(-100%) translateY(-50%)' : 'translateY(-50%)'
+                              }"
+                            >
+                              <div class="font-weight-bold mb-1">{{ hoveredData.date }}</div>
+                              <div style="color: #64B5F6;">평가금액: {{ formatCurrency(hoveredData.evaluationAmount || hoveredData.balance) }}</div>
+                              <div style="color: #FFB74D;">불입금액: {{ formatCurrency(hoveredData.depositAmount || initialAsset) }}</div>
+                              <div :class="(hoveredData.profitRate || 0) >= 0 ? 'text-success' : 'text-error'">
+                                수익률: {{ (hoveredData.profitRate || 0) >= 0 ? '+' : '' }}{{ Number(hoveredData.profitRate || 0).toFixed(2) }}%
+                              </div>
+                              <div :class="(hoveredData.profitAmount || 0) >= 0 ? 'text-success' : 'text-error'">
+                                수익금액: {{ (hoveredData.profitAmount || 0) >= 0 ? '+' : '' }}{{ formatCurrency(hoveredData.profitAmount || 0) }}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="d-flex justify-space-between text-caption text-grey mt-2 px-4">
+                            <span>{{ assetHistory[0]?.date || '' }}</span>
+                            <span>{{ assetHistory[assetHistory.length - 1]?.date || '' }}</span>
+                          </div>
+                        </div>
+
+                        <div v-else class="text-center py-8 text-grey-darken-2">
                           <v-icon size="48" class="mb-2">mdi-chart-line-variant</v-icon>
                           <div>거래 이력이 없습니다</div>
                           <div class="text-caption text-grey-darken-1 mt-1">
-                            ⏳ <strong>Day 63 (StockProfitService)</strong>에서 실제 데이터로 활성화됩니다
+                            매수/매도 거래가 발생하면 자산 변동 추이가 표시됩니다
                           </div>
                         </div>
                       </v-card-text>
@@ -202,28 +326,92 @@
                     <HelpButton
                       use-dialog
                       :dialog-title="helpContents.stockProfit.title"
-                      :dialog-content="helpContents.stockProfit.content"
+                     :dialog-content="helpContents.stockProfit.content"
                     />
                     <v-spacer />
-                    <v-btn color="white" variant="text" disabled size="small">
+                    <v-btn
+                      color="white"
+                      variant="text"
+                      @click="loadStockProfits"
+                      :loading="loadingStock"
+                      size="small"
+                    >
                       <v-icon start>mdi-refresh</v-icon>
                       새로고침
                     </v-btn>
                   </v-card-title>
 
-                  <v-card-text class="pa-0">
+                  <<v-card-text class="pa-0">
                     <v-data-table
                       :headers="stockProfitHeaders"
-                      :items="[]"
+                      :items="stockProfits"
+                      :loading="loadingStock"
                       items-per-page="10"
                       class="stock-profit-table"
                     >
+                      <template v-slot:item.stockCode="{ item }">
+                        <div class="d-flex align-center">
+                          <strong>{{ item.stockCode }}</strong>
+                          <span class="text-caption text-grey ml-2">{{ item.stockName }}</span>
+                        </div>
+                      </template>
+
+                      <template v-slot:item.totalProfit="{ item }">
+                        <span
+                          class="font-weight-bold"
+                          :class="item.totalProfit >= 0 ? 'text-teal-darken-2' : 'text-red-darken-2'"
+                        >
+                          {{ formatCurrency(item.totalProfit) }}
+                        </span>
+                      </template>
+
+                      <template v-slot:item.profitPct="{ item }">
+                        <v-chip
+                          :color="item.profitPct >= 0 ? 'teal' : 'red'"
+                          size="small"
+                          variant="flat"
+                        >
+                          {{ item.profitPct >= 0 ? '+' : '' }}{{ item.profitPct?.toFixed(2) }}%
+                        </v-chip>
+                      </template>
+
+                      <template v-slot:item.winRate="{ item }">
+                        <div>
+                          <span class="text-teal">{{ item.winCount }}</span>
+                          <span class="mx-1">/</span>
+                          <span class="text-red">{{ item.loseCount }}</span>
+                          <span class="text-caption text-grey ml-1">({{ item.winRate?.toFixed(0) }}%)</span>
+                        </div>
+                      </template>
+
+                      <template v-slot:item.currentHoldingCount="{ item }">
+                        <v-chip
+                          v-if="item.currentHoldingCount > 0"
+                          color="indigo"
+                          size="small"
+                          variant="outlined"
+                        >
+                          {{ item.currentHoldingCount }}건 보유중
+                        </v-chip>
+                        <span v-else class="text-grey">-</span>
+                      </template>
+
+                      <template v-slot:item.actions="{ item }">
+                        <v-btn
+                          color="grey"
+                          size="small"
+                          @click="openStockDetailDialog(item)"
+                        >
+                          상세
+                        </v-btn>
+                      </template>
+
                       <template v-slot:no-data>
                         <div class="text-center py-6">
                           <v-icon size="40" color="grey-lighten-1" class="mb-2">mdi-chart-line-variant</v-icon>
                           <div class="text-body-2 text-grey-darken-1 mb-1">분석 데이터가 없습니다</div>
                           <div class="text-caption text-grey-darken-1">
-                            ⏳ <strong>Day 63</strong>에서 종목별 수익 분석이 활성화됩니다
+                            매도 완료된 거래가 있으면 종목별 수익이 표시됩니다
                           </div>
                         </div>
                       </template>
@@ -526,16 +714,108 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- ⭐⭐⭐ [Day 63 추가] 종목별 수익 상세 다이얼로그 (코인 coinDetailDialog 1:1 포팅) ⭐⭐⭐ -->
+    <v-dialog v-model="stockDetailDialog" max-width="700">
+      <v-card v-if="selectedStockProfit">
+        <v-card-title class="bg-teal-darken-1 text-white">
+          <v-icon class="mr-2">mdi-chart-line</v-icon>
+          {{ selectedStockProfit.stockCode }} 수익 상세
+          <span class="text-caption ml-2">({{ selectedStockProfit.stockName }})</span>
+        </v-card-title>
+        <v-card-text class="pa-4">
+          <v-row>
+            <v-col cols="6" md="4">
+              <div class="text-caption text-grey-darken-1">총 실현 수익</div>
+              <div
+                class="text-h6 font-weight-bold"
+                :class="selectedStockProfit.totalProfit >= 0 ? 'text-teal-darken-2' : 'text-red-darken-2'"
+              >
+                {{ formatCurrency(selectedStockProfit.totalProfit) }}
+              </div>
+            </v-col>
+            <v-col cols="6" md="4">
+              <div class="text-caption text-grey-darken-1">수익률</div>
+              <div class="text-h6 font-weight-bold" :class="selectedStockProfit.profitPct >= 0 ? 'text-teal' : 'text-red'">
+                {{ selectedStockProfit.profitPct >= 0 ? '+' : '' }}{{ selectedStockProfit.profitPct?.toFixed(2) }}%
+              </div>
+            </v-col>
+            <v-col cols="6" md="4">
+              <div class="text-caption text-grey-darken-1">총 거래 건수</div>
+              <div class="text-h6 font-weight-bold">{{ selectedStockProfit.totalTradeCount }}건</div>
+            </v-col>
+          </v-row>
+
+          <v-divider class="my-4" />
+
+          <v-row>
+            <v-col cols="6" md="3">
+              <div class="text-caption text-grey-darken-1">익절</div>
+              <div class="text-body-1 font-weight-medium text-teal">{{ selectedStockProfit.winCount }}건</div>
+            </v-col>
+            <v-col cols="6" md="3">
+              <div class="text-caption text-grey-darken-1">손절</div>
+              <div class="text-body-1 font-weight-medium text-red">{{ selectedStockProfit.loseCount }}건</div>
+            </v-col>
+            <v-col cols="6" md="3">
+              <div class="text-caption text-grey-darken-1">승률</div>
+              <div class="text-body-1 font-weight-medium">{{ selectedStockProfit.winRate?.toFixed(1) }}%</div>
+            </v-col>
+            <v-col cols="6" md="3">
+              <div class="text-caption text-grey-darken-1">현재 보유</div>
+              <div class="text-body-1 font-weight-medium">{{ selectedStockProfit.currentHoldingCount }}건</div>
+            </v-col>
+          </v-row>
+
+          <v-divider class="my-4" />
+
+          <v-row>
+            <v-col cols="6">
+              <div class="text-caption text-grey-darken-1">총 매수 금액</div>
+              <div class="text-body-1">{{ formatCurrency(selectedStockProfit.totalBuyAmount) }}</div>
+            </v-col>
+            <v-col cols="6">
+              <div class="text-caption text-grey-darken-1">총 매도 금액</div>
+              <div class="text-body-1">{{ formatCurrency(selectedStockProfit.totalSellAmount) }}</div>
+            </v-col>
+            <v-col cols="6">
+              <div class="text-caption text-grey-darken-1">평균 매수가</div>
+              <div class="text-body-1">{{ formatCurrency(selectedStockProfit.avgBuyPrice) }}</div>
+            </v-col>
+            <v-col cols="6">
+              <div class="text-caption text-grey-darken-1">평균 매도가</div>
+              <div class="text-body-1">{{ formatCurrency(selectedStockProfit.avgSellPrice) }}</div>
+            </v-col>
+            <v-col cols="6">
+              <div class="text-caption text-grey-darken-1">최대 수익 거래</div>
+              <div class="text-body-1 text-teal font-weight-medium">{{ formatCurrency(selectedStockProfit.maxProfit) }}</div>
+            </v-col>
+            <v-col cols="6">
+              <div class="text-caption text-grey-darken-1">최대 손실 거래</div>
+              <div class="text-body-1 text-red font-weight-medium">{{ formatCurrency(selectedStockProfit.maxLoss) }}</div>
+            </v-col>
+          </v-row>
+
+          <div v-if="selectedStockProfit.lastTradeAt" class="mt-4 text-caption text-grey">
+            마지막 거래: {{ formatDateTime(selectedStockProfit.lastTradeAt) }}
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn color="teal-darken-1" variant="flat" class="text-white" @click="stockDetailDialog = false">닫기</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-app>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import TheHeader from '@/components/TheHeader.vue'
 import TheSidebar from '@/components/TheSidebar.vue'
 import HelpButton from '@/components/HelpButton.vue'
-import { stockTransactionApi } from '@/api/stock'
+import { stockTransactionApi, stockProfitApi } from '@/api/stock'
 
 const router = useRouter()
 const sidebarRef = ref()
@@ -556,6 +836,44 @@ interface Holding {
   highestPrice: number | null
   exchangeRate: number | null
   createdAt: string | null
+}
+
+// ⭐⭐⭐ [Day 63 추가] 종목별 수익 분석 DTO (백엔드 StockProfitDTO와 1:1 대응) ⭐⭐⭐
+interface StockProfit {
+  stockCode: string
+  stockName: string
+  totalProfit: number
+  profitPct: number
+  totalTradeCount: number
+  winCount: number
+  loseCount: number
+  winRate: number
+  totalBuyAmount: number
+  totalSellAmount: number
+  avgBuyPrice: number
+  avgSellPrice: number
+  maxProfit: number
+  maxLoss: number
+  currentHoldingCount: number
+  currentHoldingAmount: number
+  unrealizedProfit: number
+  lastTradeAt: string | null
+}
+
+// ⭐⭐⭐ [Day 63 추가] 기간별 수익 상세 DTO (백엔드 StockPeriodProfitDTO와 1:1 대응) ⭐⭐⭐
+interface PeriodProfit {
+  period: string
+  startDate: string
+  endDate: string
+  totalProfit: number
+  profitPct: number
+  tradeCount: number
+  winCount: number
+  loseCount: number
+  winRate: number
+  avgProfit: number
+  maxProfit: number
+  maxLoss: number
 }
 
 const profitTab = ref('period')
@@ -580,6 +898,39 @@ const stats = ref({
   hasCurrentPrice: false
 })
 
+// ⭐⭐⭐ [Day 63 추가] 기간별 수익 상태 ⭐⭐⭐
+const loadingProfit = ref(false)
+const profitSummary = ref({
+  todayProfit: 0, todayProfitPct: 0, todayTradeCount: 0,
+  monthProfit: 0, monthProfitPct: 0, monthTradeCount: 0,
+  yearProfit: 0, yearProfitPct: 0, yearTradeCount: 0,
+  oneYearProfit: 0, oneYearProfitPct: 0, oneYearTradeCount: 0,
+  totalProfit: 0, totalProfitPct: 0, totalTradeCount: 0,
+  initialInvestment: 0
+})
+const periodDetail = ref<PeriodProfit | null>(null)
+
+// ⭐⭐⭐ [Day 63 추가] 종목별 수익 상태 ⭐⭐⭐
+const loadingStock = ref(false)
+const stockProfits = ref<StockProfit[]>([])
+const stockDetailDialog = ref(false)
+const selectedStockProfit = ref<StockProfit | null>(null)
+
+// ⭐⭐⭐ [Day 63 추가] 자산 변동 차트 상태/상수 (코인 HoldingsView.vue 1:1 재사용) ⭐⭐⭐
+const assetHistory = ref<any[]>([])
+const snapshotRefreshing = ref(false)
+const initialAsset = ref(1000000)
+const hoveredIndex = ref(-1)
+const tooltipX = ref(0)
+const tooltipY = ref(0)
+const chartWrapperWidth = ref(800)
+
+const svgWidth = 800
+const svgHeight = 350
+const svgPadding = 30
+const svgPaddingRight = 120
+const scrollPaddingRight = 220
+
 // ⭐ 코인 페이지 holdingHeaders 그대로 (보유일 컬럼 제거하여 10개로 통일)
 const holdingHeaders = [
   { title: '거래 ID', key: 'transactionId', align: 'center' as const },
@@ -594,7 +945,7 @@ const holdingHeaders = [
   { title: '액션', key: 'actions', align: 'center' as const, sortable: false }
 ]
 
-// 주식별 수익 분석 헤더 (Day 63 활성화 예정)
+// 주식별 수익 분석 헤더
 const stockProfitHeaders = [
   { title: '종목', key: 'stockCode', align: 'start' as const },
   { title: '실현 수익', key: 'totalProfit', align: 'end' as const },
@@ -618,7 +969,7 @@ const helpContents = {
         <p>• <strong>1년</strong>: 최근 365일간</p>
         <p>• <strong>누적</strong>: 첫 거래~현재까지 전체</p>
         <p style="margin-top: 8px;"><strong>📊 주요 지표:</strong> 총 수익, 거래 건수, 익절/손절, 승률, 건당 평균, 최대 수익/손실</p>
-        <p style="margin-top: 8px;"><strong>⏳ Day 63:</strong> StockProfitService에서 실제 데이터로 활성화됩니다.</p>
+        <p style="margin-top: 8px;"><strong>💡 팁:</strong> 사용자 지정 기간으로 원하는 기간을 분석할 수 있습니다.</p>
       </div>
     `
   },
@@ -632,7 +983,7 @@ const helpContents = {
         <p>• <strong>수익률</strong>: 투자 대비 수익 비율</p>
         <p>• <strong>익절/손절</strong>: 수익 거래 / 손실 거래</p>
         <p>• <strong>승률</strong>: 익절 거래 / 전체 거래 × 100%</p>
-        <p style="margin-top: 8px;"><strong>⏳ Day 63:</strong> 종목별 수익 통계가 활성화됩니다.</p>
+        <p style="margin-top: 8px;"><strong>💡 팁:</strong> "상세" 버튼으로 종목별 세부 통계를 확인할 수 있습니다.</p>
       </div>
     `
   },
@@ -659,6 +1010,117 @@ const sortedHoldings = computed(() => {
   return list
 })
 
+// ⭐⭐⭐ [Day 63 추가] 기간별 수익 computed (코인 HoldingsView.vue 1:1 재사용) ⭐⭐⭐
+const currentPeriodProfit = computed(() => {
+  switch (selectedPeriod.value) {
+    case 'today': return profitSummary.value.todayProfit
+    case 'month': return profitSummary.value.monthProfit
+    case 'year': return profitSummary.value.yearProfit
+    case 'oneYear': return profitSummary.value.oneYearProfit
+    case 'total': return profitSummary.value.totalProfit
+    default: return periodDetail.value?.totalProfit || 0
+  }
+})
+
+const currentPeriodProfitPct = computed(() => {
+  switch (selectedPeriod.value) {
+    case 'today': return profitSummary.value.todayProfitPct
+    case 'month': return profitSummary.value.monthProfitPct
+    case 'year': return profitSummary.value.yearProfitPct
+    case 'oneYear': return profitSummary.value.oneYearProfitPct
+    case 'total': return profitSummary.value.totalProfitPct
+    default: return periodDetail.value?.profitPct || 0
+  }
+})
+
+// ⭐⭐⭐ [Day 63 추가] 자산 변동 차트 computed (코인 HoldingsView.vue 1:1 재사용) ⭐⭐⭐
+const effectiveWidth = computed(() => chartViewMode.value === 'scroll' ? dynamicChartWidth.value : svgWidth)
+
+const dynamicChartWidth = computed(() => {
+  const pointCount = assetHistory.value.length
+  return Math.max(svgWidth, pointCount * 25 + svgPadding + scrollPaddingRight)
+})
+
+const maxBalance = computed(() => {
+  if (!assetHistory.value.length) return initialAsset.value
+  const maxEval = Math.max(...assetHistory.value.map(d => d.evaluationAmount || d.balance))
+  const maxDeposit = Math.max(...assetHistory.value.map(d => d.depositAmount || initialAsset.value))
+  return Math.max(maxEval, maxDeposit)
+})
+
+const minBalance = computed(() => {
+  if (!assetHistory.value.length) return 0
+  const minEval = Math.min(...assetHistory.value.map(d => d.evaluationAmount || d.balance))
+  const minDeposit = Math.min(...assetHistory.value.map(d => d.depositAmount || initialAsset.value))
+  const minValue = Math.min(minEval, minDeposit)
+  if (minValue <= 0) return 0
+  return Math.floor(minValue * 0.98)
+})
+
+const maxEvaluation = computed(() => {
+  if (!assetHistory.value.length) return initialAsset.value
+  return Math.max(...assetHistory.value.map(d => d.evaluationAmount || d.balance || 0))
+})
+
+const minEvaluation = computed(() => {
+  if (!assetHistory.value.length) return initialAsset.value
+  return Math.min(...assetHistory.value.map(d => d.evaluationAmount || d.balance || 0))
+})
+
+const latestDepositAmount = computed(() => {
+  if (!assetHistory.value.length) return initialAsset.value
+  const last = assetHistory.value[assetHistory.value.length - 1]
+  return last.depositAmount || initialAsset.value
+})
+
+const latestEvaluationAmount = computed(() => {
+  if (!assetHistory.value.length) return initialAsset.value
+  const last = assetHistory.value[assetHistory.value.length - 1]
+  return last.evaluationAmount || last.balance || initialAsset.value
+})
+
+const barWidth = computed(() => {
+  const total = assetHistory.value.length
+  if (total <= 1) return 20
+  const chartWidth = effectiveWidth.value - svgPadding - svgPaddingRight
+  return Math.max(4, Math.min(20, (chartWidth / total) * 0.6))
+})
+
+const chartPoints = computed(() => {
+  if (!assetHistory.value.length) return []
+  const total = assetHistory.value.length
+  const rightPad = chartViewMode.value === 'scroll' ? scrollPaddingRight : svgPaddingRight
+  const width = effectiveWidth.value - svgPadding - rightPad
+  return assetHistory.value.map((d, index) => ({
+    x: svgPadding + (index / (total - 1 || 1)) * width,
+    y: getYPosition(d.evaluationAmount || d.balance),
+    balance: d.evaluationAmount || d.balance || 0,
+    evaluationAmount: d.evaluationAmount || d.balance || 0,
+    depositAmount: d.depositAmount || initialAsset.value
+  }))
+})
+
+const linePath = computed(() => {
+  if (!chartPoints.value.length) return ''
+  return chartPoints.value.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
+})
+
+const depositLinePath = computed(() => {
+  if (!chartPoints.value.length) return ''
+  return chartPoints.value
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${getYPosition(p.depositAmount)}`)
+    .join(' ')
+})
+
+const areaPath = computed(() => {
+  if (!chartPoints.value.length) return ''
+  const points = chartPoints.value
+  const bottomY = svgHeight - svgPadding
+  return `M ${points[0].x} ${bottomY} L ${points.map(p => `${p.x} ${p.y}`).join(' L ')} L ${points[points.length - 1].x} ${bottomY} Z`
+})
+
+const hoveredData = computed(() => hoveredIndex.value >= 0 ? assetHistory.value[hoveredIndex.value] : null)
+
 const getPeriodLabel = (period: string) => {
   const labels: Record<string, string> = {
     today: '오늘', month: '이번달', year: '올해', oneYear: '1년', total: '누적', custom: '사용자 지정'
@@ -666,13 +1128,104 @@ const getPeriodLabel = (period: string) => {
   return labels[period] || period
 }
 
-const applyCustomPeriod = () => {
+// ⭐⭐⭐ [Day 63 변경] 안내 메시지만 표시하던 기존 로직 → 실제 API 조회로 교체 ⭐⭐⭐
+const applyCustomPeriod = async () => {
   if (!customStartDate.value || !customEndDate.value) {
     showSnackbar('시작일과 종료일을 입력해주세요', 'warning')
     return
   }
-  selectedPeriod.value = 'custom'
-  showSnackbar('Day 63에서 사용자 지정 기간 조회가 활성화됩니다.', 'info')
+
+  loadingProfit.value = true
+  try {
+    selectedPeriod.value = 'custom'
+    await loadPeriodDetail('custom')
+    await loadAssetHistoryByCustomPeriod(customStartDate.value, customEndDate.value)
+  } finally {
+    loadingProfit.value = false
+  }
+}
+
+// ⭐⭐⭐ [Day 63 추가] 차트 좌표/라벨 계산 함수 (코인 HoldingsView.vue 1:1 재사용) ⭐⭐⭐
+const getYPosition = (balance: number) => {
+  const max = maxBalance.value
+  const min = minBalance.value
+  const range = max - min || 1
+  return svgPadding + ((max - balance) / range) * (svgHeight - svgPadding * 2)
+}
+
+const getLabelPosition = (balance: number) => {
+  const max = maxBalance.value
+  const min = minBalance.value
+  const range = max - min || 1
+  const paddingPercent = (svgPadding / svgHeight) * 100
+  const usableHeight = 100 - paddingPercent * 2
+  return paddingPercent + ((max - balance) / range) * usableHeight
+}
+
+const getAdjustedLabelPosition = (type: string) => {
+  const positions = [
+    { type: 'max', value: maxEvaluation.value, raw: getLabelPosition(maxEvaluation.value) },
+    { type: 'evaluation', value: latestEvaluationAmount.value, raw: getLabelPosition(latestEvaluationAmount.value) },
+    { type: 'deposit', value: latestDepositAmount.value, raw: getLabelPosition(latestDepositAmount.value) },
+    { type: 'min', value: minEvaluation.value, raw: getLabelPosition(minEvaluation.value) },
+    { type: 'floor', value: minBalance.value, raw: getLabelPosition(minBalance.value) }
+  ]
+
+  positions.sort((a, b) => a.raw - b.raw)
+
+  const minGap = 4
+  for (let i = 1; i < positions.length; i++) {
+    if (positions[i].raw - positions[i - 1].raw < minGap) {
+      positions[i].raw = positions[i - 1].raw + minGap
+    }
+  }
+
+  const found = positions.find(p => p.type === type)
+  return found ? found.raw : 0
+}
+
+const getPointColor = (evaluationAmount: number) => {
+  const deposit = latestDepositAmount.value
+  if (evaluationAmount > deposit * 1.01) return '#4CAF50'
+  if (evaluationAmount < deposit * 0.99) return '#F44336'
+  return '#1976D2'
+}
+
+const handleChartHover = (event: MouseEvent) => {
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  const x = event.clientX - rect.left
+
+  const currentWidth = chartViewMode.value === 'scroll' ? dynamicChartWidth.value : svgWidth
+  const svgX = (x / rect.width) * currentWidth
+  const rightPad = chartViewMode.value === 'scroll' ? scrollPaddingRight : svgPaddingRight
+  const chartWidth = currentWidth - svgPadding - rightPad
+
+  const total = assetHistory.value.length
+  if (total === 0) return
+
+  const ratio = Math.max(0, Math.min(1, (svgX - svgPadding) / chartWidth))
+  const index = Math.round(ratio * (total - 1))
+  hoveredIndex.value = Math.max(0, Math.min(total - 1, index))
+  tooltipX.value = x
+  chartWrapperWidth.value = rect.width
+
+  if (chartPoints.value[hoveredIndex.value]) {
+    tooltipY.value = chartPoints.value[hoveredIndex.value].y * (rect.height / svgHeight)
+  }
+}
+
+const handleChartTouch = (event: TouchEvent) => {
+  const touch = event.touches[0]
+  if (!touch) return
+  const target = event.currentTarget as HTMLElement
+  if (!target) return
+  const syntheticEvent = {
+    clientX: touch.clientX,
+    clientY: touch.clientY,
+    currentTarget: target,
+    target: target
+  } as unknown as MouseEvent
+  handleChartHover(syntheticEvent)
 }
 
 const loadHoldings = async () => {
@@ -711,6 +1264,121 @@ const loadHoldings = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// ⭐⭐⭐ [Day 63 추가] 기간별 수익 요약 조회 ⭐⭐⭐
+const loadProfitSummary = async () => {
+  loadingProfit.value = true
+  try {
+    const response = await stockProfitApi.getSummary()
+    profitSummary.value = (response.data as any)?.data || response.data || profitSummary.value
+    initialAsset.value = profitSummary.value.initialInvestment || 1000000
+    await loadAssetHistory()
+  } catch (error: any) {
+    console.error('주식 수익 요약 조회 실패:', error)
+    showSnackbar('주식 수익 요약 조회 실패', 'error')
+  } finally {
+    loadingProfit.value = false
+  }
+}
+
+// ⭐⭐⭐ [Day 63 추가] 특정 기간 수익 상세 조회 ⭐⭐⭐
+const loadPeriodDetail = async (period: string) => {
+  try {
+    if (period === 'custom') {
+      if (!customStartDate.value || !customEndDate.value) return
+      const response = await stockProfitApi.getByRange(customStartDate.value, customEndDate.value)
+      periodDetail.value = (response.data as any)?.data || response.data || null
+      return
+    }
+    const response = await stockProfitApi.getByPeriod(period)
+    periodDetail.value = (response.data as any)?.data || response.data || null
+  } catch (error: any) {
+    console.error('주식 기간별 수익 조회 실패:', error)
+  }
+}
+
+// ⭐⭐⭐ [Day 63 추가] 자산 스냅샷 → 차트 데이터 매핑 (StockAssetSnapshotService가 이미 존재하므로
+//    코인 페이지와 달리 SOLD 거래 기반 폴백 재계산 로직 없이 스냅샷 API만 사용) ⭐⭐⭐
+const mapSnapshotsToHistory = (snapshots: any[]) => {
+  return snapshots.map((s: any) => ({
+    date: s.date,
+    balance: parseFloat(s.evaluationAmount) || 0,
+    evaluationAmount: parseFloat(s.evaluationAmount) || 0,
+    depositAmount: parseFloat(s.depositAmount) || 0,
+    profitAmount: parseFloat(s.profitAmount) || 0,
+    profitRate: parseFloat(s.profitRate) || 0
+  }))
+}
+
+const loadAssetHistory = async () => {
+  try {
+    const response = await stockProfitApi.getAssetSnapshots('all')
+    const snapshots = (response.data as any)?.data || response.data || []
+    assetHistory.value = snapshots.length > 0 ? mapSnapshotsToHistory(snapshots) : []
+  } catch (error) {
+    console.error('주식 자산 이력 조회 실패:', error)
+    assetHistory.value = []
+  }
+}
+
+const loadAssetHistoryByPeriod = async (period: string) => {
+  try {
+    let snapshotPeriod = period
+    if (period === 'today') snapshotPeriod = '7'
+    if (period === 'oneYear') snapshotPeriod = 'year'
+    if (period === 'total') snapshotPeriod = 'all'
+
+    const response = await stockProfitApi.getAssetSnapshots(snapshotPeriod)
+    const snapshots = (response.data as any)?.data || response.data || []
+    assetHistory.value = snapshots.length > 0 ? mapSnapshotsToHistory(snapshots) : []
+  } catch (error) {
+    console.error('주식 기간별 자산 이력 조회 실패:', error)
+    assetHistory.value = []
+  }
+}
+
+const loadAssetHistoryByCustomPeriod = async (startDateStr: string, endDateStr: string) => {
+  try {
+    const response = await stockProfitApi.getAssetSnapshotsByRange(startDateStr, endDateStr)
+    const snapshots = (response.data as any)?.data || response.data || []
+    assetHistory.value = snapshots.length > 0 ? mapSnapshotsToHistory(snapshots) : []
+  } catch (error) {
+    console.error('주식 사용자 지정 기간 자산 이력 조회 실패:', error)
+    assetHistory.value = []
+  }
+}
+
+const refreshSnapshot = async () => {
+  snapshotRefreshing.value = true
+  try {
+    await stockProfitApi.createSnapshot()
+    await loadAssetHistory()
+    showSnackbar('주식 자산 스냅샷이 갱신되었습니다.', 'success')
+  } catch (error: any) {
+    showSnackbar(error.response?.data?.message || '스냅샷 갱신에 실패했습니다.', 'error')
+  } finally {
+    snapshotRefreshing.value = false
+  }
+}
+
+// ⭐⭐⭐ [Day 63 추가] 종목별 수익 분석 조회 ⭐⭐⭐
+const loadStockProfits = async () => {
+  loadingStock.value = true
+  try {
+    const response = await stockProfitApi.getByStock()
+    stockProfits.value = (response.data as any)?.data || response.data || []
+  } catch (error: any) {
+    console.error('종목별 수익 조회 실패:', error)
+    showSnackbar('종목별 수익 조회 실패', 'error')
+  } finally {
+    loadingStock.value = false
+  }
+}
+
+const openStockDetailDialog = (item: StockProfit) => {
+  selectedStockProfit.value = item
+  stockDetailDialog.value = true
 }
 
 const openSellDialog = (h: Holding) => {
@@ -754,8 +1422,25 @@ const showSnackbar = (message: string, color: string) => {
   snackbar.value = { show: true, message, color }
 }
 
+// ⭐⭐⭐ [Day 63 추가] 기간 선택 변경 감지 - 차트도 함께 갱신 ⭐⭐⭐
+watch(selectedPeriod, async (newPeriod) => {
+  if (newPeriod !== 'custom') {
+    await loadPeriodDetail(newPeriod)
+    await loadAssetHistoryByPeriod(newPeriod)
+  }
+})
+
+// ⭐⭐⭐ [Day 63 추가] 탭 변경 시 종목별 수익 데이터 최초 1회 로드 ⭐⭐⭐
+watch(profitTab, (newTab) => {
+  if (newTab === 'stock' && stockProfits.value.length === 0) {
+    loadStockProfits()
+  }
+})
+
 onMounted(async () => {
   await loadHoldings()
+  await loadProfitSummary()
+  await loadPeriodDetail('total')
 })
 </script>
 
@@ -819,6 +1504,76 @@ onMounted(async () => {
 }
 
 /* 텍스트 컬러 */
+/* ⭐⭐⭐ [Day 63 추가] 자산 변동 차트 스타일 (코인 HoldingsView.vue verbatim 포팅) ⭐⭐⭐ */
+.chart-container {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.chart-wrapper-backtest {
+  position: relative;
+  cursor: crosshair;
+  height: 350px;
+  min-width: 100%;
+}
+
+.chart-wrapper-backtest.scroll-mode {
+  overflow-x: auto;
+}
+
+.custom-chart {
+  width: 100%;
+  height: 100%;
+}
+
+.chart-point {
+  cursor: pointer;
+  transition: r 0.15s ease;
+}
+
+.chart-labels-backtest {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.chart-label {
+  position: absolute;
+  right: 5px;
+  font-size: 11px;
+  padding: 2px 6px;
+  background: white;
+  border-radius: 3px;
+  font-weight: 500;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.label-max { color: #4CAF50; }
+.label-min { color: #F44336; }
+.label-deposit { color: #FF9800; }
+.label-evaluation { color: #1976D2; }
+.label-floor { color: #9E9E9E; }
+
+.chart-tooltip-backtest {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 100;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.text-success { color: #4CAF50 !important; }
+.text-error { color: #F44336 !important; }
 .text-teal { color: #009688; }
 .text-teal-darken-2 { color: #00796b; }
 .text-red { color: #f44336; }

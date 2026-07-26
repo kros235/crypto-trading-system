@@ -161,7 +161,8 @@ public class EmailService {
         }
         
         String typeKr = "BUY".equals(type) ? "매수" : "매도";
-        String subject = String.format("[거래] %s %s 체결 알림", coinSymbol, typeKr);
+        // ⭐⭐⭐ [개선] 제목을 "[거래]"로 뭉뚱그리지 않고 "[매수]"/"[매도]"로 구분 표시 ⭐⭐⭐
+        String subject = String.format("[%s] %s 체결 알림", typeKr, coinSymbol);
         
         Map<String, Object> variables = new HashMap<>();
         variables.put("type", typeKr);
@@ -183,6 +184,40 @@ public class EmailService {
         
         sendEmail(dto);
     }
+
+    /**
+     * ⭐⭐⭐ [Day 63 개선] 레버리지 ETF 보유기간 경고 이메일 ⭐⭐⭐
+     * 왜: sendSystemAlert()로 보내던 기존 방식은 줄글(<br> 텍스트)이라 가독성이 떨어짐.
+     *     sendTradeNotification()과 동일한 카드+표 포맷(holding-warning.html)으로 교체.
+     */
+    @Async
+    public void sendHoldingWarningEmail(String email, String stockDisplayName,
+                                         int holdingDays, int maxHoldingDays,
+                                         String buyDate, boolean urgent) {
+        if (!emailConfig.isEnabled() || email == null || email.isEmpty()) {
+            return;
+        }
+
+        String subject = String.format("[%s] 레버리지 ETF 보유기간 %s: %s",
+                urgent ? "긴급" : "경고", urgent ? "초과" : "임박", stockDisplayName);
+
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("stockDisplayName", stockDisplayName);
+        variables.put("holdingDays", holdingDays);
+        variables.put("maxHoldingDays", maxHoldingDays);
+        variables.put("buyDate", buyDate);
+        variables.put("urgent", urgent);
+        variables.put("timestamp", LocalDateTime.now(KST).format(DATETIME_FORMAT));
+
+        EmailNotificationDTO dto = EmailNotificationDTO.builder()
+                .to(email)
+                .subject(subject)
+                .templateName("email/holding-warning")
+                .variables(variables)
+                .build();
+
+        sendEmail(dto);
+    }
     
     /**
      * 일일 리포트 이메일
@@ -192,12 +227,20 @@ public class EmailService {
         if (!emailConfig.isEnabled() || email == null || email.isEmpty()) {
             return;
         }
-    
-        String subject = String.format("[리포트] %s 일일 리포트", report.getReportDate());
-    
+
+        // ⭐⭐⭐ [개선] 코인 활동 여부(hasCoinActivity)와 주식 데이터 여부(stockBuyCount)를 먼저 계산해서
+        // 둘 다 있으면 "일일 리포트", 코인만/주식만 있으면 각각 "코인 일일 리포트"/"주식 일일 리포트"로 제목 구분 ⭐⭐⭐
+        boolean hasCoinData = report.getHasCoinActivity() == null || report.getHasCoinActivity();
+        boolean hasStockData = report.getStockBuyCount() != null;
+
+        String reportTypeLabel = (hasCoinData && hasStockData) ? "" : hasStockData ? "주식 " : "코인 ";
+        String subject = String.format("[리포트] %s %s일일 리포트", report.getReportDate(), reportTypeLabel);
+
         Map<String, Object> variables = new HashMap<>();
         
         variables.put("date", report.getReportDate());
+        variables.put("hasCoinData", hasCoinData);
+        variables.put("reportTypeLabel", reportTypeLabel);
         variables.put("realizedProfit", KRW_FORMAT.format(report.getRealizedProfit().setScale(0, java.math.RoundingMode.HALF_UP)));
         variables.put("unrealizedProfit", KRW_FORMAT.format(report.getUnrealizedProfit().setScale(0, java.math.RoundingMode.HALF_UP)));
         variables.put("totalProfit", KRW_FORMAT.format(report.getTotalProfit().setScale(0, java.math.RoundingMode.HALF_UP)));
@@ -229,6 +272,41 @@ public class EmailService {
             }
         }
         variables.put("holdings", formattedHoldings);
+
+        // ⭐⭐⭐ [버그 수정] hasStockData는 메서드 맨 위에서 이미 선언됨 (중복 선언 제거) ⭐⭐⭐
+        variables.put("hasStockData", hasStockData);
+        if (hasStockData) {
+            variables.put("stockBuyCount", report.getStockBuyCount());
+            variables.put("stockSellCount", report.getStockSellCount());
+            variables.put("stockRealizedProfit", KRW_FORMAT.format(report.getStockRealizedProfit().setScale(0, java.math.RoundingMode.HALF_UP)));
+            variables.put("stockUnrealizedProfit", KRW_FORMAT.format(report.getStockUnrealizedProfit().setScale(0, java.math.RoundingMode.HALF_UP)));
+            variables.put("stockTotalProfit", KRW_FORMAT.format(report.getStockTotalProfit().setScale(0, java.math.RoundingMode.HALF_UP)));
+            variables.put("stockTotalProfitRate", report.getStockProfitRate().setScale(2, java.math.RoundingMode.HALF_UP));
+            variables.put("stockProfitClass", report.getStockTotalProfit().compareTo(BigDecimal.ZERO) >= 0 ? "profit" : "loss");
+            variables.put("stockTotalInvestment", KRW_FORMAT.format(report.getStockTotalInvestment().setScale(0, java.math.RoundingMode.HALF_UP)));
+            variables.put("stockTotalEvaluation", KRW_FORMAT.format(report.getStockTotalHoldingValue().setScale(0, java.math.RoundingMode.HALF_UP)));
+
+            List<Map<String, Object>> formattedStockHoldings = new ArrayList<>();
+            if (report.getStockSummaries() != null) {
+                for (DailyReportDTO.StockSummary stock : report.getStockSummaries()) {
+                    Map<String, Object> formatted = new HashMap<>();
+                    // ⭐⭐⭐ [Day 63 개선] 종목코드만 → "종목명 (코드)" 형태로 표시 ⭐⭐⭐
+                    String stockDisplayName = (stock.getStockName() != null && !stock.getStockName().equals(stock.getStockCode()))
+                            ? stock.getStockName() + " (" + stock.getStockCode() + ")"
+                            : stock.getStockCode();
+                    formatted.put("stockDisplayName", stockDisplayName);
+                    // ⭐⭐⭐ [Day 63 추가] ETF 구분(레버리지/인버스/일반) 라벨 ⭐⭐⭐
+                    formatted.put("etfTypeLabel", formatEtfTypeLabel(stock.getEtfType()));
+                    formatted.put("holdingCount", stock.getHoldingCount());
+                    formatted.put("totalQuantity", stock.getTotalQuantity().toPlainString());
+                    formatted.put("profitLoss", KRW_FORMAT.format(stock.getProfitLoss().setScale(0, java.math.RoundingMode.HALF_UP)));
+                    formatted.put("profitRate", stock.getProfitRate().setScale(2, java.math.RoundingMode.HALF_UP));
+                    formatted.put("isProfit", stock.getProfitLoss().compareTo(BigDecimal.ZERO) >= 0);
+                    formattedStockHoldings.add(formatted);
+                }
+            }
+            variables.put("stockHoldings", formattedStockHoldings);
+        }
         
         variables.put("timestamp", LocalDateTime.now().format(DATETIME_FORMAT));
     
@@ -320,6 +398,17 @@ public class EmailService {
         }
         // 0.01원 미만 (SHIB 등): 유효숫자 보존 (예: 0.00824)
         return price.stripTrailingZeros().toPlainString();
+    }
+
+    // ⭐⭐⭐ [Day 63 추가] ETF 구분(LEVERAGE/INVERSE/NORMAL) → 한글 라벨 변환 ⭐⭐⭐
+    private String formatEtfTypeLabel(String etfType) {
+        if (etfType == null) return "-";
+        return switch (etfType) {
+            case "LEVERAGE" -> "레버리지";
+            case "INVERSE" -> "인버스";
+            case "NORMAL" -> "일반";
+            default -> etfType;
+        };
     }
 
 }

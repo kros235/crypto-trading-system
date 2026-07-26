@@ -875,9 +875,9 @@ KIS_BASE_URL=https://openapivts.koreainvestment.com:29443
 | **60** | ⑬ StockHoldingsView + StockListView 신규 작성 + 백엔드 다중 종목 가격 일괄 조회 API + 프론트엔드 API 모듈 확장 + 라우터/사이드바 연결 + **코인 보유 자산 페이지와 UI 100% 통일 (탭/요약카드/highlight-card/매도다이얼로그/상세다이얼로그 디자인 시스템 통일)** | StockPriceDTO, StockInfoService(getPricesForStocks), StockInfoController, api/stock.ts(StockPrice/getPrices), StockHoldingsView.vue, StockListView.vue, router/index.ts, TheSidebar.vue, **HoldingsView.vue (매도/상세 다이얼로그 디자인 통일)** | ✅ 완료 |
 | **61** | ⑭ StockBotMonitorView 신규 작성 (1769줄) + StockBotController 지표 조회 엔드포인트 2개 추가 + StockRiskManagementService HoldingDaysWarning DTO 4개 필드 추가 (transactionId/quantity/buyPrice/totalAmount, 동일 종목 다중 보유 식별) + stockBotApi 모듈 8개 메서드 + /stock-bot-monitor 라우트/사이드바 + **[v2~v7 후속 보완 누적] 알림 테스트 폴백 직접 호출 / 데모 모드 토글 / 봇 분리 안내 / Discord 칩 카드 우측하단 / 도움말 줄바꿈 정리 / 보유기간 경고 풍부 UI / 회색 칩 검정 글씨 / "주식 봇 상태" 라벨 통일 / 보유기간 경고 일수 검정 굵게 / 일일 한도 초기화 직관 표현 + 5가지 운영 사례 도움말 / 디스코드/수동제어 다이얼로그 폭 800px** | StockBotMonitorView.vue, StockBotController.java, StockRiskManagementService.java, api/stock.ts, router/index.ts, TheSidebar.vue | ✅ 완료 |
 | **62** | ⑮ StockBacktestService + StockBacktestView + 코인/주식 백테스트 UI 통일 | 백테스팅 | ✅ 완료 |
-| **63** | ⑯ StockProfitService + 수익분석 + 일일리포트 + **StockHoldingsView 수익분석 영역 활성화** ⭐ | 수익 분석 | ⏳ 예정 |
-| **64** | ⑰ AdminHolidayView + 관리자 통합 | 관리자 기능 | ⏳ 예정 |
-| **65** | ⑱ 사이드바 활성화 + SecurityConfig 업데이트 + 통합 테스트 | 통합 | ⏳ 예정 |
+| **63** | ⑯ StockProfitService + 수익분석 + 일일리포트 통합 + **StockHoldingsView 수익분석 영역 활성화** + 알림 시스템 버그 수정 다수 ⭐ | 수익 분석 + 알림 통합 | ✅ 완료 |
+| **64** | ⑰ AdminHolidayView + 관리자 통합 + **[Day 62 백로그] 레버리지/인버스 종목만 maxHoldingDays 강제매도 적용** | 관리자 기능 + 백테스트 정확도 개선 | ⏳ 예정 |
+| **65** | ⑱ 사이드바 활성화 + SecurityConfig 업데이트 + 통합 테스트 + **[Day 63 발견 백로그] 코인 주간/월간/연간 리포트 주식 통합** | 통합 + 리포트 확장 | ⏳ 예정 |
 | **66** | ⑲ AI 뉴스 가중치 주식 적용** (StockNewsAnalysisService 신규, stock_news/stock_news_analysis 테이블 추가, StockSettingService useAiAnalysis 활성화, StockSignalDetectorService 가중치 반영, 주식 뉴스 페이지 StockNewsView.vue 신규, StockBotMonitorView 가중치 버튼을 주식용 엔드포인트로 변경) + 최종 테스트 + 문서화 + v2.0 릴리즈 + (v2.1 리팩토링 계획 수립: com.cryptotrading → com.investment 패키지 리네이밍, controller/service/entity 서브패키지 crypto/stock/common 분리) | 배포 + AI 가중치 + 리팩토링 계획서 | ⏳ 예정 |
 | **별도** | 🚨 **[버그 수정]** 코인봇 멀티유저 격리 버그 수정 - TradingScheduler `BOT_ENABLED_KEY` 단일 전역 → 사용자별 키 변경 + isBotEnabled/setBotEnabled에 userId 인자 추가 + executeAutoTrading의 전역 게이트 제거 + executeForUser에 사용자별 체크 추가 + BotController에서 Authentication.getName() 받아 전달 (한주 형 별도 신청 시 진행) | TradingScheduler.java, TradingBotService.java, BotController.java | ⏳ 별도 신청 시 |
 
@@ -916,82 +916,128 @@ KIS_BASE_URL=https://openapivts.koreainvestment.com:29443
 
 ---
 
-## 📌 Day 63 상세 작업 내역 (Day 60에서 보류된 항목 포함)
+## 📌 Day 63 상세 작업 내역 (Day 60에서 보류된 항목 포함) — ✅ 완료
 
-> **Day 60 작업 시 보류된 사항**: StockHoldingsView의 "기간별/주식별 수익 분석" 영역이 Day 63에서 완성됩니다.
+> **Day 60 작업 시 보류된 사항**: StockHoldingsView의 "기간별/주식별 수익 분석" 영역이 Day 63에서 완성되었습니다.
 
-### 백엔드 작업
-- [ ] `StockProfitService.java` 신규 작성 (Phase 1 ProfitService 패턴 재사용)
-  - [ ] `getStockPeriodStats(userId, period)` — 기간별 수익 분석
-  - [ ] `getStockStats(userId)` — 종목별 수익 분석
-  - [ ] `getStockAssetSnapshots(userId, period)` — 자산 변동 추이 데이터
-- [ ] `StockProfitController.java` 신규 작성
-  - [ ] `GET /api/stock/profit/period-stats?period=...`
-  - [ ] `GET /api/stock/profit/stock-stats`
-  - [ ] `GET /api/stock/profit/asset-snapshots`
-- [ ] `StockDailyReportService.java` 신규 작성 (일일 리포트 주식 통합)
-  - [ ] 23:50 일일 리포트에 주식 거래 요약 포함
-  - [ ] 코인 + 주식 통합 리포트 (Discord/이메일)
+### 백엔드 작업 — ✅ 완료
+- [x] `StockProfitService.java` 신규 작성 (Phase 1 ProfitService 패턴 재사용)
+  - [x] `getProfitSummary(userId)` — 기간별(오늘/이번달/올해/1년/누적) 수익 요약
+  - [x] `getPeriodProfit(userId, period)` / `getPeriodProfitByRange(userId, start, end)` — 특정·사용자 지정 기간 수익 상세
+  - [x] `getStockProfits(userId)` — 종목별 수익 분석
+- [x] `StockProfitController.java` 신규 작성 (`/api/stock/profit/*`)
+  - [x] `GET /summary`, `GET /by-period`, `GET /by-range`, `GET /by-stock`
+  - [x] `GET /asset-snapshots`, `GET /asset-snapshots/range`, `POST /asset-snapshots/create` (Day 59 `StockAssetSnapshotService` 재사용)
+- [x] `StockDailyReportService.java` 신규 작성 (일일 리포트 주식 통합)
+  - [x] `generateStockDailyReport(userId)` — stock* 필드만 채운 `DailyReportDTO` 반환 (코인 리포트에 병합하는 용도)
+  - [x] `TradingScheduler.sendDailyReport()`(23:50)에 병합 로직 추가 → 코인 + 주식 통합 리포트 1건 발송 (Discord/이메일)
+  - [x] **[신규]** 코인/주식 각각 "거래설정 존재 OR 거래내역 존재" 여부 판별 → 둘 다 없는 사용자는 리포트 발송 자체를 생략
+  - [x] **[신규]** `DailyReportDTO.hasCoinActivity` 필드 추가 → 코인 활동 없는 사용자는 `[코인]` 섹션 자체를 이메일에서 숨김
+  - [x] **[신규]** 리포트 제목 동적화: 코인만 "코인 일일 리포트", 주식만 "주식 일일 리포트", 둘 다 "일일 리포트"
 
-### 프론트엔드 작업
-- [ ] `frontend/src/views/StockHoldingsView.vue` 수정
-  - [ ] **현재 placeholder 영역을 실제 기능으로 교체** ⭐
-  - [ ] "기간별 수익" 탭 활성화: 오늘/이번달/올해/1년/누적 + 자산 변동 차트
-  - [ ] "주식별 수익" 탭 활성화: 종목별 수익 리스트 + 수익률
-  - [ ] Phase 1 `HoldingsView.vue` 코드 패턴 차용 (구조 동일)
-- [ ] `frontend/src/api/stock.ts` 확장
-  - [ ] `stockProfitApi.getPeriodStats()`, `getStockStats()`, `getAssetSnapshots()` 메서드 추가
+### 프론트엔드 작업 — ✅ 완료
+- [x] `frontend/src/views/StockHoldingsView.vue` 수정 (18개 변경 지점)
+  - [x] placeholder 영역을 실제 기능으로 전면 교체
+  - [x] "기간별 수익" 탭: 오늘/이번달/올해/1년/누적 + 사용자 지정 기간 조회 + 자산 변동 SVG 차트(코인 `HoldingsView.vue` 차트 로직 verbatim 포팅)
+  - [x] "주식별 수익" 탭: 종목별 수익 테이블 + 상세 다이얼로그
+  - [x] Phase 1 `HoldingsView.vue` 코드 패턴 차용 (구조 동일)
+- [x] `frontend/src/api/stock.ts` 확장
+  - [x] `stockProfitApi` 7개 메서드 (`getSummary/getByPeriod/getByRange/getByStock/getAssetSnapshots/getAssetSnapshotsByRange/createSnapshot`)
+
+### ⭐ Day 61 v2~v7 후속 항목 — ✅ 완료 (일부 방식 변경)
+
+#### 백엔드 - 주식 전용 알림 엔드포인트 정식 추가 — ✅ 완료 (계획 7개 → 실제 8개)
+- [x] `POST /notifications/email/test-stock-buy`
+- [x] `POST /notifications/email/test-stock-sell`
+- [x] `POST /notifications/email/test-stock-daily-report`
+- [x] `POST /notifications/email/test-stock-holding-warning`
+- [x] `POST /notifications/discord/test-stock-buy`
+- [x] `POST /notifications/discord/test-stock-sell`
+- [x] `POST /notifications/discord/test-stock-stoploss`
+- [x] `POST /notifications/discord/test-stock-daily-report`
+
+#### 백엔드 - 주식 전용 알림 메시지 — ✅ 완료 (계획과 다른 방식으로 구현)
+- [x] **[방식 변경]** 매수/매도/손절 알림은 `buildStockBuyMessage()` 등 신규 메서드 대신, 기존 `DiscordBotService.sendBuyNotification()` 등 범용 메서드를 그대로 재사용 (이미 종목명을 파라미터로 받는 구조라 신규 로직 불필요로 판단)
+- [x] `NotificationController.resolveStockDisplayName()` 신규 — 종목코드 → "종목명 (코드)" 변환, 매수/매도/손절/보유경고 전 채널에 적용
+- [x] 보유기간 경고만 실제 신규 콘텐츠 필요 → `EmailService.sendHoldingWarningEmail()` + `templates/email/holding-warning.html` 신규 (매수/매도 체결 메일과 동일한 카드+표 포맷)
+- [x] Discord 일일 리포트에 종목별 상세 필드(종목/수량/평가액) 추가 — `DiscordBotService.buildHoldingsBreakdown()` + `HoldingRow` record 신규
+
+#### 프론트엔드 - StockBotMonitorView 임시 표기 정리 — ✅ 완료
+- [x] `helpContents.emailTest.content` / `discordTest.content`의 "현재는 코인용 템플릿으로 발송됩니다" 안내 제거
+- [x] `sendEmailTest()` / `sendDiscordTest()` 전체 케이스를 주식 전용 엔드포인트로 변경
+- [x] holding 케이스의 임시 폴백(test-buy 사용) 제거
+- [x] 상단 안내 배너 아이콘 중복/정렬 버그 수정 (테스트 중 발견)
+
+#### 검증 — ✅ 통과
+```bash
+grep -n "Day 63\|코인용 템플릿\|test-buy.*임시" frontend/src/views/StockBotMonitorView.vue
+# → 결과 2건, 전부 "[Day 63 백로그 완료]" 개발 이력 주석 (문제 없음)
+```
+
+### ⭐ [Day 63 테스트 중 추가로 발견/수정한 항목] (계획서에 없던 버그픽스)
+- [x] `trade-notification.html` "코인" 고정 라벨 → "종목" (주식 알림에도 재사용되는 공용 템플릿이라 발생한 버그)
+- [x] 일일 리포트 이메일 중복 표기 버그 수정 (`toEmailShapedStockReport()` — 주식 데이터가 코인 라벨 자리에도 복사되던 문제)
+- [x] 이메일 표 정렬 버그 수정 — `align` HTML 속성 병행 추가 (일부 웹메일이 CSS `text-align`을 무시하는 문제 대응)
+- [x] 이메일 제목 `[거래]` → `[매수]`/`[매도]` 구분 표시
+- [x] 한글 텍스트 줄바꿈 버그 수정 (`word-break`, `white-space: nowrap`)
+- [x] Discord 필드 간격/줄바꿈 버그 수정 (투명 스페이서 필드로 3등분 배치)
 
 ### ⭐ Day 62 백로그 — 레버리지/인버스 종목만 `maxHoldingDays` 강제매도 적용
-> **배경**: Day 62 시점 `StockBacktestService`는 종목 유형과 무관하게 보유기간 강제매도를 모든 종목에 일괄 적용함.
+> **Day 63에서 다루지 못함 → Day 64로 이관.**
+> 상세 내용은 Day 64 섹션 참고.
+
+### ⭐ [Day 63 신규 발견 백로그] 코인 주간/월간/연간 리포트에 주식 통합
+> **배경**: 일일 리포트는 코인+주식 통합 발송이 완성되었으나, 기존에 존재하던 코인 전용 주간(`sendWeeklyReport`)/월간(`sendMonthlyReport`)/연간(`sendYearlyReport`) 리포트(Discord DM만, Phase 1 레거시)는 주식 데이터가 전혀 통합되어 있지 않음이 테스트 중 확인됨.
+> **Day 63에서 다루지 못함 → Day 65로 이관.**
+> 상세 내용은 Day 65 섹션 참고.
+
+### 주의사항
+- 코인 보유 자산 페이지(`HoldingsView.vue`)와 100% 동일한 UI 구조 유지 — ✅ 준수
+- Phase 1 코드 재사용률 80% 이상 목표 — ✅ 달성 (수익률 계산 로직, 차트 컴포넌트, 기간 필터, Discord/Email 발송 인프라 대부분 재사용)
+- 일일 리포트는 코인+주식 통합 형태로 발송 (별도 발송 X) — ✅ 완료
+
+---
+
+## 📌 Day 64 상세 작업 내역 (예정)
+
+### ⭐ [Day 62 백로그 이관] 레버리지/인버스 종목만 maxHoldingDays 강제매도 적용
+> **배경**: `StockBacktestService`는 현재 종목 유형과 무관하게 보유기간 강제매도를 모든 종목에 일괄 적용 중.
 > 일반 지수추종 ETF(예: KODEX 200)는 장기 보유가 유리할 수 있어 백테스트 결과가 왜곡될 수 있음.
 
 - [ ] `StockBacktestService`에 `StockInfoService` 의존성 추가
 - [ ] `runBacktest()` 시작 시 `stockCodes` 전체에 대해 `etfType`을 일괄 조회하여 `Map<String, String>` 생성
 - [ ] `checkSellSignal()`의 "조건 0(보유기간 초과)"을 `etfType`이 `LEVERAGE`/`INVERSE`일 때만 평가하도록 분기 처리
-  (`etfType`이 null인 예외 케이스는 종목명 키워드 "레버리지"/"인버스" 보조 판별로 폴백)
+      (`etfType`이 null인 예외 케이스는 종목명 키워드 "레버리지"/"인버스" 보조 판별로 폴백)
 - [ ] `StockBacktestView.vue`의 "레버리지 ETF 보유기간 제한" 패널에, 선택 종목 중 레버리지/인버스가 없으면
       "선택한 종목 중 레버리지/인버스 상품이 없어 이 설정은 적용되지 않습니다" 안내 문구 표시
 
+### 관리자 휴장일 관리 (원래 계획)
+- [ ] AdminHolidayView.vue 신규
+- [ ] 관리자 대시보드에 주식 통계 추가
 
-### ⭐ Day 61 v2~v7 후속 항목 (Day 63 작업 시 함께 정리)
-
-#### 백엔드 - 주식 전용 알림 엔드포인트 정식 추가
-- [ ] NotificationController에 주식 전용 알림 테스트 엔드포인트 7개 추가
-  - [ ] `POST /notifications/email/test-stock-buy` (주식 매수 알림)
-  - [ ] `POST /notifications/email/test-stock-sell` (주식 매도 알림)
-  - [ ] `POST /notifications/email/test-stock-daily-report` (주식 일일 리포트)
-  - [ ] `POST /notifications/email/test-stock-holding-warning` (보유기간 경고)
-  - [ ] `POST /notifications/discord/test-stock-buy`
-  - [ ] `POST /notifications/discord/test-stock-sell`
-  - [ ] `POST /notifications/discord/test-stock-stoploss`
-  - [ ] `POST /notifications/discord/test-stock-daily-report`
-
-#### 백엔드 - 주식 전용 알림 메시지 템플릿 7종 추가
-- [ ] NotificationService.buildStockBuyMessage(), buildStockSellMessage(), buildStockStopLossMessage()
-- [ ] NotificationService.buildStockDailyReportMessage(), buildStockHoldingWarningMessage()
-- [ ] HoldingDaysWarning 알림 메시지에 신규 필드 활용 (종목명/매수일/수량/매수금액 포함)
-- [ ] 이메일 본문 + Discord DM 본문 모두 적용
-- [ ] 동일 종목 여러 건 보유 시 transactionId로 구분되는 메시지
-
-#### 프론트엔드 - StockBotMonitorView 임시 표기 정리
-- [ ] `helpContents.emailTest.content`의 "현재는 코인용 템플릿으로 발송됩니다" 안내 제거
-- [ ] `helpContents.discordTest.content`의 "현재는 코인용 템플릿으로 발송됩니다" 안내 제거
-- [ ] sendEmailTest() 5개 케이스 모두 주식 전용 엔드포인트로 변경
-- [ ] sendDiscordTest() 5개 케이스 모두 주식 전용 엔드포인트로 변경
-- [ ] holding 케이스의 임시 폴백 (test-buy 사용) 제거
-- [ ] sendEmailTest/sendDiscordTest의 successMsg "(현재는 코인용 템플릿)" 문구 모두 제거
-
-#### 검증 (Day 63 완료 후 0건이어야 함)
-\`\`\`bash
-grep -n "Day 63\|코인용 템플릿\|test-buy.*임시" frontend/src/views/StockBotMonitorView.vue
-\`\`\`
-
-### 주의사항
-- 코인 보유 자산 페이지(`HoldingsView.vue`)와 100% 동일한 UI 구조 유지
-- Phase 1 코드 재사용률 80% 이상 목표 (수익률 계산 로직, 차트 컴포넌트, 기간 필터 등)
-- 일일 리포트는 코인+주식 통합 형태로 발송 (별도 발송 X)
 ---
+
+## 📌 Day 65 상세 작업 내역 (예정)
+
+### ⭐ [Day 63 발견 백로그] 코인 주간/월간/연간 리포트에 주식 통합
+> **배경**: `TradingScheduler.sendWeeklyReport()`/`sendMonthlyReport()`/`sendYearlyReport()`는 Phase 1부터 있던 코인 전용
+> 기능(Discord DM만 발송)으로, 주식 데이터가 전혀 반영되어 있지 않음. 일일 리포트와 동일한 수준(코인+주식 통합,
+> 활동 없는 자산군 섹션 숨김, 이메일 발송 포함)으로 확장 필요.
+
+- [ ] `StockDailyReportService`에 `generateStockWeeklyReport()`/`generateStockMonthlyReport()`/`generateStockYearlyReport()` 추가
+      (Phase 1 `DailyReportService.generateWeeklyReport()` 등과 동일 패턴)
+- [ ] `TradingScheduler`의 3개 스케줄러 메서드에 일일 리포트와 동일한 병합 로직 적용
+      (`hasCoinActivity`/`hasStockActivity` 판별, 리포트 병합, `titlePrefix` 동적 처리)
+- [ ] `sendPeriodReportDM()`에도 종목별 상세 필드(`buildHoldingsBreakdown`) 반영
+- [ ] 주간/월간/연간 리포트에도 이메일 발송 추가 (현재는 Discord DM만 존재)
+
+### 통합 테스트 (원래 계획)
+- [ ] 전체 페이지 렌더링 테스트
+- [ ] API 연동 테스트
+- [ ] 사이드바 최종 활성화
+
+---
+
 
 # 🔮 3.5부: v2.0 완료 이후 미래 예정 작업
 
@@ -1340,9 +1386,9 @@ frontend/src/views/
 | Phase 1 (암호화폐) | ✅ 완료 | 100% |
 | Phase 2-1 (기반 구축) | ✅ 완료 | ~100% (Day 48~55 완료, 기반 구축 단계 마무리) |
 | Phase 2-2 (핵심 기능) | ✅ 완료 | 100% (Day 53~62 완료 **+ Day 60 디자인 시스템 통일 + Day 61 봇 모니터링 페이지 + Day 62 백테스팅 + 코인/주식 UI 통일**) |
-| Phase 2-3 (고도화) | ⏳ 예정 | 0% (Day 63~64 예정) |
-| Phase 2-4 (안정화) | ⏳ 예정 | 0% (Day 65 예정) |
-| **전체 프로젝트** | - | **~85%** (Phase 1 완료, Phase 2 Day 62/66 완료, 잔여 4일) |
+| Phase 2-3 (고도화) | 🔄 진행 중 | 50% (Day 63 완료, Day 64 예정) |
+| Phase 2-4 (안정화) | ⏳ 예정 | 0% (Day 65~66 예정) |
+| **전체 프로젝트** | - | **~88%** (Phase 1 완료, Phase 2 Day 63/66 완료, 잔여 3일) |
 | v2.1 패키지 리팩토링 | ⏳ 예정 (Day 66 이후) | 0% |
 | v3.0 Backend 컨테이너 분리 | ⏳ 예정 (v2.1 완료 이후) | 0% |
 | Phase 3 달러 거래 | ⏳ 미정 (v3.0 완료 이후) | 0% |

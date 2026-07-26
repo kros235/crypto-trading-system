@@ -174,7 +174,33 @@ export const stockBacktestApi = {
   getAvailableStocks: () =>
     api.get<AvailableStocksResponse>('/stock/backtest/available-stocks'),
 
-  // 기본 설정값
+// 기본 설정값
   getDefaultSettings: () =>
     api.get<StockBacktestRequest>('/stock/backtest/default-settings'),
+}
+
+// ⭐⭐⭐ [Day 63 신규 추가] 주식 수익 분석 API ⭐⭐⭐
+// api/index.ts의 profitApi(/api/profit/*)와 1:1 동일 구조, 엔드포인트만 /api/stock/profit/*
+export const stockProfitApi = {
+  getSummary: () =>
+    api.get('/stock/profit/summary'),
+
+  getByPeriod: (period: string) =>
+    api.get(`/stock/profit/by-period?period=${period}`),
+
+  // 사용자 지정 기간 수익 상세 조회 (Phase 1에는 없는 Day 63 신규 API)
+  getByRange: (startDate: string, endDate: string) =>
+    api.get(`/stock/profit/by-range?startDate=${startDate}&endDate=${endDate}`),
+
+  getByStock: () =>
+    api.get('/stock/profit/by-stock'),
+
+  getAssetSnapshots: (period: string = 'all') =>
+    api.get(`/stock/profit/asset-snapshots?period=${period}`),
+
+  getAssetSnapshotsByRange: (startDate: string, endDate: string) =>
+    api.get(`/stock/profit/asset-snapshots/range?startDate=${startDate}&endDate=${endDate}`),
+
+  createSnapshot: () =>
+    api.post('/stock/profit/asset-snapshots/create'),
 }

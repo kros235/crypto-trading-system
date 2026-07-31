@@ -30,7 +30,9 @@ notify_discord() {
         "$DISCORD_WEBHOOK_URL" > /dev/null 2>&1
 }
 
-if [ ! -f "$CERT_FILE" ]; then
+# ⭐ 수정: /etc/letsencrypt/archive/ 디렉토리는 root만 접근 가능하므로
+#          일반 사용자 권한의 [-f] 체크는 파일이 있어도 "없음"으로 오판함 → sudo test 사용
+if ! sudo test -f "$CERT_FILE"; then
     echo "$LOG_PREFIX ❌ 인증서 파일을 찾을 수 없음: $CERT_FILE"
     notify_discord "🚨 **SSL 인증서 파일 없음**\n경로: ${CERT_FILE}\n시간: ${LOG_PREFIX}" 15158332
     exit 1

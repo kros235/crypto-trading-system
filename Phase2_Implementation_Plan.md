@@ -880,6 +880,7 @@ KIS_BASE_URL=https://openapivts.koreainvestment.com:29443
 | **65** | ⑱ 사이드바 활성화 + SecurityConfig 업데이트 + 통합 테스트 + **[Day 63 발견 백로그] 코인 주간/월간/연간 리포트 주식 통합** | 통합 + 리포트 확장 | ⏳ 예정 |
 | **66** | ⑲ AI 뉴스 가중치 주식 적용** (StockNewsAnalysisService 신규, stock_news/stock_news_analysis 테이블 추가, StockSettingService useAiAnalysis 활성화, StockSignalDetectorService 가중치 반영, 주식 뉴스 페이지 StockNewsView.vue 신규, StockBotMonitorView 가중치 버튼을 주식용 엔드포인트로 변경) + 최종 테스트 + 문서화 + v2.0 릴리즈 + (v2.1 리팩토링 계획 수립: com.cryptotrading → com.investment 패키지 리네이밍, controller/service/entity 서브패키지 crypto/stock/common 분리) | 배포 + AI 가중치 + 리팩토링 계획서 | ⏳ 예정 |
 | **별도** | 🚨 **[버그 수정]** 코인봇 멀티유저 격리 버그 수정 - TradingScheduler `BOT_ENABLED_KEY` 단일 전역 → 사용자별 키 변경 + isBotEnabled/setBotEnabled에 userId 인자 추가 + executeAutoTrading의 전역 게이트 제거 + executeForUser에 사용자별 체크 추가 + BotController에서 Authentication.getName() 받아 전달 (한주 형 별도 신청 시 진행) | TradingScheduler.java, TradingBotService.java, BotController.java | ⏳ 별도 신청 시 |
+| **별도** | 🔧 **[인프라 개선]** SSL 인증서 자동 갱신 크론 미실행 문제 근본 원인 해결 + 실패 감지 Discord 알림 시스템 구축 (Day 63 완료 후, Day 64 시작 전 발견된 운영 이슈 긴급 대응) | scripts/renew-ssl.sh, scripts/check-ssl-expiry.sh(신규), scripts/setup-cron.sh | ✅ 완료 (2026-07-31) |
 
 ---
 
@@ -998,7 +999,61 @@ grep -n "Day 63\|코인용 템플릿\|test-buy.*임시" frontend/src/views/Stock
 
 ---
 
+## 📌 별도 작업 상세 내역 (2026-07-31) — SSL 인증서 자동 갱신 근본 원인 해결 — ✅ 완료
+
+> **발견 배경**: Day 64 착수 전, 운영 도메인(`crypto-trading-prd.duckdns.org`) 접속 시
+> 브라우저에서 `NET::ERR_CERT_DATE_INVALID` 발생 (인증서 만료 28일 전 상태로 방치).
+> Phase 2 일정과 무관한 인프라 이슈이나, 서비스 접속 자체가 불가능한 긴급 사안이라
+> Day 64 시작 전 우선 대응.
+
+### 원인 분석 — ✅ 완료
+- [x] crontab 등록(1일/15일 03:00)은 정상이었으나 실제로는 수개월간 미실행 확인
+- [x] 근본 원인 특정: `logs/` 디렉토리 부재로 `>> logs/ssl-renew.log` 리다이렉션이 실패해
+      cron이 명령어 자체를 실행하지 못함 (스크립트 본문은 호출조차 안 됨)
+- [x] sudo 권한 문제는 아님을 검증 완료 (`sudo -k` 후 `sudo -n` 테스트로 확인)
+- [x] 스크립트에 성공/실패 판별 로직 자체가 없어 문제를 아무도 알아챌 수 없던 구조적 결함 확인
+
+### 수정 내용 — ✅ 완료
+- [x] `scripts/renew-ssl.sh` 수정
+  - `mkdir -p logs` 추가로 근본 원인 제거
+  - 컨테이너 중지/certbot renew/인증서 복사/컨테이너 재시작 4단계 전체에 exit code 확인
+  - 각 단계 실패 시 Discord Webhook 즉시 알림 (curl 직접 호출, 백엔드 상태 무관하게 동작)
+  - 갱신 실패와 무관하게 프론트엔드 컨테이너는 반드시 재시작하도록 하여 서비스 중단 방지
+- [x] `scripts/check-ssl-expiry.sh` 신규 생성
+  - 매일 인증서 잔여 기간을 `openssl`로 직접 계산 (crontab/certbot 상태에 의존하지 않는 독립 검증)
+  - 만료 14일 이내 매일 반복 경고, 이미 만료 시 긴급 알림
+  - 최초 버전에서 `/etc/letsencrypt/archive/`가 root 전용 권한이라 파일 존재 오탐 발생 →
+    `sudo test -f`로 수정하여 해결
+- [x] `scripts/setup-cron.sh` 수정
+  - crontab 등록 시점에 `logs/` 디렉토리 생성 보장 (재발 방지)
+  - `check-ssl-expiry.sh` 매일 04:30 KST 크론 신규 등록
+
+### 검증 — ✅ 완료 (Oracle Cloud 운영 서버 실제 테스트)
+- [x] Discord Webhook 단독 동작 확인
+- [x] check-ssl-expiry.sh 평시(무알림)/경고(임계값 강제 조정)/오탐 수정 후 재검증 모두 통과
+- [x] renew-ssl.sh 성공 경로(`--dry-run`) 테스트: 컨테이너 재기동, 성공 알림, 서비스 무중단 확인
+- [x] renew-ssl.sh 실패 경로(존재하지 않는 도메인 강제 유도) 테스트: 실패 알림 발송 + 실패해도 컨테이너 정상 재기동 확인
+- [x] crontab 최종 등록 확인 (갱신 1건 + 감시 1건, 총 2줄, 중복 없음)
+
+### 커밋 이력
+- `cccc4b3` - renew-ssl.sh 수정, check-ssl-expiry.sh 신규, setup-cron.sh 수정
+- `830d141` - check-ssl-expiry.sh 인증서 파일 오탐 수정
+
+### 후속 조치 필요 사항
+- ⚠️ 테스트 과정에서 Discord Webhook URL이 대화 로그에 노출됨 → **Webhook 재발급 및 `.env.production` 교체 필요**
+- 다음 크론 실행 시점(8/1 새벽 3시, 4시 30분)에 `logs/ssl-renew.log`, `logs/ssl-check.log`가
+  실제로 자동 생성되는지 확인 필요 (수동 실행으로는 이미 검증됨)
+
+### Phase 2 일정에 미치는 영향
+- Phase 2 진행률(88%)에는 영향 없음 (Phase 2 기능 개발과 무관한 인프라 유지보수)
+- Day 64(휴장일 관리 UI) 착수는 예정대로 진행 가능
+
+---
+
 ## 📌 Day 64 상세 작업 내역 (예정)
+
+> Day 64 착수 전, 예정에 없던 SSL 자동 갱신 이슈를 발견하여 우선 대응함.
+> 상세 내용은 바로 위 "📌 별도 작업 상세 내역 (2026-07-31)" 섹션 참고.
 
 ### ⭐ [Day 62 백로그 이관] 레버리지/인버스 종목만 maxHoldingDays 강제매도 적용
 > **배경**: `StockBacktestService`는 현재 종목 유형과 무관하게 보유기간 강제매도를 모든 종목에 일괄 적용 중.

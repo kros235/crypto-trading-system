@@ -1,0 +1,56 @@
+fix(ssl): SSL 인증서 자동 갱신 크론 미실행 문제 해결 및 실패 감지 알림 추가
+
+[문제 발견 배경]
+- 2026-07-31, crypto-trading-prd.duckdns.org 접속 시 브라우저에서
+  NET::ERR_CERT_DATE_INVALID 발생 (인증서 만료 28일 전 상태로 확인)
+- crontab에는 1일/15일 03:00 자동 갱신이 정상 등록되어 있었으나
+  실제로는 수개월간 단 한 번도 실행되지 않은 것으로 확인됨
+
+[근본 원인 분석]
+1. logs 디렉토리 부재 (핵심 원인)
+   - crontab 명령: renew-ssl.sh 리다이렉션 대상이 logs/ssl-renew.log
+   - 리다이렉션 대상 디렉토리가 없으면 cron이 명령 자체를 실행하지
+     못하고 조용히 실패함 (스크립트 본문은 아예 호출되지 않음)
+   - cat logs/ssl-renew.log 실행 시 No such file or directory 확인으로
+     로그 파일이 생성된 적조차 없다는 사실 확증
+2. sudo 권한 문제 아님 (확인 완료)
+   - sudo -k로 세션 초기화 후 sudo -n certbot renew --dry-run 실행 결과
+     비밀번호 요구 없이 정상 진행 확인, NOPASSWD 관련 조치 불필요
+3. 스크립트에 에러 체크 로직 부재
+   - certbot renew, docker stop/start 등 각 단계의 성공/실패 여부를
+     확인하지 않아 실패해도 알아챌 방법이 없었음
+   - 수동 실행 시 SSL 인증서 갱신 완료 메시지가 성공 여부와 무관하게
+     항상 출력되는 구조
+
+[수정 내용]
+
+1. scripts/renew-ssl.sh (수정)
+   - mkdir -p logs 추가로 크론 리다이렉션 실패의 근본 원인 해결
+   - 각 단계(컨테이너 중지, certbot renew, 인증서 복사, 컨테이너 재시작)마다
+     exit code 확인 로직 추가
+   - 실패 시 Discord Webhook으로 즉시 알림 발송 (curl 직접 호출 방식으로
+     백엔드 서버 상태와 무관하게 동작하도록 구현)
+   - 갱신 성공 시에도 신규 만료일을 포함한 성공 알림 발송
+   - 컨테이너 재시작 실패 시 별도의 긴급 알림 분기 추가
+     (서비스 중단 가능성이 있는 최우선순위 케이스)
+
+2. scripts/check-ssl-expiry.sh (신규 생성)
+   - renew-ssl.sh가 향후 어떤 이유로든 재차 조용히 실패할 경우를 대비한
+     이중 안전장치
+   - 매일 실행하여 인증서 만료까지 남은 일수를 openssl로 직접 계산
+   - 만료 14일 이내는 경고 알림을 매일 반복 발송
+   - 이미 만료된 경우 긴급 알림 발송 (수동 갱신 커맨드 안내 포함)
+
+3. scripts/setup-cron.sh (수정)
+   - crontab 등록 시점에도 logs 디렉토리 생성을 보장하도록
+     mkdir -p 추가 (재발 방지)
+   - check-ssl-expiry.sh를 매일 04시 30분 KST 크론에 신규 등록
+
+[영향 범위]
+- 애플리케이션 코드(Backend/Frontend) 변경 없음, 인프라 스크립트만 수정
+- 기존 crontab 등록 방식(1일/15일 03:00 갱신)은 그대로 유지
+
+[테스트 예정 항목]
+- Oracle Cloud 운영 서버에서 setup-cron.sh 재실행 후 crontab 등록 확인
+- dry-run 기반 임시 스크립트로 전체 흐름 및 Discord 알림 검증
+- check-ssl-expiry.sh 임계값 조정을 통한 알림 발송 로직 검증

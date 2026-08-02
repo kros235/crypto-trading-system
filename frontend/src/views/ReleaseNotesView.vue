@@ -64,6 +64,28 @@
             />
           </v-col>
           <v-col cols="6" md="5" class="d-flex justify-end">
+            <!-- ⭐ 신규: 모두 선택 / 선택 해제 토글 버튼 (관리자 전용) -->
+            <v-btn
+              v-if="authStore.isAdmin"
+              color="secondary"
+              variant="flat"
+              class="mr-2 bg-white"
+              @click="toggleSelectAll"
+            >
+              <v-icon start>{{ isAllSelected ? 'mdi-checkbox-multiple-blank-outline' : 'mdi-checkbox-multiple-marked-outline' }}</v-icon>
+              {{ isAllSelected ? '선택 해제' : '모두 선택' }}
+            </v-btn>
+            <!-- ⭐ 신규: 선택 글 삭제 버튼 (선택된 항목이 있을 때만 표시) -->
+            <v-btn
+              v-if="authStore.isAdmin && selectedIds.length > 0"
+              color="error"
+              variant="flat"
+              class="mr-2"
+              @click="confirmBulkDelete"
+            >
+              <v-icon start>mdi-delete-sweep</v-icon>
+              선택 글 삭제 ({{ selectedIds.length }})
+            </v-btn>
             <v-btn color="secondary" variant="flat" class="mr-2 bg-white" @click="loadReleaseNotes">
               <v-icon start>mdi-magnify</v-icon>
               검색
@@ -86,7 +108,13 @@
                 :items-per-page="pageSize"
                 class="elevation-1"
                 @click:row="openDetail"
+                :show-select="authStore.isAdmin"
+                v-model="selectedIds"
+                item-value="id"
+                @click:row.prevent
               >
+                <!-- ⭐ 신규: 헤더의 기본 전체선택 체크박스는 숨기고 별도 버튼으로 대체 -->
+                <template v-slot:header.data-table-select></template>
                 <!-- ⭐ 글 번호: 순번 방식 (페이지 기반) -->
                 <template v-slot:item.rowNum="{ index }">
                   {{ totalElements - ((currentPage - 1) * pageSize + index) }}
@@ -211,6 +239,22 @@
             </v-card-actions>
           </v-card>
         </v-dialog>
+
+        <!-- ⭐ 신규: 선택 글 일괄 삭제 확인 다이얼로그 -->
+        <v-dialog v-model="bulkDeleteDialog" max-width="400">
+          <v-card>
+            <v-card-title>선택 글 삭제</v-card-title>
+            <v-card-text>
+              선택하신 <strong>{{ selectedIds.length }}건</strong>의 게시글을 정말 삭제하시겠습니까?<br>
+              삭제된 게시글은 복구할 수 없습니다.
+            </v-card-text>
+            <v-card-actions>
+              <v-spacer />
+              <v-btn @click="bulkDeleteDialog = false">취소</v-btn>
+              <v-btn color="error" @click="bulkDeleteNotes" :loading="bulkDeleting">삭제</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
       </v-container>
     </v-main>
   </v-app>
@@ -263,6 +307,11 @@ const isEditMode = ref(false)
 const formRef = ref()
 const formValid = ref(false)
 
+// ⭐ 신규: 체크박스 다중 선택 및 일괄 삭제 상태
+const selectedIds = ref<number[]>([])
+const bulkDeleteDialog = ref(false)
+const bulkDeleting = ref(false)
+
 // 검색 및 총 건수
 const searchKeyword = ref('')
 const totalElements = ref(0)
@@ -300,6 +349,7 @@ const headers = computed(() => {
 // 메서드
 const loadReleaseNotes = async () => {
   loading.value = true
+  selectedIds.value = []  // ⭐ 신규: 목록 갱신 시 선택 초기화 (다른 페이지 항목이 선택된 채 남는 것 방지)
   try {
     const response = await api.get('/release-notes', {
       params: {
@@ -403,6 +453,39 @@ const deleteNote = async () => {
     console.error('삭제 실패:', error)
   } finally {
     deleting.value = false
+  }
+}
+
+// ⭐ 신규: 현재 화면에 표시된 게시글 전체선택 / 선택해제 토글
+const isAllSelected = computed(() =>
+  releaseNotes.value.length > 0 && selectedIds.value.length === releaseNotes.value.length
+)
+
+const toggleSelectAll = () => {
+  if (isAllSelected.value) {
+    selectedIds.value = []
+  } else {
+    selectedIds.value = releaseNotes.value.map((note: any) => note.id)
+  }
+}
+
+// ⭐ 신규: 선택 글 일괄 삭제
+const confirmBulkDelete = () => {
+  if (selectedIds.value.length === 0) return
+  bulkDeleteDialog.value = true
+}
+
+const bulkDeleteNotes = async () => {
+  bulkDeleting.value = true
+  try {
+    await api.delete('/release-notes/bulk', { data: { ids: selectedIds.value } })
+    bulkDeleteDialog.value = false
+    selectedIds.value = []
+    loadReleaseNotes()
+  } catch (error) {
+    console.error('일괄 삭제 실패:', error)
+  } finally {
+    bulkDeleting.value = false
   }
 }
 

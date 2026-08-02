@@ -1120,6 +1120,35 @@ grep -n "Day 63\|코인용 템플릿\|test-buy.*임시" frontend/src/views/Stock
 - [x] 완전히 정리한 사용자 — 발송 생략 확인
 - [x] 기간 내 활동 있었던 사용자 — 그 기간 리포트만 발송, 다음 기간부터 생략 확인 (주간 테스트로 검증, 로직 공유하는 월간/연간도 간접 검증됨)
 
+### ⭐ [Day 64 추가 작업] 릴리즈 노트 게시판 다중 선택 삭제 기능 — ✅ 완료 (2026-08-02)
+
+> **배경**: 릴리즈 노트 게시글이 200건 이상 누적되어, 관리자가 여러 건을 한 번에 정리할 수 있는
+> 수단이 없었음(기존에는 단건 삭제만 가능). 체크박스 다중 선택 + 일괄 삭제 기능을 신규 추가.
+
+**백엔드**
+- [x] `BulkDeleteRequest.java` 신규 (`dto/releasenote/`) — 삭제할 게시글 ID 리스트 요청 DTO
+- [x] `ReleaseNoteController.java`에 `DELETE /api/release-notes/bulk` 엔드포인트 추가 (관리자 전용)
+- [x] `ReleaseNoteService.java`에 `bulkDeleteReleaseNotes(ids, userId)` 메서드 추가
+      (`findAllById`로 일괄 조회 후 기존 soft delete 방식과 동일하게 `isDeleted=true` 일괄 처리)
+- [x] 빌드 에러 수정: 메서드 추가 과정에서 남은 중복 클래스 닫는 괄호(`}`) 제거
+      (`ReleaseNoteController.java`, `ReleaseNoteService.java` 컴파일 실패 해결)
+
+**프론트엔드 (`ReleaseNotesView.vue`)**
+- [x] 검색/새글작성 버튼과 동일한 스타일의 '모두 선택 / 선택 해제' 토글 버튼 추가 (관리자 전용)
+- [x] '선택 글 삭제 (N)' 버튼 추가 — 선택 항목이 있을 때만 노출
+- [x] `v-data-table`에 `show-select` + `item-value="id"` + `v-model="selectedIds"` 적용 (행별 체크박스)
+- [x] 기본 헤더 전체선택 체크박스는 숨기고 커스텀 버튼으로 대체 (`v-slot:header.data-table-select`)
+- [x] 일괄 삭제 확인 다이얼로그 신규 추가
+- [x] 검색/페이지 이동/카테고리 변경 시 선택 상태 자동 초기화
+
+**변경 파일**
+
+backend/src/main/java/com/cryptotrading/dto/releasenote/BulkDeleteRequest.java (신규)
+backend/src/main/java/com/cryptotrading/controller/ReleaseNoteController.java (수정)
+backend/src/main/java/com/cryptotrading/service/ReleaseNoteService.java (수정)
+frontend/src/views/ReleaseNotesView.vue (수정)
+
+
 ### 다음 일정(Day 66)으로 이관된 통합 테스트
 - [ ] 전체 페이지 렌더링 테스트
 - [ ] API 연동 테스트

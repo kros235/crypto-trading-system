@@ -98,13 +98,27 @@ public class ReleaseNoteController {
     /**
      * 게시글 삭제 (관리자 전용, Soft Delete)
      */
-    @DeleteMapping("/{id}")
-    @Operation(summary = "게시글 삭제", description = "릴리즈 노트를 삭제합니다 (관리자 전용)")
-    public ResponseEntity<ApiResponse<Void>> deleteReleaseNote(
-            @PathVariable Long id,
-            @AuthenticationPrincipal String userId) {
-        
-        releaseNoteService.deleteReleaseNote(id, userId);
-        return ResponseEntity.ok(ApiResponse.success(null, "게시글이 삭제되었습니다."));
-    }
+      @DeleteMapping("/{id}")
+      @Operation(summary = "게시글 삭제", description = "릴리즈 노트를 삭제합니다 (관리자 전용)")
+      public ResponseEntity<ApiResponse<Void>> deleteReleaseNote(
+              @PathVariable Long id,
+              @AuthenticationPrincipal String userId) {
+          
+          releaseNoteService.deleteReleaseNote(id, userId);
+          return ResponseEntity.ok(ApiResponse.success(null, "게시글이 삭제되었습니다."));
+      }
+
+      /**
+       * 게시글 일괄 삭제 (관리자 전용, Soft Delete)
+       * ⭐ 신규: 체크박스 다중 선택 삭제 기능
+       */
+      @DeleteMapping("/bulk")
+      @Operation(summary = "게시글 일괄 삭제", description = "선택한 릴리즈 노트를 일괄 삭제합니다 (관리자 전용)")
+      public ResponseEntity<ApiResponse<Void>> bulkDeleteReleaseNotes(
+              @org.springframework.web.bind.annotation.RequestBody com.cryptotrading.dto.releasenote.BulkDeleteRequest request,
+              @AuthenticationPrincipal String userId) {
+
+          int count = releaseNoteService.bulkDeleteReleaseNotes(request.getIds(), userId);
+          return ResponseEntity.ok(ApiResponse.success(null, count + "건의 게시글이 삭제되었습니다."));
+      }
 }

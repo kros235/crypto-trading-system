@@ -116,14 +116,34 @@ public class ReleaseNoteService {
     /**
      * 게시글 삭제 (관리자 전용, Soft Delete)
      */
-    @Transactional
-    public void deleteReleaseNote(Long id, String userId) {
-        ReleaseNote releaseNote = releaseNoteRepository.findByIdAndIsDeletedFalse(id)
-                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.RESOURCE_NOT_FOUND, "게시글 ID: " + id));  // ⭐ 수정
+      @Transactional
+      public void deleteReleaseNote(Long id, String userId) {
+          ReleaseNote releaseNote = releaseNoteRepository.findByIdAndIsDeletedFalse(id)
+                  .orElseThrow(() -> new EntityNotFoundException(ErrorCode.RESOURCE_NOT_FOUND, "게시글 ID: " + id));
 
-        releaseNote.setIsDeleted(true);
-        releaseNoteRepository.save(releaseNote);
-        
-        log.info("릴리즈 노트 삭제: ID={}, 제목={}, 삭제자={}", id, releaseNote.getTitle(), userId);
-    }
+          releaseNote.setIsDeleted(true);
+          releaseNoteRepository.save(releaseNote);
+          
+          log.info("릴리즈 노트 삭제: ID={}, 제목={}, 삭제자={}", id, releaseNote.getTitle(), userId);
+      }
+
+      /**
+       * 게시글 일괄 삭제 (관리자 전용, Soft Delete)
+       * ⭐ 신규: 체크박스 다중 선택 삭제 기능
+       */
+      @Transactional
+      public int bulkDeleteReleaseNotes(java.util.List<Long> ids, String userId) {
+          if (ids == null || ids.isEmpty()) {
+              throw new IllegalArgumentException("삭제할 게시글이 선택되지 않았습니다.");
+          }
+
+          java.util.List<ReleaseNote> targets = releaseNoteRepository.findAllById(ids);
+          for (ReleaseNote note : targets) {
+              note.setIsDeleted(true);
+          }
+          releaseNoteRepository.saveAll(targets);
+
+          log.info("릴리즈 노트 일괄 삭제: IDs={}, 건수={}, 삭제자={}", ids, targets.size(), userId);
+          return targets.size();
+      }
 }

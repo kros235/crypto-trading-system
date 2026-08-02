@@ -340,22 +340,11 @@ public class NotificationController {
             // 일일 리포트 생성
             DailyReportDTO report = dailyReportService.generateDailyReport(userId);
             
-            // DM 발송
-            String profitSign = report.getTotalProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "";
-            // ⭐⭐⭐ [Day 63 개선] 종목별(코인별) 평가액 내역 추가 ⭐⭐⭐
-            var holdingsBreakdown = discordBotService.buildHoldingsBreakdown(report.getCoinSummaries(), null);
-            discordBotService.sendDailyReportDM(
-                user.getDiscordUserId(),
-                "코인 ",
-                report.getReportDate().toString(),
-                profitSign + String.format("%,.0f", report.getRealizedProfit()),
-                (report.getUnrealizedProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "") 
-                    + String.format("%,.0f", report.getUnrealizedProfit()),
-                profitSign + String.format("%,.0f", report.getTotalProfit()),
-                profitSign + report.getProfitRate().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString(),
-                report.getHoldingCount(),
-                String.format("%,.0f", report.getTotalHoldingValue()),
-                holdingsBreakdown
+            // ⭐⭐⭐ [수정] sendCategorizedReportDM으로 교체 (코인 단독이므로 hasCoinActivity 명시 필요) ⭐⭐⭐
+            report.setHasCoinActivity(true);
+            discordBotService.sendCategorizedReportDM(
+                user.getDiscordUserId(), "일일", report.getReportDate().toString(),
+                report, userId
             );
             
             response.put("success", true);
@@ -841,20 +830,11 @@ public class NotificationController {
             // ⭐⭐⭐ [Day 63 개선] coreShape 매핑 없이 stock* 필드를 그대로 사용 (Discord는 core 필드에 의존하지 않음) ⭐⭐⭐
             DailyReportDTO report = stockDailyReportService.generateStockDailyReport(userId);
 
-            String profitSign = report.getStockTotalProfit().compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
-            var holdingsBreakdown = discordBotService.buildHoldingsBreakdown(null, report.getStockSummaries());
-            discordBotService.sendDailyReportDM(
-                user.getDiscordUserId(),
-                "주식 ",
-                report.getReportDate().toString(),
-                profitSign + String.format("%,.0f", report.getStockRealizedProfit()),
-                (report.getStockUnrealizedProfit().compareTo(BigDecimal.ZERO) >= 0 ? "+" : "")
-                    + String.format("%,.0f", report.getStockUnrealizedProfit()),
-                profitSign + String.format("%,.0f", report.getStockTotalProfit()),
-                profitSign + report.getStockProfitRate().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString(),
-                report.getStockHoldingCount(),
-                String.format("%,.0f", report.getStockTotalHoldingValue()),
-                holdingsBreakdown
+            // ⭐⭐⭐ [수정] sendCategorizedReportDM으로 교체 (주식 단독이므로 hasCoinActivity=false 명시) ⭐⭐⭐
+            report.setHasCoinActivity(false);
+            discordBotService.sendCategorizedReportDM(
+                user.getDiscordUserId(), "일일", report.getReportDate().toString(),
+                report, userId
             );
 
             response.put("success", true);

@@ -876,9 +876,10 @@ KIS_BASE_URL=https://openapivts.koreainvestment.com:29443
 | **61** | ⑭ StockBotMonitorView 신규 작성 (1769줄) + StockBotController 지표 조회 엔드포인트 2개 추가 + StockRiskManagementService HoldingDaysWarning DTO 4개 필드 추가 (transactionId/quantity/buyPrice/totalAmount, 동일 종목 다중 보유 식별) + stockBotApi 모듈 8개 메서드 + /stock-bot-monitor 라우트/사이드바 + **[v2~v7 후속 보완 누적] 알림 테스트 폴백 직접 호출 / 데모 모드 토글 / 봇 분리 안내 / Discord 칩 카드 우측하단 / 도움말 줄바꿈 정리 / 보유기간 경고 풍부 UI / 회색 칩 검정 글씨 / "주식 봇 상태" 라벨 통일 / 보유기간 경고 일수 검정 굵게 / 일일 한도 초기화 직관 표현 + 5가지 운영 사례 도움말 / 디스코드/수동제어 다이얼로그 폭 800px** | StockBotMonitorView.vue, StockBotController.java, StockRiskManagementService.java, api/stock.ts, router/index.ts, TheSidebar.vue | ✅ 완료 |
 | **62** | ⑮ StockBacktestService + StockBacktestView + 코인/주식 백테스트 UI 통일 | 백테스팅 | ✅ 완료 |
 | **63** | ⑯ StockProfitService + 수익분석 + 일일리포트 통합 + **StockHoldingsView 수익분석 영역 활성화** + 알림 시스템 버그 수정 다수 ⭐ | 수익 분석 + 알림 통합 | ✅ 완료 |
-| **64** | ⑰ AdminHolidayView + 관리자 통합 + **[Day 62 백로그] 레버리지/인버스 종목만 maxHoldingDays 강제매도 적용** | 관리자 기능 + 백테스트 정확도 개선 | ⏳ 예정 |
-| **65** | ⑱ 사이드바 활성화 + SecurityConfig 업데이트 + 통합 테스트 + **[Day 63 발견 백로그] 코인 주간/월간/연간 리포트 주식 통합** | 통합 + 리포트 확장 | ⏳ 예정 |
-| **66** | ⑲ AI 뉴스 가중치 주식 적용** (StockNewsAnalysisService 신규, stock_news/stock_news_analysis 테이블 추가, StockSettingService useAiAnalysis 활성화, StockSignalDetectorService 가중치 반영, 주식 뉴스 페이지 StockNewsView.vue 신규, StockBotMonitorView 가중치 버튼을 주식용 엔드포인트로 변경) + 최종 테스트 + 문서화 + v2.0 릴리즈 + (v2.1 리팩토링 계획 수립: com.cryptotrading → com.investment 패키지 리네이밍, controller/service/entity 서브패키지 crypto/stock/common 분리) | 배포 + AI 가중치 + 리팩토링 계획서 | ⏳ 예정 |
+| **64** | ⑰ 일일/주간/월간/연간 리포트 코인+주식 완전 통합 + 웹훅/DM 포맷 통일 (ReportFormatterService 신규, hasCoinActivity/hasStockActivity 기간 기반 판정 개편, 활동 없는 기간 발송 생략) | 리포트 시스템 전면 개편 | ✅ 완료 |
+| **65** | ⑱ AdminHolidayView + 관리자 통합 + **[Day 62 백로그] 레버리지/인버스 종목만 maxHoldingDays 강제매도 적용** | 관리자 기능 + 백테스트 정확도 개선 | ⏳ 예정 |
+| **66** | ⑲ 사이드바 활성화 + SecurityConfig 업데이트 + 통합 테스트 | 통합 테스트 | ⏳ 예정 |
+| **67** | ⑳ AI 뉴스 가중치 주식 적용 ... (원래 66일차 내용 그대로) | 배포 + AI 가중치 + 리팩토링 계획서 | ⏳ 예정 |
 | **별도** | 🚨 **[버그 수정]** 코인봇 멀티유저 격리 버그 수정 - TradingScheduler `BOT_ENABLED_KEY` 단일 전역 → 사용자별 키 변경 + isBotEnabled/setBotEnabled에 userId 인자 추가 + executeAutoTrading의 전역 게이트 제거 + executeForUser에 사용자별 체크 추가 + BotController에서 Authentication.getName() 받아 전달 (한주 형 별도 신청 시 진행) | TradingScheduler.java, TradingBotService.java, BotController.java | ⏳ 별도 신청 시 |
 | **별도** | 🔧 **[인프라 개선]** SSL 인증서 자동 갱신 크론 미실행 문제 근본 원인 해결 + 실패 감지 Discord 알림 시스템 구축 (Day 63 완료 후, Day 64 시작 전 발견된 운영 이슈 긴급 대응) | scripts/renew-ssl.sh, scripts/check-ssl-expiry.sh(신규), scripts/setup-cron.sh | ✅ 완료 (2026-07-31) |
 
@@ -1072,21 +1073,54 @@ grep -n "Day 63\|코인용 템플릿\|test-buy.*임시" frontend/src/views/Stock
 
 ---
 
-## 📌 Day 65 상세 작업 내역 (예정)
+## 📌 Day 64 상세 작업 내역 — ✅ 완료
 
-### ⭐ [Day 63 발견 백로그] 코인 주간/월간/연간 리포트에 주식 통합
-> **배경**: `TradingScheduler.sendWeeklyReport()`/`sendMonthlyReport()`/`sendYearlyReport()`는 Phase 1부터 있던 코인 전용
-> 기능(Discord DM만 발송)으로, 주식 데이터가 전혀 반영되어 있지 않음. 일일 리포트와 동일한 수준(코인+주식 통합,
-> 활동 없는 자산군 섹션 숨김, 이메일 발송 포함)으로 확장 필요.
+> **배경**: 일일 리포트는 Day 63에서 코인+주식 통합이 완성됐으나, 주간/월간/연간 리포트(Phase 1부터
+> 있던 코인 전용, Discord DM만 발송)는 주식 데이터가 전혀 반영되지 않았고, 웹훅과 DM의 리포트
+> 내용/포맷도 서로 달라 사용자 혼란이 있었음. 이번 작업으로 4개 리포트(일/주/월/연) 전부
+> 코인+주식 통합 + 웹훅/DM 완전 동일 포맷으로 정리.
 
-- [ ] `StockDailyReportService`에 `generateStockWeeklyReport()`/`generateStockMonthlyReport()`/`generateStockYearlyReport()` 추가
-      (Phase 1 `DailyReportService.generateWeeklyReport()` 등과 동일 패턴)
-- [ ] `TradingScheduler`의 3개 스케줄러 메서드에 일일 리포트와 동일한 병합 로직 적용
-      (`hasCoinActivity`/`hasStockActivity` 판별, 리포트 병합, `titlePrefix` 동적 처리)
-- [ ] `sendPeriodReportDM()`에도 종목별 상세 필드(`buildHoldingsBreakdown`) 반영
-- [ ] 주간/월간/연간 리포트에도 이메일 발송 추가 (현재는 Discord DM만 존재)
+### 활동 판별 로직 개편 — ✅ 완료
+- [x] `hasCoinActivity`/`hasStockActivity` 판정 기준 변경
+      - 기존: 거래설정 존재 OR 과거~현재 통틀어 거래이력 1건이라도 존재 (완전히 손 떼도 영원히 옴)
+      - 변경: 거래설정 존재 OR 현재 보유(HOLDING) 존재 OR **해당 기간(일/주/월/연) 내 거래이력 존재**
+- [x] `TradingScheduler`에 `hasCoinPeriodActivity(userId, start, end)` / `hasStockPeriodActivity(userId, start, end)` 헬퍼 신규 추가
+- [x] `sendDailyReport()`/`sendWeeklyReport()`/`sendMonthlyReport()`/`sendYearlyReport()` 4개 메서드 전부 적용
+      → 완전히 정리한 사용자도 "그 기간 안에 거래했다면" 해당 기간 리포트는 한 번 발송되고, 다음 기간부터 조용해짐
 
-### 통합 테스트 (원래 계획)
+### 주간/월간/연간 리포트 코인+주식 통합 — ✅ 완료
+- [x] `StockDailyReportService.generateStockPeriodReport(userId, startDate, endDate)` 신규
+      (Phase 1 `DailyReportService.generatePeriodReport()`와 동일 패턴, 기간별 매수/매도 집계 + 현재 보유 기준 평가손익)
+- [x] `TradingScheduler`의 `sendWeeklyReport()`/`sendMonthlyReport()`/`sendYearlyReport()`에 일일 리포트와 동일한
+      코인+주식 병합 로직 적용 (활동 판별 → 병합 → 발송)
+- [x] 이메일은 기존에도 발송되고 있었음(변경 없음), Discord DM에 코인+주식 통합 반영
+
+### 웹훅 ↔ Discord DM 포맷 통일 — ✅ 완료
+- [x] `ReportFormatterService.java` 신규 — `[코인]`/`[주식]` 섹션(거래요약/손익현황/보유현황/보유종목 상세표)을
+      생성하는 로직을 단일 서비스로 추출
+- [x] `NotificationService.formatDailyReport()` → `ReportFormatterService` 위임으로 단순화 (웹훅)
+- [x] `DiscordBotService.sendCategorizedReportDM()` 신규 — 기존 `sendDailyReportDM()`/`sendPeriodReportDM()` 2개
+      메서드를 통합, Embed 필드 반복 방식 대신 코드블록 정렬 표로 렌더링 (DM)
+- [x] 종목명이 긴 주식은 표엔 종목코드만 표시하고 표 위에 "코드=종목명" 범례로 분리 (이름 잘림 방지)
+- [x] 코인 보유 종목 표 컬럼 폭 조정 (수량 칸 축소, 줄바꿈 현상 해결)
+
+### 죽은 코드 정리 — ✅ 완료
+- [x] `sendDailyReportDM()`, `sendPeriodReportDM()`, `buildHoldingsBreakdown()`, `HoldingRow` record,
+      중복된 `visualWidth`/`padRight`/`truncateVisual` 헬퍼 제거 (grep 검증 완료)
+
+### 버그 수정 (테스트 중 발견) — ✅ 완료
+- [x] `ReportFormatterService` `String.format()` 포맷 지정자 개수 불일치(`%d` 인자 누락)로 리포트 생성 실패하던 버그 수정
+- [x] `DailyAssetSnapshotService.createDailySnapshot()`이 호출자와 같은 물리 트랜잭션을 공유하여, API 키 없는
+      사용자의 스냅샷 생성 실패 시 매도 자체가 `UnexpectedRollbackException`으로 롤백되던 버그 →
+      `@Transactional(propagation = Propagation.REQUIRES_NEW)`로 격리
+
+### 검증 — ✅ 완료
+- [x] 코인+주식 둘 다 활동 중인 경우 (일/주/월/연 전부, 웹훅+DM)
+- [x] 코인/주식 각각 단독 활동 중인 경우 (섹션 자동 숨김)
+- [x] 완전히 정리한 사용자 — 발송 생략 확인
+- [x] 기간 내 활동 있었던 사용자 — 그 기간 리포트만 발송, 다음 기간부터 생략 확인 (주간 테스트로 검증, 로직 공유하는 월간/연간도 간접 검증됨)
+
+### 다음 일정(Day 66)으로 이관된 통합 테스트
 - [ ] 전체 페이지 렌더링 테스트
 - [ ] API 연동 테스트
 - [ ] 사이드바 최종 활성화
@@ -1441,9 +1475,9 @@ frontend/src/views/
 | Phase 1 (암호화폐) | ✅ 완료 | 100% |
 | Phase 2-1 (기반 구축) | ✅ 완료 | ~100% (Day 48~55 완료, 기반 구축 단계 마무리) |
 | Phase 2-2 (핵심 기능) | ✅ 완료 | 100% (Day 53~62 완료 **+ Day 60 디자인 시스템 통일 + Day 61 봇 모니터링 페이지 + Day 62 백테스팅 + 코인/주식 UI 통일**) |
-| Phase 2-3 (고도화) | 🔄 진행 중 | 50% (Day 63 완료, Day 64 예정) |
-| Phase 2-4 (안정화) | ⏳ 예정 | 0% (Day 65~66 예정) |
-| **전체 프로젝트** | - | **~88%** (Phase 1 완료, Phase 2 Day 63/66 완료, 잔여 3일) |
+| Phase 2-3 (고도화) | 🔄 진행 중 | 67% (Day 63~64 완료, Day 65 예정) |
+| Phase 2-4 (안정화) | ⏳ 예정 | 0% (Day 66~67 예정) |
+| **전체 프로젝트** | - | **~90%** (Phase 1 완료, Phase 2 Day 64/67 완료, 잔여 3일) |
 | v2.1 패키지 리팩토링 | ⏳ 예정 (Day 66 이후) | 0% |
 | v3.0 Backend 컨테이너 분리 | ⏳ 예정 (v2.1 완료 이후) | 0% |
 | Phase 3 달러 거래 | ⏳ 미정 (v3.0 완료 이후) | 0% |

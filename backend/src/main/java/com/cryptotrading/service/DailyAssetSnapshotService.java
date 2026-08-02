@@ -11,6 +11,7 @@ import com.cryptotrading.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -45,7 +46,16 @@ public class DailyAssetSnapshotService {
      * - 이전 스냅샷에서 불입금액 이어받기
      * - 수익 금액/수익률 자동 계산
      */
-    @Transactional
+    // ⭐⭐⭐ [버그 수정] REQUIRED → REQUIRES_NEW ⭐⭐⭐
+    // 왜: 이 메서드가 호출자(예: TransactionService.sellTransaction())와 같은 물리 트랜잭션을
+    //     공유하고 있었음. 내부에서 호출하는 UserService.getDecryptedApiKeys()도 @Transactional이라,
+    //     API 키가 없는 사용자(테스트 계정 등)에서 예외가 나면 이 메서드 자체는 try/catch로
+    //     삼켜서 정상 종료하더라도, 공유 중인 물리 트랜잭션에는 이미 "rollback-only" 표시가
+    //     남아버림 → 호출자(sellTransaction 등)가 커밋하려는 순간 UnexpectedRollbackException 발생
+    //     → 스냅샷과 무관한 매도 자체가 통째로 롤백되는 문제.
+    //     REQUIRES_NEW로 바꾸면 이 메서드는 독립된 새 물리 트랜잭션에서 실행되므로,
+    //     내부에서 무슨 예외가 나든 호출자의 트랜잭션에는 전혀 영향을 주지 않음.
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createDailySnapshot(String userId) {
         LocalDate today = LocalDate.now(KST);
 

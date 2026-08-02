@@ -30,9 +30,12 @@ import org.springframework.stereotype.Component;
 import jakarta.annotation.PostConstruct;
 
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import com.cryptotrading.entity.Transaction;
+import com.cryptotrading.entity.TransactionStatus;
 
 @Component
 @RequiredArgsConstructor
@@ -225,13 +228,19 @@ public class TradingScheduler {
        
             for (User user : users) {
                 try {
-                    // ⭐⭐⭐ [개선] 코인/주식 각각 활동(거래설정 또는 거래내역) 여부 판별 ⭐⭐⭐
-                    // 왜: 코인을 아예 안 하는 사용자에게 "코인 총 손익 0원" 섹션이,
-                    //     주식을 아예 안 하는 사용자에게 "[주식]" 섹션이 무의미하게 뜨는 것을 방지하기 위함.
+                    // ⭐⭐⭐ [수정] "오늘 안의 거래 이력"도 활동으로 인정하도록 조건 추가 ⭐⭐⭐
+                    // 왜: 오늘 매수/매도해서 실적이 있는데도, 마침 오늘 안에 설정 삭제+전량 매도까지
+                    //     끝내버리면 "지금 상태" 기준만으로는 활동 없음(false)이 되어 리포트가 아예
+                    //     안 갔음. 주간/월간/연간과 동일하게 "그 기간(오늘) 안의 거래 이력"도 함께
+                    //     보도록 하여, 오늘 거래했으면 오늘 리포트는 한 번 오고 다음 날부터는
+                    //     다시 조용해지도록 함(hasCoinPeriodActivity/hasStockPeriodActivity 재사용).
+                    LocalDate today = LocalDate.now();
                     boolean hasCoinActivity = tradingSettingRepository.findByUserId(user.getUserId()).isPresent()
-                            || transactionRepository.countByUserId(user.getUserId()) > 0;
+                            || transactionRepository.countByUserIdAndStatus(user.getUserId(), Transaction.TransactionStatus.HOLDING) > 0
+                            || hasCoinPeriodActivity(user.getUserId(), today, today);
                     boolean hasStockActivity = stockTradingSettingRepository.existsByUserId(user.getUserId())
-                            || stockTransactionRepository.countByUserId(user.getUserId()) > 0;
+                            || stockTransactionRepository.countByUserIdAndStatus(user.getUserId(), TransactionStatus.HOLDING) > 0
+                            || hasStockPeriodActivity(user.getUserId(), today, today);
 
                     if (!hasCoinActivity && !hasStockActivity) {
                         log.debug("사용자 {} 코인/주식 활동 이력 없음 - 일일 리포트 발송 생략", user.getUserId());
@@ -275,33 +284,12 @@ public class TradingScheduler {
 
                     // Discord DM 발송
                     if (user.getDiscordUserId() != null && !user.getDiscordUserId().isEmpty()) {
-                        boolean hasStockData = report.getStockBuyCount() != null;
-                        // ⭐⭐⭐ [개선] 활동 조합에 따라 제목 접두어와 표시할 숫자를 선택 ⭐⭐⭐
-                        String titlePrefix = (hasCoinActivity && hasStockData) ? "" : hasStockData ? "주식 " : "코인 ";
-                        java.math.BigDecimal realized = (!hasCoinActivity && hasStockData) ? report.getStockRealizedProfit() : report.getRealizedProfit();
-                        java.math.BigDecimal unrealized = (!hasCoinActivity && hasStockData) ? report.getStockUnrealizedProfit() : report.getUnrealizedProfit();
-                        java.math.BigDecimal total = (!hasCoinActivity && hasStockData) ? report.getStockTotalProfit() : report.getTotalProfit();
-                        java.math.BigDecimal rate = (!hasCoinActivity && hasStockData) ? report.getStockProfitRate() : report.getProfitRate();
-                        int holdCount = (!hasCoinActivity && hasStockData) ? report.getStockHoldingCount() : report.getHoldingCount();
-                        java.math.BigDecimal holdValue = (!hasCoinActivity && hasStockData) ? report.getStockTotalHoldingValue() : report.getTotalHoldingValue();
-
-                        String profitSign = total.compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "";
-                        // ⭐⭐⭐ [개선] 종목별 평가액 내역 추가 (코인+주식 통합, sendBuyNotification과 동일한 필드 포맷) ⭐⭐⭐
-                        var holdingsBreakdown = discordBotService.buildHoldingsBreakdown(
-                                hasCoinActivity ? report.getCoinSummaries() : null,
-                                hasStockData ? report.getStockSummaries() : null);
-                        discordBotService.sendDailyReportDM(
-                            user.getDiscordUserId(),
-                            titlePrefix,
-                            report.getReportDate().toString(),
-                            profitSign + String.format("%,.0f", realized),
-                            (unrealized.compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "")
-                                + String.format("%,.0f", unrealized),
-                            profitSign + String.format("%,.0f", total),
-                            profitSign + rate.setScale(2, RoundingMode.HALF_UP).toPlainString(),
-                            holdCount,
-                            String.format("%,.0f", holdValue),
-                            holdingsBreakdown
+                        // ⭐⭐⭐ [수정] 웹훅과 동일한 [코인]/[주식] 섹션 텍스트를 그대로 DM으로 발송 ⭐⭐⭐
+                        // 왜: DM 전용 필드 조합 로직(titlePrefix/realized/unrealized 등 삼항연산)이
+                        //     더 이상 필요 없음 — 각 섹션이 자기 데이터를 그대로 렌더링하기 때문.
+                        discordBotService.sendCategorizedReportDM(
+                            user.getDiscordUserId(), "일일", report.getReportDate().toString(),
+                            report, user.getUserId()
                         );
                     }
                
@@ -322,15 +310,56 @@ public class TradingScheduler {
     /**
      * ★ 추가: 매주 일요일 23:50 주간 리포트 발송
      */
+    /**
+     * ⭐⭐⭐ [수정] 일일 리포트와 동일한 활동 판별 + 코인/주식 통합 로직 적용 ⭐⭐⭐
+     * 왜: 기존엔 활성 사용자 전원에게 코인 데이터만 무조건 발송했음(주식 데이터 미반영,
+     *     활동 없어도 계속 발송). 일일 리포트(Day 63)와 동일하게 개선.
+     */
     @Scheduled(cron = "0 50 23 * * SUN", zone = "Asia/Seoul")
     public void sendWeeklyReport() {
         log.info("========== 주간 리포트 발송 시작 ==========");
         try {
-            // ⭐⭐⭐ [수정] 비활성 사용자 제외 ⭐⭐⭐
             List<User> users = userRepository.findByIsActive(true);
             for (User user : users) {
                 try {
+                    LocalDate today = LocalDate.now();
+                    LocalDate weekStart = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+
+                    // ⭐⭐⭐ [수정] 설정/보유 여부에 "기간 내 거래 이력" 조건 추가 ⭐⭐⭐
+                    boolean hasCoinActivity = tradingSettingRepository.findByUserId(user.getUserId()).isPresent()
+                            || transactionRepository.countByUserIdAndStatus(user.getUserId(), Transaction.TransactionStatus.HOLDING) > 0
+                            || hasCoinPeriodActivity(user.getUserId(), weekStart, today);
+                    boolean hasStockActivity = stockTradingSettingRepository.existsByUserId(user.getUserId())
+                            || stockTransactionRepository.countByUserIdAndStatus(user.getUserId(), TransactionStatus.HOLDING) > 0
+                            || hasStockPeriodActivity(user.getUserId(), weekStart, today);
+
+                    if (!hasCoinActivity && !hasStockActivity) {
+                        log.debug("사용자 {} 코인/주식 활동 이력 없음 - 주간 리포트 발송 생략", user.getUserId());
+                        continue;
+                    }
+
                     DailyReportDTO report = dailyReportService.generateWeeklyReport(user.getUserId());
+                    report.setHasCoinActivity(hasCoinActivity);
+
+                    if (hasStockActivity) {
+                        try {
+                            DailyReportDTO stockReport = stockDailyReportService.generateStockPeriodReport(user.getUserId(), weekStart, today);
+                            report.setStockBuyCount(stockReport.getStockBuyCount());
+                            report.setStockSellCount(stockReport.getStockSellCount());
+                            report.setStockTotalBuyAmount(stockReport.getStockTotalBuyAmount());
+                            report.setStockTotalSellAmount(stockReport.getStockTotalSellAmount());
+                            report.setStockRealizedProfit(stockReport.getStockRealizedProfit());
+                            report.setStockUnrealizedProfit(stockReport.getStockUnrealizedProfit());
+                            report.setStockTotalProfit(stockReport.getStockTotalProfit());
+                            report.setStockProfitRate(stockReport.getStockProfitRate());
+                            report.setStockHoldingCount(stockReport.getStockHoldingCount());
+                            report.setStockTotalHoldingValue(stockReport.getStockTotalHoldingValue());
+                            report.setStockTotalInvestment(stockReport.getStockTotalInvestment());
+                            report.setStockSummaries(stockReport.getStockSummaries());
+                        } catch (Exception stockEx) {
+                            log.warn("사용자 {} 주식 주간 리포트 병합 실패 (코인 리포트는 정상 발송): {}", user.getUserId(), stockEx.getMessage());
+                        }
+                    }
 
                     // 이메일 (등록된 경우만)
                     if (user.getEmail() != null && !user.getEmail().isEmpty()) {
@@ -338,17 +367,10 @@ public class TradingScheduler {
                     }
                     // Discord DM (등록된 경우만)
                     if (user.getDiscordUserId() != null && !user.getDiscordUserId().isEmpty()) {
-                        String profitSign = report.getTotalProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "";
-                        discordBotService.sendPeriodReportDM(
-                            user.getDiscordUserId(), "주간",
-                            report.getReportDate().toString(),
-                            profitSign + String.format("%,.0f", report.getRealizedProfit()),
-                            (report.getUnrealizedProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "")
-                                + String.format("%,.0f", report.getUnrealizedProfit()),
-                            profitSign + String.format("%,.0f", report.getTotalProfit()),
-                            profitSign + report.getProfitRate().setScale(2, RoundingMode.HALF_UP).toPlainString(),
-                            report.getHoldingCount(),
-                            String.format("%,.0f", report.getTotalHoldingValue())
+                        // ⭐⭐⭐ [수정] 일일 리포트와 동일하게 sendCategorizedReportDM로 통합 ⭐⭐⭐
+                        discordBotService.sendCategorizedReportDM(
+                            user.getDiscordUserId(), "주간", report.getReportDate().toString(),
+                            report, user.getUserId()
                         );
                     }
                     log.info("사용자 {} 주간 리포트 발송 완료", user.getUserId());
@@ -366,31 +388,60 @@ public class TradingScheduler {
      * ★ 추가: 매월 말일 23:50 월간 리포트 발송
      * - 말일 여부: cron으로 말일 직접 지정 불가 → L(last) 사용
      */
-    @Scheduled(cron = "0 50 23 L * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 50 23 L * *", zone = "Asia/Seoul") 
     public void sendMonthlyReport() {
         log.info("========== 월간 리포트 발송 시작 ==========");
         try {
-            // ⭐⭐⭐ [수정] 비활성 사용자 제외 ⭐⭐⭐
             List<User> users = userRepository.findByIsActive(true);
             for (User user : users) {
                 try {
+                    LocalDate today = LocalDate.now();
+                    LocalDate monthStart = today.withDayOfMonth(1);
+                    LocalDate monthEnd = today.with(java.time.temporal.TemporalAdjusters.lastDayOfMonth());
+
+                    boolean hasCoinActivity = tradingSettingRepository.findByUserId(user.getUserId()).isPresent()
+                            || transactionRepository.countByUserIdAndStatus(user.getUserId(), Transaction.TransactionStatus.HOLDING) > 0
+                            || hasCoinPeriodActivity(user.getUserId(), monthStart, monthEnd);
+                    boolean hasStockActivity = stockTradingSettingRepository.existsByUserId(user.getUserId())
+                            || stockTransactionRepository.countByUserIdAndStatus(user.getUserId(), TransactionStatus.HOLDING) > 0
+                            || hasStockPeriodActivity(user.getUserId(), monthStart, monthEnd);
+
+                    if (!hasCoinActivity && !hasStockActivity) {
+                        log.debug("사용자 {} 코인/주식 활동 이력 없음 - 월간 리포트 발송 생략", user.getUserId());
+                        continue;
+                    }
+
                     DailyReportDTO report = dailyReportService.generateMonthlyReport(user.getUserId());
+                    report.setHasCoinActivity(hasCoinActivity);
+
+                    if (hasStockActivity) {
+                        try {
+                            DailyReportDTO stockReport = stockDailyReportService.generateStockPeriodReport(user.getUserId(), monthStart, monthEnd);
+                            report.setStockBuyCount(stockReport.getStockBuyCount());
+                            report.setStockSellCount(stockReport.getStockSellCount());
+                            report.setStockTotalBuyAmount(stockReport.getStockTotalBuyAmount());
+                            report.setStockTotalSellAmount(stockReport.getStockTotalSellAmount());
+                            report.setStockRealizedProfit(stockReport.getStockRealizedProfit());
+                            report.setStockUnrealizedProfit(stockReport.getStockUnrealizedProfit());
+                            report.setStockTotalProfit(stockReport.getStockTotalProfit());
+                            report.setStockProfitRate(stockReport.getStockProfitRate());
+                            report.setStockHoldingCount(stockReport.getStockHoldingCount());
+                            report.setStockTotalHoldingValue(stockReport.getStockTotalHoldingValue());
+                            report.setStockTotalInvestment(stockReport.getStockTotalInvestment());
+                            report.setStockSummaries(stockReport.getStockSummaries());
+                        } catch (Exception stockEx) {
+                            log.warn("사용자 {} 주식 월간 리포트 병합 실패 (코인 리포트는 정상 발송): {}", user.getUserId(), stockEx.getMessage());
+                        }
+                    }
 
                     if (user.getEmail() != null && !user.getEmail().isEmpty()) {
                         emailService.sendDailyReport(user.getEmail(), report);
                     }
                     if (user.getDiscordUserId() != null && !user.getDiscordUserId().isEmpty()) {
-                        String profitSign = report.getTotalProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "";
-                        discordBotService.sendPeriodReportDM(
-                            user.getDiscordUserId(), "월간",
-                            report.getReportDate().toString(),
-                            profitSign + String.format("%,.0f", report.getRealizedProfit()),
-                            (report.getUnrealizedProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "")
-                                + String.format("%,.0f", report.getUnrealizedProfit()),
-                            profitSign + String.format("%,.0f", report.getTotalProfit()),
-                            profitSign + report.getProfitRate().setScale(2, RoundingMode.HALF_UP).toPlainString(),
-                            report.getHoldingCount(),
-                            String.format("%,.0f", report.getTotalHoldingValue())
+                        // ⭐⭐⭐ [수정] 일일 리포트와 동일하게 sendCategorizedReportDM로 통합 ⭐⭐⭐
+                        discordBotService.sendCategorizedReportDM(
+                            user.getDiscordUserId(), "월간", report.getReportDate().toString(),
+                            report, user.getUserId()
                         );
                     }
                     log.info("사용자 {} 월간 리포트 발송 완료", user.getUserId());
@@ -411,27 +462,56 @@ public class TradingScheduler {
     public void sendYearlyReport() {
         log.info("========== 연간 리포트 발송 시작 ==========");
         try {
-            // ⭐⭐⭐ [수정] 비활성 사용자 제외 ⭐⭐⭐
             List<User> users = userRepository.findByIsActive(true);
             for (User user : users) {
                 try {
+                    LocalDate today = LocalDate.now();
+                    LocalDate yearStart = today.withDayOfYear(1);
+                    LocalDate yearEnd = today.with(java.time.temporal.TemporalAdjusters.lastDayOfYear());
+
+                    boolean hasCoinActivity = tradingSettingRepository.findByUserId(user.getUserId()).isPresent()
+                            || transactionRepository.countByUserIdAndStatus(user.getUserId(), Transaction.TransactionStatus.HOLDING) > 0
+                            || hasCoinPeriodActivity(user.getUserId(), yearStart, yearEnd);
+                    boolean hasStockActivity = stockTradingSettingRepository.existsByUserId(user.getUserId())
+                            || stockTransactionRepository.countByUserIdAndStatus(user.getUserId(), TransactionStatus.HOLDING) > 0
+                            || hasStockPeriodActivity(user.getUserId(), yearStart, yearEnd);
+
+                    if (!hasCoinActivity && !hasStockActivity) {
+                        log.debug("사용자 {} 코인/주식 활동 이력 없음 - 연간 리포트 발송 생략", user.getUserId());
+                        continue;
+                    }
+
                     DailyReportDTO report = dailyReportService.generateYearlyReport(user.getUserId());
+                    report.setHasCoinActivity(hasCoinActivity);
+
+                    if (hasStockActivity) {
+                        try {
+                            DailyReportDTO stockReport = stockDailyReportService.generateStockPeriodReport(user.getUserId(), yearStart, yearEnd);
+                            report.setStockBuyCount(stockReport.getStockBuyCount());
+                            report.setStockSellCount(stockReport.getStockSellCount());
+                            report.setStockTotalBuyAmount(stockReport.getStockTotalBuyAmount());
+                            report.setStockTotalSellAmount(stockReport.getStockTotalSellAmount());
+                            report.setStockRealizedProfit(stockReport.getStockRealizedProfit());
+                            report.setStockUnrealizedProfit(stockReport.getStockUnrealizedProfit());
+                            report.setStockTotalProfit(stockReport.getStockTotalProfit());
+                            report.setStockProfitRate(stockReport.getStockProfitRate());
+                            report.setStockHoldingCount(stockReport.getStockHoldingCount());
+                            report.setStockTotalHoldingValue(stockReport.getStockTotalHoldingValue());
+                            report.setStockTotalInvestment(stockReport.getStockTotalInvestment());
+                            report.setStockSummaries(stockReport.getStockSummaries());
+                        } catch (Exception stockEx) {
+                            log.warn("사용자 {} 주식 연간 리포트 병합 실패 (코인 리포트는 정상 발송): {}", user.getUserId(), stockEx.getMessage());
+                        }
+                    }
 
                     if (user.getEmail() != null && !user.getEmail().isEmpty()) {
                         emailService.sendDailyReport(user.getEmail(), report);
                     }
                     if (user.getDiscordUserId() != null && !user.getDiscordUserId().isEmpty()) {
-                        String profitSign = report.getTotalProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "";
-                        discordBotService.sendPeriodReportDM(
-                            user.getDiscordUserId(), "연간",
-                            report.getReportDate().toString(),
-                            profitSign + String.format("%,.0f", report.getRealizedProfit()),
-                            (report.getUnrealizedProfit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "+" : "")
-                                + String.format("%,.0f", report.getUnrealizedProfit()),
-                            profitSign + String.format("%,.0f", report.getTotalProfit()),
-                            profitSign + report.getProfitRate().setScale(2, RoundingMode.HALF_UP).toPlainString(),
-                            report.getHoldingCount(),
-                            String.format("%,.0f", report.getTotalHoldingValue())
+                        // ⭐⭐⭐ [수정] 일일 리포트와 동일하게 sendCategorizedReportDM로 통합 ⭐⭐⭐
+                        discordBotService.sendCategorizedReportDM(
+                            user.getDiscordUserId(), "연간", report.getReportDate().toString(),
+                            report, user.getUserId()
                         );
                     }
                     log.info("사용자 {} 연간 리포트 발송 완료", user.getUserId());
@@ -575,5 +655,31 @@ public class TradingScheduler {
                 }
             }
         }
+    }
+
+    /**
+     * ⭐⭐⭐ [신규] 기간(주간/월간/연간) 내 코인 거래 이력 존재 여부 ⭐⭐⭐
+     * 왜: 설정도 삭제하고 전량 매도해서 지금은 활동이 없어도, 해당 기간 안에 실제 거래가
+     *     있었다면 그 기간의 리포트는 한 번은 보내주는 게 맞다는 판단. (일일 리포트는
+     *     "설정 존재 OR 현재 보유"만으로 계속 판단 — 오늘 하루 안의 활동은 이미 그 기준에
+     *     자연스럽게 포함되므로 별도 변경 없음)
+     */
+    private boolean hasCoinPeriodActivity(String userId, LocalDate start, LocalDate end) {
+        LocalDateTime startDateTime = start.atStartOfDay();
+        LocalDateTime endDateTime = end.atTime(LocalTime.MAX);
+        return !transactionRepository.findByUserIdAndCreatedAtBetween(userId, startDateTime, endDateTime).isEmpty()
+                || !transactionRepository.findByUserIdAndSoldAtBetween(userId, startDateTime, endDateTime).isEmpty();
+    }
+
+    /**
+     * ⭐⭐⭐ [신규] 기간(주간/월간/연간) 내 주식 거래 이력 존재 여부 ⭐⭐⭐
+     */
+    private boolean hasStockPeriodActivity(String userId, LocalDate start, LocalDate end) {
+        LocalDateTime startDateTime = start.atStartOfDay();
+        LocalDateTime endDateTime = end.atTime(LocalTime.MAX);
+        boolean hasBuys = stockTransactionRepository.findByUserIdAndCreatedAtAfter(userId, startDateTime).stream()
+                .anyMatch(t -> !t.getCreatedAt().isAfter(endDateTime));
+        boolean hasSells = !stockTransactionRepository.findSoldTransactionsByDateRange(userId, startDateTime, endDateTime).isEmpty();
+        return hasBuys || hasSells;
     }
 }

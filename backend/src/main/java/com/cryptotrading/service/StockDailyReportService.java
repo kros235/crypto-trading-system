@@ -150,6 +150,119 @@ public class StockDailyReportService {
                 .build();
     }
 
+    /**
+     * ⭐⭐⭐ [신규] 기간별(주간/월간/연간) 주식 리포트 생성 (stock* 필드만 채워진 DailyReportDTO 반환) ⭐⭐⭐
+     * 왜: generateStockDailyReport()는 "오늘" 하루치 매수/매도만 집계함. 주간/월간/연간 리포트는
+     *     날짜 범위(startDate~endDate)의 매수/매도 건수·금액을 집계해야 하므로 별도 메서드로 분리.
+     *     보유 종목과 평가손익은 코인의 DailyReportService.generatePeriodReport()와 동일하게
+     *     "현재 시점 기준 보유 현황"으로 계산함(기간 동안의 스냅샷이 아님).
+     */
+    public DailyReportDTO generateStockPeriodReport(String userId, LocalDate startDate, LocalDate endDate) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.atTime(LocalTime.MAX);
+
+        List<StockTransaction> periodBuys = stockTransactionRepository
+                .findByUserIdAndCreatedAtAfter(userId, start)
+                .stream()
+                .filter(t -> t.getType() == TransactionType.BUY && !t.getCreatedAt().isAfter(end))
+                .toList();
+
+        List<StockTransaction> periodSells = stockTransactionRepository
+                .findSoldTransactionsByDateRange(userId, start, end);
+
+        List<StockTransaction> holdings = stockTransactionRepository
+                .findByUserIdAndStatus(userId, TransactionStatus.HOLDING);
+
+        Map<String, BigDecimal> currentPrices = getCurrentPrices(userId, holdings);
+
+        BigDecimal totalBuyAmount = periodBuys.stream()
+                .map(StockTransaction::getTotalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalSellAmount = periodSells.stream()
+                .map(t -> t.getSoldPrice() != null && t.getQuantity() != null
+                        ? t.getSoldPrice().multiply(BigDecimal.valueOf(t.getQuantity()))
+                        : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal realizedProfit = periodSells.stream()
+                .map(t -> t.getProfitLoss() != null ? t.getProfitLoss() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalInvestment = BigDecimal.ZERO;
+        BigDecimal totalHoldingValue = BigDecimal.ZERO;
+        Map<String, List<StockTransaction>> holdingsByCode = holdings.stream()
+                .collect(Collectors.groupingBy(StockTransaction::getStockCode));
+
+        List<StockSummary> stockSummaries = new ArrayList<>();
+
+        for (Map.Entry<String, List<StockTransaction>> entry : holdingsByCode.entrySet()) {
+            String code = entry.getKey();
+            List<StockTransaction> codeHoldings = entry.getValue();
+            BigDecimal currentPrice = currentPrices.getOrDefault(code, BigDecimal.ZERO);
+
+            BigDecimal totalQuantity = BigDecimal.ZERO;
+            BigDecimal totalCost = BigDecimal.ZERO;
+
+            for (StockTransaction t : codeHoldings) {
+                totalQuantity = totalQuantity.add(BigDecimal.valueOf(t.getQuantity()));
+                totalCost = totalCost.add(t.getTotalAmount());
+            }
+
+            BigDecimal avgPrice = totalQuantity.compareTo(BigDecimal.ZERO) > 0
+                    ? totalCost.divide(totalQuantity, 2, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
+
+            BigDecimal currentValue = totalQuantity.multiply(currentPrice);
+            BigDecimal profitLoss = currentValue.subtract(totalCost);
+            BigDecimal profitRate = totalCost.compareTo(BigDecimal.ZERO) > 0
+                    ? profitLoss.divide(totalCost, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100"))
+                    : BigDecimal.ZERO;
+
+            totalInvestment = totalInvestment.add(totalCost);
+            totalHoldingValue = totalHoldingValue.add(currentValue);
+
+            com.cryptotrading.entity.StockInfo stockInfo = stockInfoRepository.findById(code).orElse(null);
+            String resolvedStockName = stockInfo != null ? stockInfo.getStockName() : code;
+            String etfType = (stockInfo != null && stockInfo.getEtfType() != null) ? stockInfo.getEtfType().name() : null;
+
+            stockSummaries.add(StockSummary.builder()
+                    .stockCode(code)
+                    .stockName(resolvedStockName)
+                    .etfType(etfType)
+                    .holdingCount(codeHoldings.size())
+                    .totalQuantity(totalQuantity)
+                    .averagePrice(avgPrice)
+                    .currentPrice(currentPrice)
+                    .profitLoss(profitLoss)
+                    .profitRate(profitRate)
+                    .build());
+        }
+
+        BigDecimal unrealizedProfit = totalHoldingValue.subtract(totalInvestment);
+        BigDecimal totalProfit = realizedProfit.add(unrealizedProfit);
+        BigDecimal profitRate = totalInvestment.compareTo(BigDecimal.ZERO) > 0
+                ? totalProfit.divide(totalInvestment, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100"))
+                : BigDecimal.ZERO;
+
+        return DailyReportDTO.builder()
+                .userId(userId)
+                .reportDate(endDate)
+                .stockBuyCount(periodBuys.size())
+                .stockSellCount(periodSells.size())
+                .stockTotalBuyAmount(totalBuyAmount)
+                .stockTotalSellAmount(totalSellAmount)
+                .stockRealizedProfit(realizedProfit)
+                .stockUnrealizedProfit(unrealizedProfit)
+                .stockTotalProfit(totalProfit)
+                .stockProfitRate(profitRate)
+                .stockHoldingCount(holdingsByCode.size())
+                .stockTotalHoldingValue(totalHoldingValue)
+                .stockTotalInvestment(totalInvestment)
+                .stockSummaries(stockSummaries)
+                .build();
+    }
+
     private Map<String, BigDecimal> getCurrentPrices(String userId, List<StockTransaction> holdings) {
         Map<String, BigDecimal> prices = new HashMap<>();
 

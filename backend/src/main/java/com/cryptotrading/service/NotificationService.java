@@ -24,6 +24,8 @@ import java.util.Map;
 public class NotificationService {
     
     private final NotificationConfig notificationConfig;
+    // ⭐⭐⭐ [추가] 코인/주식 섹션 텍스트를 DM과 동일하게 생성하기 위한 공용 포맷터 ⭐⭐⭐
+    private final ReportFormatterService reportFormatterService;
     private final WebClient webClient = WebClient.create();
     
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
@@ -253,10 +255,13 @@ public class NotificationService {
         );
     }
 
+    /**
+     * ⭐⭐⭐ [수정] 코인/주식 섹션 생성을 ReportFormatterService에 위임 ⭐⭐⭐
+     * 왜: 웹훅 채널과 Discord DM이 서로 다른 내용/포맷으로 리포트를 만들던 문제를 해소하기 위해,
+     *     "[코인]"/"[주식]" 섹션(거래요약+손익현황+보유현황+보유종목상세) 생성 로직을 공용 서비스로
+     *     추출함. 이제 웹훅과 DM이 완전히 동일한 본문 텍스트를 사용함.
+     */
     private String formatDailyReport(DailyReportDTO report) {
-        String profitEmoji = report.getTotalProfit().compareTo(BigDecimal.ZERO) >= 0 ? "📈" : "📉";
-        String profitSign = report.getTotalProfit().compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
-        
         StringBuilder sb = new StringBuilder();
         sb.append(String.format("""
             📊 **일일 거래 리포트**
@@ -264,100 +269,13 @@ public class NotificationService {
             
             ━━━━━━━━━━━━━━━━━━━━━━
             
-            💼 **거래 요약**
-            • 매수: %d건 (%s원)
-            • 매도: %d건 (%s원)
-            
-            %s **손익 현황**
-            • 실현 손익: %s%s원
-            • 평가 손익: %s%s원
-            • **총 손익**: %s%s원 (%s%s%%)
-            
-            📦 **보유 현황**
-            • 보유 종목: %d종목
-            • 총 평가액: %s원
-            • 투자 원금: %s원
-            
             """,
-            report.getReportDate().format(DATE_FORMATTER),
-            report.getBuyCount(), formatNumber(report.getTotalBuyAmount()),
-            report.getSellCount(), formatNumber(report.getTotalSellAmount()),
-            profitEmoji,
-            profitSign, formatNumber(report.getRealizedProfit()),
-            report.getUnrealizedProfit().compareTo(BigDecimal.ZERO) >= 0 ? "+" : "", 
-            formatNumber(report.getUnrealizedProfit()),
-            profitSign, formatNumber(report.getTotalProfit()),
-            profitSign, report.getProfitRate().setScale(2, RoundingMode.HALF_UP),
-            report.getHoldingCount(),
-            formatNumber(report.getTotalHoldingValue()),
-            formatNumber(report.getTotalInvestment())
+            report.getReportDate().format(DATE_FORMATTER)
         ));
-        
-        // 코인별 상세 (있는 경우)
-        if (report.getCoinSummaries() != null && !report.getCoinSummaries().isEmpty()) {
-            sb.append("📋 **종목별 현황**\n");
-            for (DailyReportDTO.CoinSummary coin : report.getCoinSummaries()) {
-                String coinProfitSign = coin.getProfitLoss().compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
-                sb.append(String.format("• %s: %s%s원 (%s%s%%)\n",
-                    coin.getCoinSymbol(),
-                    coinProfitSign, formatNumber(coin.getProfitLoss()),
-                    coinProfitSign, coin.getProfitRate().setScale(2, RoundingMode.HALF_UP)
-                ));
-            }
-        }
 
-        // ⭐⭐⭐ [Day 63 추가] 주식 섹션 (stockBuyCount가 null이면 주식 리포트가 병합되지 않은 것이므로 기존과 동일하게 스킵) ⭐⭐⭐
-        if (report.getStockBuyCount() != null) {
-            String stockProfitEmoji = report.getStockTotalProfit().compareTo(BigDecimal.ZERO) >= 0 ? "📈" : "📉";
-            String stockProfitSign = report.getStockTotalProfit().compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
-
-            sb.append(String.format("""
-                
-                ━━━━━━━━━━━━━━━━━━━━━━
-                
-                📊 **[주식] 거래 요약**
-                • 매수: %d건 (%s원)
-                • 매도: %d건 (%s원)
-                
-                %s **[주식] 손익 현황**
-                • 실현 손익: %s%s원
-                • 평가 손익: %s%s원
-                • **총 손익**: %s%s원 (%s%s%%)
-                
-                📦 **[주식] 보유 현황**
-                • 보유 종목: %d종목
-                • 총 평가액: %s원
-                • 투자 원금: %s원
-                
-                """,
-                report.getStockBuyCount(), formatNumber(report.getStockTotalBuyAmount()),
-                report.getStockSellCount(), formatNumber(report.getStockTotalSellAmount()),
-                stockProfitEmoji,
-                stockProfitSign, formatNumber(report.getStockRealizedProfit()),
-                report.getStockUnrealizedProfit().compareTo(BigDecimal.ZERO) >= 0 ? "+" : "",
-                formatNumber(report.getStockUnrealizedProfit()),
-                stockProfitSign, formatNumber(report.getStockTotalProfit()),
-                stockProfitSign, report.getStockProfitRate().setScale(2, RoundingMode.HALF_UP),
-                report.getStockHoldingCount(),
-                formatNumber(report.getStockTotalHoldingValue()),
-                formatNumber(report.getStockTotalInvestment())
-            ));
-
-            if (report.getStockSummaries() != null && !report.getStockSummaries().isEmpty()) {
-                sb.append("📋 **[주식] 종목별 현황**\n");
-                for (DailyReportDTO.StockSummary stock : report.getStockSummaries()) {
-                    String stockSign = stock.getProfitLoss().compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
-                    sb.append(String.format("• %s: %s%s원 (%s%s%%)\n",
-                        stock.getStockCode(),
-                        stockSign, formatNumber(stock.getProfitLoss()),
-                        stockSign, stock.getProfitRate().setScale(2, RoundingMode.HALF_UP)
-                    ));
-                }
-            }
-        }
-        
+        sb.append(reportFormatterService.buildCategorySections(report));
         sb.append(String.format("\n👤 사용자: %s", report.getUserId()));
-        
+
         return sb.toString();
     }
 

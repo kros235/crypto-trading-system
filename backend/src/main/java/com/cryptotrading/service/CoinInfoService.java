@@ -36,6 +36,9 @@ public class CoinInfoService {
     private final UpbitApiService upbitApiService;
     private final CacheService cacheService;
 
+    // ⭐⭐⭐ [신규] Top10 자동 리밸런싱 서비스 ⭐⭐⭐
+    private final Top10RebalanceService top10RebalanceService;
+
     /**
      * 코인 정보 초기화/업데이트 (수동 실행 또는 스케줄링)
      * ★★★ 수정: 업비트에 없는 코인 비활성화 로직 추가 ★★★
@@ -167,6 +170,12 @@ public class CoinInfoService {
               updateMarketCapRanks();
          } catch (Exception e) {
                  log.warn("스케줄된 시가총액 순위 갱신 실패 (무시): {}", e.getMessage());
+         }
+         // ⭐⭐⭐ [신규] 시가총액 순위 갱신 직후 Top10 자동 운영 사용자 리밸런싱 ⭐⭐⭐
+         try {
+             top10RebalanceService.rebalanceAllUsers();
+         } catch (Exception e) {
+             log.warn("Top10 자동 리밸런싱 실패 (무시): {}", e.getMessage());
          }
     }
 

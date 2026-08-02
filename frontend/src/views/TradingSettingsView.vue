@@ -27,7 +27,7 @@
             <v-alert
               v-if="message"
               :type="messageType"
-              dismissible
+              dismissible 
               class="mb-4"
               @click:close="message = ''"
             >
@@ -48,8 +48,37 @@
                     color="grey-darken-1"
                   />
                 </h3>
+
+	  <!-- ⭐⭐⭐ [신규] Top10 자동 운영 체크박스 ⭐⭐⭐ -->
+               <div class="d-flex align-center mb-3">
+                 <v-checkbox
+                   v-model="settings.useTop10AutoRebalance"
+                   label="Top10 종목 자동 운영"
+                   color="primary"
+                   hide-details
+                 />
+                 <HelpButton
+                   use-dialog
+                   :dialog-title="helpContents.top10AutoRebalance.title"
+                   :dialog-content="helpContents.top10AutoRebalance.content"
+                   :dialog-width="1050"
+                   color="grey-darken-1"
+                 />
+               </div>
+               <v-alert
+                 v-if="settings.useTop10AutoRebalance"
+                 type="info"
+                 variant="tonal"
+                 density="compact"
+                 class="mb-3"
+                 style="font-size: 12px;"
+               >
+                 매일 새벽 04:00 KST에 시가총액 상위 10개 코인 기준으로 거래 종목이 자동 갱신됩니다.
+                 현재 아래 목록은 최신 시가총액 상위 10개 코인이며, 개별 선택은 비활성화됩니다.
+               </v-alert>
+
                 <v-autocomplete
-                  v-model="settings.coinSymbols"
+                  v-model="displayedCoinSymbols"
                   :items="availableCoins"
                   item-title="displayName"
                   item-value="symbol"
@@ -60,6 +89,7 @@
                   :rules="[rules.required]"
                   variant="outlined"
                   :loading="coinsLoading"
+                  :disabled="settings.useTop10AutoRebalance"
                 >
                   <template v-slot:chip="{ props, item }">
                     <v-chip
@@ -73,7 +103,9 @@
                   </template>
                 </v-autocomplete>
                 <div class="text-caption text-grey mt-1">
-                  * 최소 1개 이상의 코인을 선택해주세요
+                 {{ settings.useTop10AutoRebalance
+                     ? '* Top10 자동 운영 중에는 종목이 자동으로 관리됩니다'
+                     : '* 최소 1개 이상의 코인을 선택해주세요 (Top10 자동 운영을 끄면 현재 목록이 수동 선택값으로 유지됩니다)' }}
                 </div>
               </div>
 
@@ -1005,6 +1037,61 @@ const helpContents = {
             - 시장 정보가 풍부해 분석이 용이함<br/><br/>
             📊 <strong style="color: #4CAF50;">기본 추천 코인:</strong><br/>
             BTC, ETH, XRP, SOL
+          </div>
+        </div>
+      </div>
+    `
+  },
+
+  // ⭐⭐⭐ [신규] Top10 자동 운영 도움말 ⭐⭐⭐
+  top10AutoRebalance: {
+    title: '🔄 Top10 종목 자동 운영',
+    content: `
+      <div class="glossary-detail pa-3">
+        <div class="glossary-section mb-4">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">🔖 쉬운 설명</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <p class="text-body-2 text-grey-darken-3 mb-0">"매일 새벽, 시가총액 Top10 코인으로 거래 종목을 자동으로 갈아끼워주는 기능"</p>
+          </div>
+        </div>
+ 
+        <div class="glossary-example-card mb-4" style="background-color: #263238; border-color: #37474F; border-radius: 8px; padding: 16px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #ECEFF1;">📊 ETF 비유</span>
+          </div>
+          <div style="padding-left: 24px; font-family: 'Noto Sans KR', sans-serif; line-height: 1.8; color: #CFD8DC;">
+            나스닥100 ETF가 주기적으로 편입/편출 종목을 바꾸듯,<br/>
+            이 옵션을 켜면 <strong style="color: #4CAF50;">매일 04:00 KST</strong>에 시가총액 상위 10개 코인 기준으로<br/>
+            거래 종목이 자동으로 교체됩니다.<br/><br/>
+             예) 어제 Top10에 있던 A코인이 오늘 11위로 밀려나고 F코인이 10위로 올라오면<br/>
+            → A 편출, F 편입으로 자동 반영
+          </div>
+        </div>
+  
+        <div class="glossary-section mb-4" style="background-color: #FFF3E0; border-radius: 8px; padding: 12px;">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold" style="color: #E65100;">⚠️ 편출된 종목의 기존 보유분은?</span>
+          </div>
+          <div style="padding-left: 24px; color: #424242;">
+            편출되어도 <strong>기존에 보유 중인 물량은 강제로 매도되지 않습니다.</strong><br/><br/>
+            - 목표 수익률 / 손절매 / 트레일링 스톱 조건을 충족할 때만 정상적으로 매도됩니다.<br/>
+            - 편출 기간 동안에는 해당 종목의 <strong>신규 매수만 중단</strong>됩니다.<br/>
+            - 나중에 다시 Top10에 편입되면 신규 매수가 재개됩니다.
+          </div>
+        </div>
+ 
+        <div class="mb-2">
+          <div class="d-flex align-center mb-2">
+            <span class="text-subtitle-1 font-weight-bold">📋 주의 사항</span>
+          </div>
+          <div style="padding-left: 24px;">
+            <ul style="margin: 0; padding-left: 18px; color: #424242; line-height: 1.8;">
+              <li>이 옵션을 켜면 코인 개별 선택 UI가 비활성화되며, 종목은 시스템이 자동으로 관리합니다.</li>
+              <li>편입/편출이 발생하면 Discord DM과 이메일로 알림을 보내드립니다.</li>
+              <li>변경 없는 날에는 알림이 발송되지 않습니다.</li>
+            </ul>
           </div>
         </div>
       </div>
@@ -1970,6 +2057,30 @@ const helpContents = {
 // 활성 코인 목록
 const availableCoins = ref<Array<CoinInfo & { displayName: string }>>([])
 
+// ⭐⭐⭐ [신규] 시가총액 상위 10개 심볼 (availableCoins는 이미 순위 정렬되어 로드됨) ⭐⭐⭐
+const top10Symbols = computed(() =>
+  availableCoins.value
+    .filter(c => c.marketCapRank != null)
+    .slice(0, 10)
+    .map(c => c.symbol)
+)
+
+// ⭐⭐⭐ [수정] watch → computed(getter/setter)로 변경 ⭐⭐⭐
+// 이유: 체크박스 토글과 v-autocomplete의 disabled 전환이 같은 타이밍에 겹치면서
+//       watch로 갱신한 값이 화면에 즉시 반영되지 않는 문제가 있었음.
+//       "화면에 표시되는 값"을 아예 이 computed 하나로 통일하면 타이밍 문제 없이 항상 최신 Top10이 보임.
+// 부가 효과: 체크 해제 시 이전에 직접 선택했던 코인 목록이 자동으로 복원됨 (덮어쓰지 않으므로)
+const displayedCoinSymbols = computed<string[]>({
+  get: () => settings.value.useTop10AutoRebalance ? top10Symbols.value : settings.value.coinSymbols,
+  set: (val) => {
+    // Top10 자동 운영 중에는 사용자가 직접 편집 못하므로(disabled) set이 호출될 일 없지만, 방어적으로 가드
+    if (!settings.value.useTop10AutoRebalance) {
+      settings.value.coinSymbols = val
+    }
+  }
+})
+
+
 // 기존 설정 존재 여부
 const hasExistingSettings = ref(false)
 
@@ -2004,7 +2115,9 @@ const settings = ref({
   // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
   useRoundRobin: true,        // 매수 방식: true=라운드로빈, false=고정금액
   additionalDropPct: 1.0,
-  useStopLoss: true
+  useStopLoss: true,
+  // ⭐⭐⭐ [신규] Top10 자동 운영 여부 ⭐⭐⭐
+  useTop10AutoRebalance: false
 })
 
 // 기본값 (초기화용)
@@ -2037,7 +2150,9 @@ const defaultSettings = {
   // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
   useRoundRobin: true,        // 기본값: 라운드로빈 방식
   additionalDropPct: 1.0,
-  useStopLoss: true
+  useStopLoss: true,
+  // ⭐⭐⭐ [신규] Top10 자동 운영 여부 - 기본값 OFF ⭐⭐⭐
+  useTop10AutoRebalance: false
 }
 
 // 유효성 검증 규칙
@@ -2149,9 +2264,11 @@ const loadSettings = async () => {
         // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
         useRoundRobin: data.useRoundRobin ?? true,
         additionalDropPct: data.additionalDropPct ?? 1.0,
-        useStopLoss: data.useStopLoss ?? true
+        useStopLoss: data.useStopLoss ?? true,
+        // ⭐⭐⭐ [신규] Top10 자동 운영 여부 ⭐⭐⭐
+        useTop10AutoRebalance: data.useTop10AutoRebalance ?? false
       }
-
+ 
       hasExistingSettings.value = true
       message.value = '기존 거래 설정을 불러왔습니다'
       messageType.value = 'info'
@@ -2199,7 +2316,9 @@ const createDefaultSettings = async () => {
       // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
       useRoundRobin: Boolean(settings.value.useRoundRobin),
       additionalDropPct: Number(settings.value.additionalDropPct),
-      useStopLoss: Boolean(settings.value.useStopLoss)
+      useStopLoss: Boolean(settings.value.useStopLoss),
+      // ⭐⭐⭐ [신규] Top10 자동 운영 여부 ⭐⭐⭐
+      useTop10AutoRebalance: Boolean(settings.value.useTop10AutoRebalance)
     }
     
     await tradingApi.createSettings(payload)
@@ -2234,7 +2353,8 @@ const saveSettings = async () => {
   try {
     // 데이터 정제 (빈 값 처리, 타입 보장)
     const payload = {
-      coinSymbols: settings.value.coinSymbols,
+      // ⭐⭐⭐ [수정] Top10 자동 운영 중에는 settings.coinSymbols가 갱신되지 않으므로, 실제 표시값을 저장 ⭐⭐⭐
+      coinSymbols: displayedCoinSymbols.value,
       basePeriod: Number(settings.value.basePeriod),
       buyThresholdPct: Number(settings.value.buyThresholdPct),
       sellTargetPct: Number(settings.value.sellTargetPct),
@@ -2262,7 +2382,9 @@ const saveSettings = async () => {
       // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
       useRoundRobin: Boolean(settings.value.useRoundRobin),
       additionalDropPct: Number(settings.value.additionalDropPct),
-      useStopLoss: Boolean(settings.value.useStopLoss)
+      useStopLoss: Boolean(settings.value.useStopLoss),
+      // ⭐⭐⭐ [신규] Top10 자동 운영 여부 ⭐⭐⭐
+      useTop10AutoRebalance: Boolean(settings.value.useTop10AutoRebalance)
     }
 
     console.log('Sending payload:', payload) // 디버깅용
@@ -2367,7 +2489,9 @@ const deleteSettings = async () => {
       // ⭐⭐⭐ 수정: usePerTradeLimit → useRoundRobin ⭐⭐⭐
       useRoundRobin: Boolean(settings.value.useRoundRobin),
       additionalDropPct: Number(settings.value.additionalDropPct),
-      useStopLoss: Boolean(settings.value.useStopLoss)
+      useStopLoss: Boolean(settings.value.useStopLoss),
+      // ⭐⭐⭐ [신규] Top10 자동 운영 여부 ⭐⭐⭐
+      useTop10AutoRebalance: Boolean(settings.value.useTop10AutoRebalance)
     }
     
     await tradingApi.createSettings(payload)

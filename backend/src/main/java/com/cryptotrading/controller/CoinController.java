@@ -4,6 +4,7 @@ import com.cryptotrading.dto.upbit.UpbitAccountDTO;
 import com.cryptotrading.dto.upbit.UpbitTickerDTO;
 import com.cryptotrading.entity.CoinInfo;
 import com.cryptotrading.service.CoinInfoService;
+import com.cryptotrading.service.Top10RebalanceService;
 import com.cryptotrading.service.UpbitApiService;
 import com.cryptotrading.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,8 @@ public class CoinController {
     private final CoinInfoService coinInfoService;
     private final UpbitApiService upbitApiService;
     private final UserService userService;
+    // ⭐⭐⭐ [신규] Top10 자동 리밸런싱 수동 테스트용 ⭐⭐⭐
+    private final Top10RebalanceService top10RebalanceService;
 
     @GetMapping("/active")
     public ResponseEntity<List<CoinInfo>> getActiveCoins() {
@@ -104,6 +107,28 @@ public class CoinController {
             return ResponseEntity.ok(result);
         } catch (RuntimeException e) {
             log.error("시가총액 순위 갱신 실패: {}", e.getMessage());
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    
+    /**
+     * ⭐⭐⭐ [신규] Top10 자동 리밸런싱 수동 테스트 API ⭐⭐⭐
+     * - 04:00 KST 스케줄을 기다리지 않고 즉시 리밸런싱 실행
+     * - use_top10_auto_rebalance = true 인 사용자 전원 대상
+     * - 테스트 목적: 실제 배포 후에도 관리자가 필요 시 즉시 재실행 가능 (운영 편의성)
+     */
+    @PostMapping("/rebalance-top10")
+    public ResponseEntity<?> rebalanceTop10() {
+        try {
+            top10RebalanceService.rebalanceAllUsers();
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Top10 자동 리밸런싱이 실행되었습니다");
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            log.error("Top10 리밸런싱 수동 실행 실패: {}", e.getMessage());
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);

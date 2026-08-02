@@ -127,4 +127,7 @@ public class TradingSettingDTO {
     private BigDecimal additionalDropPct;
 
     private Boolean useStopLoss;
+
+    // ⭐⭐⭐ [신규] Top10 자동 운영 여부 ⭐⭐⭐
+    private Boolean useTop10AutoRebalance;
 }

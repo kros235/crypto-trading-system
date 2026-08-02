@@ -3036,6 +3036,88 @@ ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE COMMENT '2FA 활성화 여�
 
 ---
 
+### ✅ Day 34 (작업일자 미정 - 추후 확정) - Top10 시가총액 코인 자동 리밸런싱 기능
+**완료 항목:**
+- DB 스키마 확장
+  - trading_settings 테이블에 use_top10_auto_rebalance 컬럼 추가
+- Top10 자동 편입/편출 핵심 로직 (Backend)
+  - Top10RebalanceService 신규 구현
+    - market_cap_rank 기준 활성 코인 상위 10개 추출
+    - use_top10_auto_rebalance = true 사용자만 대상으로 coinSymbols 자동 교체
+    - 편입/편출 목록 계산 후 변경 있을 때만 저장 + 알림 (불필요한 갱신 방지)
+  - CoinInfoService.scheduledUpdate()에 리밸런싱 호출 연동
+    - 매일 04:00 KST, 시가총액 순위 갱신 직후 즉시 실행
+  - 기존 알림 인프라 재사용 (discordBotService.sendSystemAlertDM, emailService.sendSystemAlert)
+    - 신규 알림 메서드 없이 옵션 사용자에게만 편입/편출 안내 발송
+  - 수동 테스트용 API 추가: POST /api/coins/rebalance-top10
+- 편출 종목 보유 정책
+  - 편출되어도 기존 보유분은 강제 매도하지 않음
+  - 목표 수익률/손절매/트레일링 스톱 조건 충족 시에만 정상 매도 (기존 매도 로직 그대로 재사용, 추가 구현 불필요)
+  - 편출 기간에는 신규 매수만 중단, 재편입 시 매수 재개
+- 거래 설정 페이지 UI (Frontend)
+  - "Top10 종목 자동 운영" 체크박스 추가
+  - 체크 시 시가총액 상위 10개 코인을 즉시 화면에 반영 + 개별 선택 UI 비활성화
+  - 저장 시 화면에 표시된 Top10 목록이 즉시 DB에 반영
+  - 체크 해제 시 직전까지 표시되던 목록을 수동 선택값으로 그대로 유지 (A안 정책)
+- 도움말 보강
+  - 거래 설정 페이지 도움말에 Top10 자동 운영 상세 설명 추가
+  - /help 용어 사전에 "Top10 자동 운영" 항목 추가 (거래 카테고리)
+
+**DB 마이그레이션:**
+```sql
+ALTER TABLE trading_settings
+ADD COLUMN use_top10_auto_rebalance TINYINT(1) DEFAULT 0
+COMMENT 'Top10 자동 운영 여부 (매일 04:00 KST 시가총액 상위10 자동 반영)'
+AFTER use_stop_loss;
+```
+
+**생성된 파일 (Backend):**
+- `service/Top10RebalanceService.java` - Top10 리밸런싱 핵심 로직
+
+**수정된 파일 (Backend):**
+- `entity/TradingSetting.java` - useTop10AutoRebalance 필드 추가
+- `dto/TradingSettingDTO.java` - 필드 추가
+- `service/TradingSettingService.java` - 생성/수정/조회 3곳 반영
+- `repository/TradingSettingRepository.java` - findByUseTop10AutoRebalanceTrue() 추가
+- `service/CoinInfoService.java` - Top10RebalanceService 연동 (scheduledUpdate 마지막에 호출)
+- `controller/CoinController.java` - 수동 테스트 API 추가
+
+**수정된 파일 (Frontend):**
+- `views/TradingSettingsView.vue` - 체크박스, computed 기반 즉시반영 로직, 저장 payload, 도움말 추가
+- `views/HelpView.vue` - 용어 사전 항목 추가
+
+**해결한 주요 이슈:**
+1. **CoinController 빌드 실패**
+   - 문제: Top10RebalanceService import 누락으로 컴파일 에러
+   - 해결: import문 1줄 추가
+2. **체크박스 ON 시 화면에 Top10이 반영되지 않는 문제**
+   - 문제: watch로 coinSymbols를 갱신하는 방식이 disabled 전환과 타이밍이 겹쳐 화면 미반영
+   - 해결: displayedCoinSymbols computed(getter/setter)로 변경, 화면에 표시되는 값 자체를 항상 최신으로 계산하도록 구조 변경
+3. **저장 후 체크 해제 시 이전 선택값이 사라지는 문제**
+   - 원인: 저장 시점에 DB의 coinSymbols 자체가 Top10으로 덮어써지므로 "이전 값"이 물리적으로 존재하지 않음
+   - 결정: 별도 컬럼으로 마지막 수동 선택값을 저장하는 대신(B안), 체크 해제 시 현재 목록을 그대로 이어받는 A안으로 확정 (구조 단순 유지, 안내 문구로 보완)
+
+**테스트 완료:**
+- ✅ 컴파일/빌드 성공 - Docker
+- ✅ 시가총액 순위 갱신 API - Postman
+- ✅ Top10 리밸런싱 수동 실행 API - Postman
+- ✅ DB coin_symbols 정확히 Top10으로 반영 - MySQL
+- ✅ Discord DM 알림 (편입/편출 목록 포함) - Discord
+- ✅ 옵션 미사용 계정 격리 검증 (영향 없음) - MySQL
+- ✅ 멱등성 검증 (변경 없을 시 알림 재발송 안 됨) - 로그 확인
+- ✅ 백엔드 로그 흐름 확인 - Docker 로그
+- ✅ 체크박스 ON 시 Top10 즉시 표시 - 브라우저
+- ✅ 저장 후 새로고침 시 값 유지 - 브라우저
+- ✅ 도움말 다이얼로그 정상 표시 (줄바꿈 수정 포함) - 브라우저
+- ✅ /help 용어 사전 항목 표시 - 브라우저
+
+**운영 서버 미반영 사항 (추후 배포 예정):**
+- Oracle Cloud 운영 DB에 `ALTER TABLE` 미적용 상태
+- 운영 서버 코드 배포 미완료
+- → 전체 작업 완료 및 Day 번호 확정 시 별도로 배포 절차 안내 예정
+
+---
+
 ### 릴리즈 노트 게시판 상세 (Day 30 신규)
 
 #### 개요

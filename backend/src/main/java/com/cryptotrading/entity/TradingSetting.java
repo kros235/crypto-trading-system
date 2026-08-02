@@ -132,6 +132,12 @@ public class TradingSetting extends BaseEntity {
     @Builder.Default
     private Boolean useStopLoss = true;
 
+    // ⭐⭐⭐ [신규] Top10 자동 운영 여부 ⭐⭐⭐
+    // - true: 매일 04:00 KST 시가총액 갱신 직후 coinSymbols가 상위 10개 코인으로 자동 재설정됨
+    // - false(기본값): 기존과 동일하게 사용자가 직접 선택한 코인 유지
+   @Column(name = "use_top10_auto_rebalance")
+   private Boolean useTop10AutoRebalance = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "user_id", insertable = false, updatable = false)
     private User user;

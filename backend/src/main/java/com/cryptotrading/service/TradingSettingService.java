@@ -72,6 +72,9 @@ public class TradingSettingService {
                 .additionalDropPct(
                         dto.getAdditionalDropPct() != null ? dto.getAdditionalDropPct() : new BigDecimal("0.5"))
                 .useStopLoss(dto.getUseStopLoss() != null ? dto.getUseStopLoss() : true)
+	  // ⭐⭐⭐ [신규] Top10 자동 운영 - 기본값 false (명시적으로 켠 사용자만 적용) ⭐⭐⭐
+	  .useTop10AutoRebalance(
+                dto.getUseTop10AutoRebalance() != null ? dto.getUseTop10AutoRebalance() : false)                
                 .build();
 
         TradingSetting saved = tradingSettingRepository.save(setting);
@@ -121,6 +124,10 @@ public class TradingSettingService {
                 dto.getAdditionalDropPct() != null ? dto.getAdditionalDropPct() : new BigDecimal("0.5"));
         setting.setUseStopLoss(dto.getUseStopLoss() != null ? dto.getUseStopLoss() : true);
 
+        // ⭐⭐⭐ [신규] Top10 자동 운영 ⭐⭐⭐
+       setting.setUseTop10AutoRebalance(
+               dto.getUseTop10AutoRebalance() != null ? dto.getUseTop10AutoRebalance() : false);
+
         TradingSetting updated = tradingSettingRepository.save(setting);
         log.info("거래 설정 수정 완료: userId={}", userId);
 
@@ -169,6 +176,8 @@ public class TradingSettingService {
                 .useRoundRobin(setting.getUseRoundRobin())
                 .additionalDropPct(setting.getAdditionalDropPct())
                 .useStopLoss(setting.getUseStopLoss())
+                // ⭐⭐⭐ [신규] Top10 자동 운영 ⭐⭐⭐
+                .useTop10AutoRebalance(setting.getUseTop10AutoRebalance())
                 .build();
     }
 }
